@@ -1,19 +1,21 @@
 import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { AirtableAdapter } from './airtable-adapter';
+// import { AirtableAdapter } from './airtable-adapter'; // Temporarily disabled
 
 const authConfig: NextAuthConfig = {
-  adapter: AirtableAdapter({
+  // Comment out adapter for now since we're focusing on board games
+  // Will re-enable when setting up authentication
+  /* adapter: AirtableAdapter({
     apiKey: process.env.AIRTABLE_API_KEY!,
-    baseId: process.env.AIRTABLE_BASE_ID!,
+    baseId: process.env.AIRTABLE_CUSTOMER_BASE_ID!,
     tableNames: {
       users: 'Users',
       accounts: 'Accounts',
       sessions: 'Sessions',
       verificationTokens: 'VerificationTokens',
     },
-  }),
+  }), */
 
   providers: [
     CredentialsProvider({

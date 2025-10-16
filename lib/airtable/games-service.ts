@@ -7,12 +7,16 @@ class GamesService {
   private viewId: string;
 
   constructor() {
-    if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
-      throw new Error('Airtable configuration missing');
+    // Use fallback values if environment variables are not set
+    const apiKey = process.env.AIRTABLE_API_KEY || '';
+    const baseId = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
+
+    if (!apiKey) {
+      console.warn('Warning: AIRTABLE_API_KEY is not set');
     }
 
-    const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
-    this.base = airtable.base(process.env.AIRTABLE_BASE_ID);
+    const airtable = new Airtable({ apiKey });
+    this.base = airtable.base(baseId);
     this.tableId = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
     this.viewId = process.env.AIRTABLE_GAMES_VIEW_ID || 'viwHMUIuvp0H2S1vE';
   }
