@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  sipnplay-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sipnplay-portal
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+      - AIRTABLE_CUSTOMER_TABLE_ID=${AIRTABLE_CUSTOMER_TABLE_ID}
+      - AIRTABLE_GAMES_TABLE_ID=${AIRTABLE_GAMES_TABLE_ID}
+      - AIRTABLE_EVENTS_TABLE_ID=${AIRTABLE_EVENTS_TABLE_ID}
+      - AIRTABLE_GAMES_VIEW_ID=${AIRTABLE_GAMES_VIEW_ID}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+      - FACEBOOK_ACCESS_TOKEN=${FACEBOOK_ACCESS_TOKEN}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - REDIS_URL=redis://redis-cache:6379
+    depends_on:
+      - redis-cache
+    restart: unless-stopped
+    networks:
+      - sipnplay-network
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: sipnplay-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - sipnplay-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  sipnplay-network:
+    driver: bridge
