@@ -22,6 +22,15 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Set dummy environment variables for build (runtime will use actual values)
+# These prevent build-time errors when Next.js tries to validate env vars
+ENV AIRTABLE_API_KEY=dummy_key_for_build
+ENV AIRTABLE_GAMES_BASE_ID=dummy_base_id
+ENV AIRTABLE_GAMES_TABLE_ID=dummy_table_id
+ENV AIRTABLE_GAMES_VIEW_ID=dummy_view_id
+ENV AIRTABLE_CUSTOMER_BASE_ID=dummy_base_id
+ENV AIRTABLE_CUSTOMER_TABLE_ID=dummy_table_id
+
 RUN npm run build
 
 # Production image, copy all the files and run next
