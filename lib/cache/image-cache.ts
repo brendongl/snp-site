@@ -7,6 +7,8 @@ const CACHE_METADATA_FILE = path.join(process.cwd(), 'data', 'image-cache-metada
 
 interface ImageMetadata {
   originalUrl: string;
+  contentHash: string; // MD5 hash of image file bytes
+  sourceGameId?: string; // Which game this image belongs to (optional)
   cachedPath: string;
   fileName: string;
   mimeType: string;
@@ -58,6 +60,22 @@ function hashUrl(url: string): string {
   return crypto.createHash('md5').update(url).digest('hex');
 }
 
+// Generate hash for image content (file bytes)
+function hashContent(buffer: ArrayBuffer): string {
+  return crypto.createHash('md5').update(Buffer.from(buffer)).digest('hex');
+}
+
+// Find cached entry by content hash
+function findCacheByContentHash(contentHash: string): ImageMetadata | null {
+  const metadata = loadMetadata();
+  for (const entry of Object.values(metadata)) {
+    if (entry.contentHash === contentHash) {
+      return entry;
+    }
+  }
+  return null;
+}
+
 // Get file extension from URL or content type
 function getFileExtension(url: string, contentType?: string): string {
   // Try to get extension from URL
@@ -85,17 +103,18 @@ function getFileExtension(url: string, contentType?: string): string {
 /**
  * Download and cache an image from a URL
  */
-export async function cacheImage(url: string): Promise<ImageMetadata | null> {
+export async function cacheImage(url: string, gameId?: string): Promise<ImageMetadata | null> {
   try {
     ensureImageCacheDir();
 
     const urlHash = hashUrl(url);
     const metadata = loadMetadata();
 
-    // Check if already cached
+    // Check if already cached by URL
     if (metadata[urlHash]) {
       const cachedPath = path.join(IMAGE_CACHE_DIR, metadata[urlHash].fileName);
       if (fs.existsSync(cachedPath)) {
+        console.log(`Image already cached by URL: ${url}`);
         return metadata[urlHash];
       }
     }
@@ -109,16 +128,33 @@ export async function cacheImage(url: string): Promise<ImageMetadata | null> {
 
     const buffer = await response.arrayBuffer();
     const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const contentHash = hashContent(buffer);
+
+    // Check if this exact image content already exists in cache
+    const existingByContent = findCacheByContentHash(contentHash);
+    if (existingByContent) {
+      const existingPath = path.join(IMAGE_CACHE_DIR, existingByContent.fileName);
+      if (fs.existsSync(existingPath)) {
+        // Reuse existing file, just add new URL mapping
+        console.log(`Image content already cached (same bytes), reusing: ${existingByContent.fileName}`);
+        const newMetadata = { ...existingByContent, originalUrl: url, sourceGameId: gameId };
+        metadata[urlHash] = newMetadata;
+        saveMetadata(metadata);
+        return newMetadata;
+      }
+    }
+
+    // New image - cache it
     const extension = getFileExtension(url, contentType);
     const fileName = `${urlHash}${extension}`;
     const cachedPath = path.join(IMAGE_CACHE_DIR, fileName);
 
-    // Save image
     fs.writeFileSync(cachedPath, Buffer.from(buffer));
 
-    // Save metadata
     const imageMetadata: ImageMetadata = {
       originalUrl: url,
+      contentHash,
+      sourceGameId: gameId,
       cachedPath,
       fileName,
       mimeType: contentType,
@@ -129,7 +165,7 @@ export async function cacheImage(url: string): Promise<ImageMetadata | null> {
     metadata[urlHash] = imageMetadata;
     saveMetadata(metadata);
 
-    console.log(`Cached image: ${url} -> ${fileName}`);
+    console.log(`Cached new image: ${url} -> ${fileName}`);
     return imageMetadata;
   } catch (error) {
     console.error(`Error caching image ${url}:`, error);

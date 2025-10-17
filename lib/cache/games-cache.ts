@@ -73,6 +73,24 @@ export function getCacheMetadata(): { lastUpdated: string | null; count: number 
   }
 }
 
+/**
+ * Get age of cache in milliseconds
+ */
+export function getCacheAge(): number {
+  const metadata = getCacheMetadata();
+  if (!metadata.lastUpdated) {
+    return Infinity; // No cache
+  }
+  return Date.now() - new Date(metadata.lastUpdated).getTime();
+}
+
+/**
+ * Check if cache is older than specified milliseconds
+ */
+export function isCacheOlderThan(milliseconds: number): boolean {
+  return getCacheAge() > milliseconds;
+}
+
 // Content Checks Cache Functions
 
 export function getCachedContentChecks(): ContentCheck[] | null {
