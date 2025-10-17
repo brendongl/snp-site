@@ -14,6 +14,7 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
   const firstImage = game.fields.Images?.[0];
   const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
   // Use cached image proxy if URL exists
+  // The /api/images/[hash] endpoint accepts a url query parameter for direct proxying
   const imageUrl = originalImageUrl
     ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
     : undefined;

@@ -431,11 +431,54 @@ function GamesPageContent() {
       {/* Search and Filters - Collapsible */}
       <div className="sticky top-0 z-10 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
         {isHeaderCollapsed ? (
-          // Collapsed view - slim bar
-          <div className="flex items-center justify-between py-2">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
-            </p>
+          // Collapsed view - slim bar with active filters
+          <div className="flex items-center justify-between gap-2 py-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap flex-1">
+              <p className="text-sm text-muted-foreground whitespace-nowrap">
+                Showing {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
+              </p>
+              {hasAnyFilters && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {filters.search && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      🔍 {filters.search}
+                    </span>
+                  )}
+                  {filters.quickFilter && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      {filters.quickFilter === 'sixPlus' && '👥 6+ Players'}
+                      {filters.quickFilter === 'couples' && '💑 Couples'}
+                      {filters.quickFilter === 'social' && '🎉 Social'}
+                    </span>
+                  )}
+                  {filters.categories && filters.categories.length > 0 && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      📁 {filters.categories.length} categor{filters.categories.length === 1 ? 'y' : 'ies'}
+                    </span>
+                  )}
+                  {(filters.playerCount?.min || filters.playerCount?.max) && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      🎲 Players: {filters.playerCount?.min || '?'}-{filters.playerCount?.max || '?'}
+                    </span>
+                  )}
+                  {(filters.yearRange?.min || filters.yearRange?.max) && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      📅 {filters.yearRange?.min || '?'}-{filters.yearRange?.max || '?'}
+                    </span>
+                  )}
+                  {(filters.complexity?.min || filters.complexity?.max) && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      🧠 Complexity: {filters.complexity?.min || '?'}-{filters.complexity?.max || '?'}
+                    </span>
+                  )}
+                  {filters.bestPlayerCount && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                      ⭐ Best: {filters.bestPlayerCount}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"

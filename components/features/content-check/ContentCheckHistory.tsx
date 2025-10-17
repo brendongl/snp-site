@@ -145,7 +145,13 @@ export function ContentCheckHistory({
                     {check.fields.Inspector && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <User className="w-4 h-4" />
-                        <span>Inspector: {check.fields.Inspector[0] || 'Unknown'}</span>
+                        <span>
+                          Inspector: {
+                            Array.isArray(check.fields.Inspector)
+                              ? check.fields.Inspector.join(', ') || 'Unknown'
+                              : check.fields.Inspector || 'Unknown'
+                          }
+                        </span>
                       </div>
                     )}
                   </div>

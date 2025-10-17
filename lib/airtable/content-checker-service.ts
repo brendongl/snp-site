@@ -16,6 +16,7 @@ interface AirtableResponse {
  */
 async function fetchStaffMap(): Promise<Record<string, string>> {
   if (!AIRTABLE_API_KEY) {
+    logger.warn('Content Check', 'AIRTABLE_API_KEY not set, skipping staff name mapping');
     return {};
   }
 
@@ -31,7 +32,7 @@ async function fetchStaffMap(): Promise<Record<string, string>> {
     });
 
     if (!response.ok) {
-      logger.warn('Content Check', 'Failed to fetch staff records', { status: response.status });
+      logger.warn('Content Check', 'Failed to fetch staff records', { status: response.status, statusText: response.statusText });
       return {};
     }
 
@@ -41,9 +42,11 @@ async function fetchStaffMap(): Promise<Record<string, string>> {
     data.records.forEach((record) => {
       if (record.fields['Staff Name']) {
         staffMap[record.id] = record.fields['Staff Name'];
+        logger.debug('Content Check', `Mapped staff ID ${record.id} to ${record.fields['Staff Name']}`);
       }
     });
 
+    logger.info('Content Check', `Successfully fetched ${data.records.length} staff records, mapped ${Object.keys(staffMap).length} names`);
     return staffMap;
   } catch (error) {
     logger.warn('Content Check', 'Error fetching staff map', error instanceof Error ? error : new Error(String(error)));
@@ -100,27 +103,36 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
 
     // Fetch staff map to convert Inspector IDs to names
     const staffMap = await fetchStaffMap();
+    logger.info('Content Check', `Processing ${allRecords.length} content check records with staff map`);
 
-    return allRecords.map((record) => ({
-      id: record.id,
-      fields: {
-        'Record ID': record.fields['Record ID'],
-        'Board Game': record.fields['Board Game'],
-        'Check Date': record.fields['Check Date'],
-        'Inspector': record.fields['Inspector'] && Array.isArray(record.fields['Inspector'])
-          ? record.fields['Inspector'].map((id: string) => staffMap[id] || id)
-          : record.fields['Inspector'],
-        'Status': record.fields['Status'],
-        'Missing Pieces': record.fields['Missing Pieces'],
-        'Box Condition': record.fields['Box Condition'],
-        'Card Condition': record.fields['Card Condition'],
-        'Is Fake': record.fields['Is Fake'],
-        'Notes': record.fields['Notes'],
-        'Sleeved At Check': record.fields['Sleeved At Check'],
-        'Box Wrapped At Check': record.fields['Box Wrapped At Check'],
-        'Photos': record.fields['Photos'],
-      },
-    }));
+    return allRecords.map((record) => {
+      let inspectorNames: string[] | undefined;
+      if (record.fields['Inspector'] && Array.isArray(record.fields['Inspector'])) {
+        inspectorNames = record.fields['Inspector'].map((id: string) => staffMap[id] || id);
+        if (inspectorNames.length > 0 && inspectorNames[0].startsWith('rec')) {
+          logger.warn('Content Check', `Record ${record.id} has unmapped inspector IDs: ${inspectorNames.join(', ')}`);
+        }
+      }
+
+      return {
+        id: record.id,
+        fields: {
+          'Record ID': record.fields['Record ID'],
+          'Board Game': record.fields['Board Game'],
+          'Check Date': record.fields['Check Date'],
+          'Inspector': inspectorNames || record.fields['Inspector'],
+          'Status': record.fields['Status'],
+          'Missing Pieces': record.fields['Missing Pieces'],
+          'Box Condition': record.fields['Box Condition'],
+          'Card Condition': record.fields['Card Condition'],
+          'Is Fake': record.fields['Is Fake'],
+          'Notes': record.fields['Notes'],
+          'Sleeved At Check': record.fields['Sleeved At Check'],
+          'Box Wrapped At Check': record.fields['Box Wrapped At Check'],
+          'Photos': record.fields['Photos'],
+        },
+      };
+    });
   } catch (error) {
     console.error('Error fetching content checks:', error);
     throw error;
