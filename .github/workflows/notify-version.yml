@@ -1,0 +1,89 @@
+name: Notify Discord on Version Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/version.ts'
+      - 'package.json'
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from package.json
+        id: version
+        run: |
+          VERSION=$(grep '"version"' package.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+          BUILD_DATE=$(date -u '+%Y-%m-%d')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "buildDate=$BUILD_DATE" >> $GITHUB_OUTPUT
+
+      - name: Extract recent commits as changes
+        id: changes
+        run: |
+          # Get last 5 commits excluding merge commits
+          COMMITS=$(git log --oneline -5 --pretty=format:"%s" | sed 's/v[0-9.]\+ - //' | grep -v "Merge" || echo "See commit history")
+          # Convert newlines to JSON array
+          CHANGES=$(echo "$COMMITS" | jq -R -s -c 'split("\n")[:-1]')
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+
+      - name: Send Discord notification
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUILD_DATE="${{ steps.version.outputs.buildDate }}"
+          CHANGES='${{ steps.changes.outputs.changes }}'
+
+          # Parse the changes array for the Discord message
+          CHANGES_TEXT=""
+          if [ -n "$CHANGES" ] && [ "$CHANGES" != "[]" ]; then
+            CHANGES_TEXT=$(echo "$CHANGES" | jq -r '.[] | "• " + .' | tr '\n' '\\n')
+          fi
+
+          # Create the embed JSON
+          PAYLOAD=$(cat <<EOF
+          {
+            "version": "$VERSION",
+            "buildDate": "$BUILD_DATE",
+            "changes": $(echo "$CHANGES" | jq '.'),
+            "webhookUrl": "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          }
+          EOF
+          )
+
+          # Note: The webhook endpoint requires authentication
+          # For now, we'll use Discord directly
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "username": "Sip n Play Bot",
+              "content": "🎮 **New Version Released: v'"$VERSION"'**",
+              "embeds": [{
+                "title": "Board Games Portal Update",
+                "description": "New version deployed to production",
+                "color": 3498843,
+                "fields": [
+                  {
+                    "name": "📦 Version",
+                    "value": "v'"$VERSION"'",
+                    "inline": true
+                  },
+                  {
+                    "name": "📅 Build Date",
+                    "value": "'"$BUILD_DATE"'",
+                    "inline": true
+                  },
+                  {
+                    "name": "🔗 Repository",
+                    "value": "[View on GitHub](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": false
+                  }
+                ]
+              }]
+            }'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

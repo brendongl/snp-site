@@ -165,10 +165,15 @@ export async function POST(request: Request) {
       fields['Deposit'] = deposit;
     }
 
-    // Only add expansion and base game fields if isExpansion is true
-    if (isExpansion && baseGameId) {
+    // Handle expansion configuration
+    if (isExpansion) {
+      // Mark as expansion
+      fields['Expansion'] = true;
+
       // Link to base game if provided
-      fields['Base Game'] = [baseGameId];
+      if (baseGameId) {
+        fields['Base Game'] = [baseGameId];
+      }
     }
 
     // Add images if we have them

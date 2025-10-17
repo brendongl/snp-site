@@ -41,10 +41,12 @@
 
 ### Example Version History
 
+- `1.0.5` - Windows file permission fixes for image cache metadata
+- `1.0.4` - Content-based image deduplication and cache-first strategy with TTL
+- `1.0.3` - Fix version display and show staff names in content checks
+- `1.0.2` - Improve network error messages and add troubleshooting guide
+- `1.0.1` - Add project workflow documentation
 - `1.0.0` - Image caching system, Docker permission fixes
-- `0.9.0` - Content check history, staff mode
-- `0.8.0` - Games catalog with filters
-- `0.1.0` - Initial setup
 
 ## Docker Build Workflow
 
@@ -118,9 +120,31 @@ docker rm snp-site
 docker run -d --name snp-site [options] snp-site
 ```
 
+## Current Architecture Notes
+
+### Caching Strategy (as of v1.0.4+)
+- **Games Cache**: 1-hour TTL, cache-first approach
+  - Fresh load: Returns cached games if <1 hour old
+  - Stale cache: Fetches from Airtable after 1 hour
+  - Fallback: Uses stale cache if Airtable API unavailable
+
+- **Image Caching**: Content-based deduplication (MD5 hash)
+  - Detects duplicate images across different URLs
+  - Reuses cached files instead of downloading duplicates
+  - Windows-compatible fallback error handling
+  - Files: `lib/cache/image-cache.ts`, `lib/cache/games-cache.ts`
+
+### File Locations
+- **Version tracking**: [lib/version.ts](../lib/version.ts)
+- **Cache utilities**: [lib/cache/](../lib/cache/)
+- **API routes**: [app/api/](../app/api/)
+- **Component library**: [components/](../components/)
+
 ## Notes
 
 - Keep commits atomic and focused
 - Always include version in commit message
 - Document breaking changes clearly
 - Test in Docker before deploying to production
+- Update both `lib/version.ts` AND `package.json` version numbers in sync
+- For image/cache issues: Check Windows file permissions first, fallback error handling is in place

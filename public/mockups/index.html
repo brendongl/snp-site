@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sip n Play - Design Mockups</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #00B4D8 0%, #F77F00 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 48px;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .color-palette {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-palette h2 {
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .colors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .color {
+            text-align: center;
+        }
+
+        .color-box {
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 2px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .color-code {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .mockups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .mockup-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .mockup-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .mockup-card h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #00B4D8;
+        }
+
+        .mockup-card p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .mockup-features {
+            text-align: left;
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .mockup-features li {
+            margin-bottom: 6px;
+            list-style-position: inside;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #00B4D8 0%, #0099B8 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 180, 216, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #F77F00 0%, #E67000 100%);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(247, 127, 0, 0.4);
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-section h2 {
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .info-section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #e67000;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 16px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sip n Play - Design System</h1>
+            <p>Three mobile mockups featuring the Sip n Play branding</p>
+        </header>
+
+        <!-- Color Palette -->
+        <div class="color-palette">
+            <h2>🎨 Brand Color Palette</h2>
+            <div class="colors">
+                <div class="color">
+                    <div class="color-box" style="background: #00B4D8;"></div>
+                    <div class="color-name">Primary Cyan</div>
+                    <div class="color-code">#00B4D8</div>
+                </div>
+                <div class="color">
+                    <div class="color-box" style="background: #F77F00;"></div>
+                    <div class="color-name">Primary Orange</div>
+                    <div class="color-code">#F77F00</div>
+                </div>
+                <div class="color">
+                    <div class="color-box" style="background: #FFF4E6;"></div>
+                    <div class="color-name">Cream</div>
+                    <div class="color-code">#FFF4E6</div>
+                </div>
+                <div class="color">
+                    <div class="color-box" style="background: #8B4513;"></div>
+                    <div class="color-name">Brown</div>
+                    <div class="color-code">#8B4513</div>
+                </div>
+                <div class="color">
+                    <div class="color-box" style="background: #FFFFFF; border: 2px solid #ddd;"></div>
+                    <div class="color-name">White</div>
+                    <div class="color-code">#FFFFFF</div>
+                </div>
+                <div class="color">
+                    <div class="color-box" style="background: #F5F5F5;"></div>
+                    <div class="color-name">Light Gray</div>
+                    <div class="color-code">#F5F5F5</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mockups -->
+        <div class="mockups">
+            <div class="mockup-card">
+                <h3>Design 1</h3>
+                <h3 style="font-size: 16px; color: #F77F00;">Bold & Playful</h3>
+                <p>Maximum visual impact with featured logo, cyan gradient header, and bold orange elements</p>
+                <ul class="mockup-features">
+                    <li>🎯 Large centered logo</li>
+                    <li>🌊 Cyan gradient background</li>
+                    <li>🟠 Bold orange accents</li>
+                    <li>🎮 Rounded, playful UI</li>
+                </ul>
+                <a href="/mockups/design-1-bold-playful.html" class="btn">View Mockup</a>
+            </div>
+
+            <div class="mockup-card">
+                <h3>Design 2</h3>
+                <h3 style="font-size: 16px; color: #00B4D8;">Clean & Modern</h3>
+                <p>Minimalist layout with horizontal logo in header and subtle cyan/orange accents</p>
+                <ul class="mockup-features">
+                    <li>✨ Horizontal header logo</li>
+                    <li>📐 Minimalist spacing</li>
+                    <li>💙 Subtle cyan accents</li>
+                    <li>🎯 Professional feel</li>
+                </ul>
+                <a href="/mockups/design-2-clean-modern.html" class="btn btn-secondary">View Mockup</a>
+            </div>
+
+            <div class="mockup-card">
+                <h3>Design 3</h3>
+                <h3 style="font-size: 16px; color: #8B4513;">Fun & Gaming</h3>
+                <p>Split color-block header, playful card design, alternating color accents</p>
+                <ul class="mockup-features">
+                    <li>🎮 Color-block header</li>
+                    <li>🎨 Alternating top borders</li>
+                    <li>🎪 Playful typography</li>
+                    <li>⭐ Game-like feel</li>
+                </ul>
+                <a href="/mockups/design-3-fun-gaming.html" class="btn">View Mockup</a>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="info-section">
+            <h2>📱 About These Mockups</h2>
+            <p>These are <strong>interactive HTML mockups</strong> designed to showcase three different branding approaches for Sip n Play. Each design:</p>
+            <ul style="margin-left: 20px;">
+                <li>Is mobile-first (375px width - iPhone 12/13 size)</li>
+                <li>Features the Sip n Play logo prominently</li>
+                <li>Includes the subtitle tagline</li>
+                <li>Shows the same core features (search, filters, game cards)</li>
+                <li>Uses the extracted brand colors from your logo</li>
+                <li>Is fully interactive (try clicking buttons and filters!)</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>💡 Next Steps:</strong> Click on "View Mockup" to see each design in a mobile device frame. Let me know which direction you prefer, and we can refine it further or implement it into the actual website!
+            </div>
+
+            <h2 style="margin-top: 24px;">🎨 Design Philosophy</h2>
+            <p><strong>Design 1 (Bold & Playful):</strong> For maximum brand presence and engagement. Great for standing out in app stores or as a hero page.</p>
+            <p><strong>Design 2 (Clean & Modern):</strong> For a professional, approachable vibe. Works well if you want the focus on the game collection rather than branding.</p>
+            <p><strong>Design 3 (Fun & Gaming):</strong> Perfect if you want to emphasize the playful, social nature of gaming at a cafe.</p>
+        </div>
+    </div>
+</body>
+</html>

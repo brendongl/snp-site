@@ -45,25 +45,38 @@ function loadMetadata(): CacheMetadataStore {
   }
 }
 
-// Save metadata with atomic write (write to temp file, then rename)
+// Save metadata with safe write (handles Windows file locking)
 function saveMetadata(metadata: CacheMetadataStore) {
   try {
     ensureImageCacheDir();
     const tempFile = `${CACHE_METADATA_FILE}.tmp`;
     fs.writeFileSync(tempFile, JSON.stringify(metadata, null, 2), 'utf-8');
-    // Atomic rename to prevent corruption if process crashes mid-write
-    fs.renameSync(tempFile, CACHE_METADATA_FILE);
+
+    // Try atomic rename first (works on Unix/Linux)
+    try {
+      fs.renameSync(tempFile, CACHE_METADATA_FILE);
+    } catch (renameError) {
+      // If rename fails (e.g., Windows file locking), try unlink + move approach
+      try {
+        if (fs.existsSync(CACHE_METADATA_FILE)) {
+          fs.unlinkSync(CACHE_METADATA_FILE);
+        }
+        fs.renameSync(tempFile, CACHE_METADATA_FILE);
+      } catch (fallbackError) {
+        // Last resort: just write directly (may have concurrency issues but better than crashing)
+        fs.writeFileSync(CACHE_METADATA_FILE, JSON.stringify(metadata, null, 2), 'utf-8');
+        // Clean up temp file
+        try {
+          if (fs.existsSync(tempFile)) {
+            fs.unlinkSync(tempFile);
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+    }
   } catch (error) {
     console.error('Error saving image cache metadata:', error);
-    // Clean up temp file if it exists
-    try {
-      const tempFile = `${CACHE_METADATA_FILE}.tmp`;
-      if (fs.existsSync(tempFile)) {
-        fs.unlinkSync(tempFile);
-      }
-    } catch (cleanupError) {
-      // Ignore cleanup errors
-    }
   }
 }
 

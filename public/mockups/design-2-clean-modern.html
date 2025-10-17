@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sip n Play - Clean & Modern Design</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .device-frame {
+            width: 375px;
+            height: 812px;
+            margin: 20px auto;
+            background: white;
+            border: 8px solid #333;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .device-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background: #333;
+            border-radius: 0 0 30px 30px;
+            z-index: 10;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: #fafafa;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .logo-container {
+            flex-shrink: 0;
+        }
+
+        .logo-container img {
+            width: 80px;
+            height: auto;
+        }
+
+        .header-content {
+            flex: 1;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #00B4D8;
+            margin-bottom: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #666;
+            margin: 0;
+        }
+
+        /* Search bar */
+        .search-section {
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+
+        .search-bar input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            outline: none;
+            padding: 4px 8px;
+            font-size: 14px;
+        }
+
+        .search-bar svg {
+            width: 18px;
+            height: 18px;
+            color: #999;
+        }
+
+        /* Filters */
+        .filters-section {
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-chip:active {
+            transform: scale(0.95);
+        }
+
+        .filter-chip.active {
+            background: #00B4D8;
+            color: white;
+            border-color: #00B4D8;
+            box-shadow: 0 2px 8px rgba(0, 180, 216, 0.2);
+        }
+
+        /* Results info */
+        .results-info {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #666;
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sort-control {
+            font-size: 12px;
+            color: #00B4D8;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Game Grid */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 12px 8px;
+            background: #fafafa;
+        }
+
+        .game-card {
+            aspect-ratio: 2.5/3;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #e8e8e8;
+        }
+
+        .game-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #00B4D8;
+        }
+
+        .game-card-image {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 28px;
+        }
+
+        .game-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .game-card-info {
+            font-size: 9px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        /* Bottom Actions */
+        .bottom-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 12px;
+            background: white;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .btn {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #00B4D8;
+            color: white;
+            border: 1px solid #00B4D8;
+        }
+
+        .btn-primary:active {
+            opacity: 0.8;
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #F77F00;
+            border: 1px solid #F77F00;
+        }
+
+        .btn-secondary:active {
+            background: rgba(247, 127, 0, 0.05);
+            transform: scale(0.95);
+        }
+
+        /* Scrollbar styling */
+        .screen::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .screen::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .screen::-webkit-scrollbar-thumb {
+            background: #999;
+            border-radius: 3px;
+        }
+
+        .design-name {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .design-description {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="device-frame">
+        <div class="screen">
+            <!-- Header with logo -->
+            <div class="header">
+                <div class="logo-container">
+                    <img src="/logo-sipnplay.jpg" alt="Sip n Play Logo">
+                </div>
+                <div class="header-content">
+                    <div class="header-title">Sip n Play</div>
+                    <p class="header-subtitle">Search through all our games, pick the perfect game for your number of players, preferences, and more</p>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="search-section">
+                <div class="search-bar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" placeholder="Search games...">
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filter-label">Quick Filters</div>
+                <div class="filter-chips">
+                    <div class="filter-chip active">👥 6+ Players</div>
+                    <div class="filter-chip">💑 Couples</div>
+                    <div class="filter-chip">🎉 Social</div>
+                </div>
+            </div>
+
+            <!-- Results Info -->
+            <div class="results-info">
+                <span>47 games</span>
+                <span class="sort-control">▼ Date Added</span>
+            </div>
+
+            <!-- Game Grid -->
+            <div class="games-grid">
+                <div class="game-card">
+                    <div class="game-card-image">🎲</div>
+                    <div class="game-card-title">Catan</div>
+                    <div class="game-card-info">2-4 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🃏</div>
+                    <div class="game-card-title">Ticket to Ride</div>
+                    <div class="game-card-info">2-5 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🎯</div>
+                    <div class="game-card-title">Splendor</div>
+                    <div class="game-card-info">2-4 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🎨</div>
+                    <div class="game-card-title">Azul</div>
+                    <div class="game-card-info">2-4 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🏰</div>
+                    <div class="game-card-title">Carcassonne</div>
+                    <div class="game-card-info">2-5 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">📚</div>
+                    <div class="game-card-title">Wingspan</div>
+                    <div class="game-card-info">1-5 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🎪</div>
+                    <div class="game-card-title">Fluxx</div>
+                    <div class="game-card-info">2-6 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🎭</div>
+                    <div class="game-card-title">Codenames</div>
+                    <div class="game-card-info">2-8 players</div>
+                </div>
+                <div class="game-card">
+                    <div class="game-card-image">🎬</div>
+                    <div class="game-card-title">7 Wonders</div>
+                    <div class="game-card-info">3-7 players</div>
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="bottom-actions">
+                <button class="btn btn-primary">🎲 Random Pick</button>
+                <button class="btn btn-secondary">⚙️ More Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="design-name">Design 2: Clean & Modern</div>
+    <div class="design-description">
+        Minimalist layout with logo in header, subtle cyan/orange accents, and spacious card grid. Professional and approachable.
+    </div>
+</body>
+</html>

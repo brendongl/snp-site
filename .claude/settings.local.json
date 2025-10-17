@@ -36,7 +36,9 @@
       "Bash(docker build:*)",
       "Bash(echo:*)",
       "Bash(cmd /c taskkill /PID 2152 /F)",
-      "Bash(cmd /c \"wmic process where ProcessId=2152 delete\")"
+      "Bash(cmd /c \"wmic process where ProcessId=2152 delete\")",
+      "Bash(git checkout:*)",
+      "Bash(ls -la \"c:\\Users\\Brendon\\Documents\\Claude\\snp-site\\.github\\workflows\"\" 2>/dev/null || echo \"Directory not found \")"
     ],
     "deny": [],
     "ask": []
