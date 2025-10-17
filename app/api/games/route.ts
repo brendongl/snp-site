@@ -63,8 +63,19 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error in games API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch games';
+    const errorCause = (error as any)?.cause?.code;
+    const isTimeout = errorMessage.includes('aborted') ||
+                      errorMessage.includes('ETIMEDOUT') ||
+                      errorCause === 'ETIMEDOUT' ||
+                      errorMessage.includes('fetch failed');
+
     return NextResponse.json(
-      { error: 'Failed to fetch games' },
+      {
+        error: isTimeout
+          ? 'Network timeout - Cannot reach Airtable API. Please check Docker network settings (try Host mode or add DNS servers).'
+          : errorMessage
+      },
       { status: 500 }
     );
   }

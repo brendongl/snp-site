@@ -36,12 +36,16 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error in content checks API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch content checks';
-    const isTimeout = errorMessage.includes('aborted') || errorMessage.includes('ETIMEDOUT');
+    const errorCause = (error as any)?.cause?.code;
+    const isTimeout = errorMessage.includes('aborted') ||
+                      errorMessage.includes('ETIMEDOUT') ||
+                      errorCause === 'ETIMEDOUT' ||
+                      errorMessage.includes('fetch failed');
 
     return NextResponse.json(
       {
         error: isTimeout
-          ? 'Request timeout - unable to reach Airtable. Check network connectivity.'
+          ? 'Network timeout - Cannot reach Airtable API. Please check Docker network settings (try Host mode or add DNS servers).'
           : errorMessage
       },
       { status: 500 }
