@@ -84,7 +84,7 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
 
   // Scroll to 2nd image by default when modal opens
   useEffect(() => {
-    if (open && game && scrollContainerRef.current && game.fields.Images?.length > 1) {
+    if (open && game && scrollContainerRef.current && game.fields.Images && game.fields.Images.length > 1) {
       // Small delay to ensure DOM is ready
       setTimeout(() => {
         if (scrollContainerRef.current) {

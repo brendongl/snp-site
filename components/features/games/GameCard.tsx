@@ -82,19 +82,19 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
         {/* Staff-only check info */}
         {isStaff && (
           <div className="mt-3 pt-3 border-t text-xs space-y-1">
-            {game.fields['Latest Check Status'] && (
+            {game.fields['Latest Check Status'] && game.fields['Latest Check Status'].length > 0 && (
               <div className="flex items-center gap-1.5">
-                {game.fields['Latest Check Status'] === 'Complete' && (
+                {game.fields['Latest Check Status'][0] === 'Complete' && (
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
                 )}
-                {game.fields['Latest Check Status'] === 'Issues Found' && (
+                {game.fields['Latest Check Status'][0] === 'Issues Found' && (
                   <AlertCircle className="h-3 w-3 text-yellow-600" />
                 )}
-                {game.fields['Latest Check Status'] === 'Missing' && (
+                {game.fields['Latest Check Status'][0] === 'Missing' && (
                   <XCircle className="h-3 w-3 text-red-600" />
                 )}
                 <span className="text-muted-foreground">
-                  {game.fields['Latest Check Status']}
+                  {game.fields['Latest Check Status'][0]}
                 </span>
               </div>
             )}

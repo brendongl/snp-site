@@ -29,7 +29,7 @@ export function SpinnerWheel({ games, open, onClose, onComplete }: SpinnerWheelP
   const [currentIndex, setCurrentIndex] = useState(0);
   const [translateY, setTranslateY] = useState(0);
   const reelRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Create tripled game array for infinite scroll effect
   const tripledGames = [...games, ...games, ...games];

@@ -147,8 +147,12 @@ class GamesService {
         const minPlayers = game.fields['Min Players'];
         const maxPlayers = game.fields['Max. Players'];
 
-        if (filters.playerCount!.min && maxPlayers && maxPlayers < filters.playerCount!.min) return false;
-        if (filters.playerCount!.max && minPlayers && minPlayers > filters.playerCount!.max) return false;
+        // Parse player counts (handle "No Limit" as infinity)
+        const minNum = minPlayers ? (minPlayers === 'No Limit' ? Infinity : parseInt(minPlayers)) : 0;
+        const maxNum = maxPlayers ? (maxPlayers === 'No Limit' ? Infinity : parseInt(maxPlayers)) : 0;
+
+        if (filters.playerCount!.min && maxNum < filters.playerCount!.min) return false;
+        if (filters.playerCount!.max && minNum > filters.playerCount!.max) return false;
         return true;
       });
     }
@@ -168,22 +172,25 @@ class GamesService {
     if (filters.quickFilter) {
       switch (filters.quickFilter) {
         case 'sixPlus':
-          filtered = filtered.filter(game =>
-            (game.fields['Max. Players'] || 0) >= 6
-          );
+          filtered = filtered.filter(game => {
+            const maxPlayers = game.fields['Max. Players'];
+            const maxNum = maxPlayers ? (maxPlayers === 'No Limit' ? Infinity : parseInt(maxPlayers)) : 0;
+            return maxNum >= 6;
+          });
           break;
         case 'couples':
           filtered = filtered.filter(game =>
-            game.fields['Min Players'] === 2 &&
-            game.fields['Max. Players'] === 2
+            game.fields['Min Players'] === '2' &&
+            game.fields['Max. Players'] === '2'
           );
           break;
-        case 'party':
+        case 'social':
           filtered = filtered.filter(game => {
             const categories = game.fields.Categories || [];
             return categories.some(cat =>
               cat.toLowerCase().includes('party') ||
-              cat.toLowerCase().includes('social')
+              cat.toLowerCase().includes('social') ||
+              cat.toLowerCase().includes('deduction')
             );
           });
           break;
@@ -215,8 +222,8 @@ class GamesService {
 
       case 'maxPlayers':
         sorted.sort((a, b) => {
-          const maxA = a.fields['Max. Players'] || 0;
-          const maxB = b.fields['Max. Players'] || 0;
+          const maxA = a.fields['Max. Players'] === 'No Limit' ? 999 : parseInt(a.fields['Max. Players'] || '0');
+          const maxB = b.fields['Max. Players'] === 'No Limit' ? 999 : parseInt(b.fields['Max. Players'] || '0');
           if (maxA !== maxB) return maxB - maxA;
           // Secondary sort by acquisition date
           return this.compareAcquisitionDates(b, a);
