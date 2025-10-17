@@ -31,20 +31,7 @@ class GamesService {
         })
         .eachPage((records, fetchNextPage) => {
           records.forEach((record) => {
-            games.push({
-              id: record.id,
-              fields: {
-                'Game Name': record.get('Game Name') as string,
-                'Categories': record.get('Categories') as string[] || [],
-                'Images': record.get('Images') as any || [],
-                'Year Released': record.get('Year Released') as number,
-                'Complexity / Difficulty': record.get('Complexity / Difficulty') as number,
-                'Min Players (BG)': record.get('Min Players (BG)') as number,
-                'Max. Players (BG)': record.get('Max. Players (BG)') as number,
-                'Description': record.get('Description') as string,
-                'Date of Acquisition': record.get('Date of Acquisition') as string,
-              },
-            });
+            games.push(this.mapRecordToGame(record));
           });
           fetchNextPage();
         });
@@ -56,24 +43,67 @@ class GamesService {
     }
   }
 
+  async getUpdatedGames(since: string): Promise<BoardGame[]> {
+    try {
+      const games: BoardGame[] = [];
+      const filterFormula = `IS_AFTER({Last Modified}, '${since}')`;
+
+      console.log(`Fetching games modified since: ${since}`);
+
+      await this.base(this.tableId)
+        .select({
+          filterByFormula: filterFormula,
+          view: this.viewId,
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach((record) => {
+            games.push(this.mapRecordToGame(record));
+          });
+          fetchNextPage();
+        });
+
+      console.log(`Found ${games.length} updated games`);
+      return games;
+    } catch (error) {
+      console.error('Error fetching updated games:', error);
+      throw new Error('Failed to fetch updated games from Airtable');
+    }
+  }
+
+  private mapRecordToGame(record: any): BoardGame {
+    return {
+      id: record.id,
+      fields: {
+        'Game Name': record.get('Game Name') as string,
+        'Categories': record.get('Categories') as string[] || [],
+        'Images': record.get('Images') as any || [],
+        'Year Released': record.get('Year Released') as number,
+        'Complexity': record.get('Complexity') as number,
+        'Min Players': record.get('Min Players') as string,
+        'Max. Players': record.get('Max. Players') as string,
+        'Description': record.get('Description') as string,
+        'Date of Aquisition': record.get('Date of Aquisition') as string,
+        'Best Player Amount': record.get('Best Player Amount') as string,
+        'Age Tag': record.get('Age Tag') as string,
+        'SNP Popularity': record.get('SNP Popularity') as number,
+        'Latest Check Date': record.get('Latest Check Date') as string,
+        'Latest Check Status': record.get('Latest Check Status') as string[],
+        'Latest Check Notes': record.get('Latest Check Notes') as string[],
+        'Total Checks': record.get('Total Checks') as number,
+        'Sleeved': record.get('Sleeved') as boolean,
+        'Box Wrapped': record.get('Box Wrapped') as boolean,
+        // Expansion fields
+        'Expansion': record.get('Expansion') as boolean,
+        'Base Game': record.get('Base Game') as string[],
+        'Game Expansions Link': record.get('Game Expansions Link') as string[],
+      },
+    };
+  }
+
   async getGameById(id: string): Promise<BoardGame | null> {
     try {
       const record = await this.base(this.tableId).find(id);
-
-      return {
-        id: record.id,
-        fields: {
-          'Game Name': record.get('Game Name') as string,
-          'Categories': record.get('Categories') as string[] || [],
-          'Images': record.get('Images') as any || [],
-          'Year Released': record.get('Year Released') as number,
-          'Complexity / Difficulty': record.get('Complexity / Difficulty') as number,
-          'Min Players (BG)': record.get('Min Players (BG)') as number,
-          'Max. Players (BG)': record.get('Max. Players (BG)') as number,
-          'Description': record.get('Description') as string,
-          'Date of Acquisition': record.get('Date of Acquisition') as string,
-        },
-      };
+      return this.mapRecordToGame(record);
     } catch (error) {
       console.error('Error fetching game by ID:', error);
       return null;
@@ -114,8 +144,8 @@ class GamesService {
     // Player count filter
     if (filters.playerCount) {
       filtered = filtered.filter(game => {
-        const minPlayers = game.fields['Min Players (BG)'];
-        const maxPlayers = game.fields['Max. Players (BG)'];
+        const minPlayers = game.fields['Min Players'];
+        const maxPlayers = game.fields['Max. Players'];
 
         if (filters.playerCount!.min && maxPlayers && maxPlayers < filters.playerCount!.min) return false;
         if (filters.playerCount!.max && minPlayers && minPlayers > filters.playerCount!.max) return false;
@@ -126,7 +156,7 @@ class GamesService {
     // Complexity filter
     if (filters.complexity) {
       filtered = filtered.filter(game => {
-        const complexity = game.fields['Complexity / Difficulty'];
+        const complexity = game.fields['Complexity'];
         if (!complexity) return false;
         if (filters.complexity!.min && complexity < filters.complexity!.min) return false;
         if (filters.complexity!.max && complexity > filters.complexity!.max) return false;
@@ -139,13 +169,13 @@ class GamesService {
       switch (filters.quickFilter) {
         case 'sixPlus':
           filtered = filtered.filter(game =>
-            (game.fields['Max. Players (BG)'] || 0) >= 6
+            (game.fields['Max. Players'] || 0) >= 6
           );
           break;
         case 'couples':
           filtered = filtered.filter(game =>
-            game.fields['Min Players (BG)'] === 2 &&
-            game.fields['Max. Players (BG)'] === 2
+            game.fields['Min Players'] === 2 &&
+            game.fields['Max. Players'] === 2
           );
           break;
         case 'party':
@@ -185,8 +215,8 @@ class GamesService {
 
       case 'maxPlayers':
         sorted.sort((a, b) => {
-          const maxA = a.fields['Max. Players (BG)'] || 0;
-          const maxB = b.fields['Max. Players (BG)'] || 0;
+          const maxA = a.fields['Max. Players'] || 0;
+          const maxB = b.fields['Max. Players'] || 0;
           if (maxA !== maxB) return maxB - maxA;
           // Secondary sort by acquisition date
           return this.compareAcquisitionDates(b, a);
@@ -195,8 +225,8 @@ class GamesService {
 
       case 'complexity':
         sorted.sort((a, b) => {
-          const compA = a.fields['Complexity / Difficulty'] || 0;
-          const compB = b.fields['Complexity / Difficulty'] || 0;
+          const compA = a.fields['Complexity'] || 0;
+          const compB = b.fields['Complexity'] || 0;
           if (compA !== compB) return compB - compA;
           // Secondary sort by acquisition date
           return this.compareAcquisitionDates(b, a);
@@ -213,8 +243,8 @@ class GamesService {
   }
 
   private compareAcquisitionDates(a: BoardGame, b: BoardGame): number {
-    const dateA = a.fields['Date of Acquisition'];
-    const dateB = b.fields['Date of Acquisition'];
+    const dateA = a.fields['Date of Aquisition'];
+    const dateB = b.fields['Date of Aquisition'];
 
     if (!dateA && !dateB) return 0;
     if (!dateA) return 1;

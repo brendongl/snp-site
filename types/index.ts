@@ -4,6 +4,7 @@ export interface BoardGame {
   fields: {
     'Game Name': string;
     Categories?: string[];
+    Mechanisms?: string[];
     Images?: Array<{
       id: string;
       url: string;
@@ -17,11 +18,57 @@ export interface BoardGame {
       };
     }>;
     'Year Released'?: number;
-    'Complexity / Difficulty'?: number;
-    'Min Players (BG)'?: number;
-    'Max. Players (BG)'?: number;
+    'Complexity'?: number;
+    'Min Players'?: string;  // Changed from number to string (singleSelect in Airtable)
+    'Max. Players'?: string;  // Changed from number to string (singleSelect in Airtable)
     Description?: string;
-    'Date of Acquisition'?: string;
+    'Date of Aquisition'?: string;
+    'Best Player Amount'?: string;
+    'Age Tag'?: string;
+    'SNP Popularity'?: number;
+    // Content Check fields
+    'Sleeved'?: boolean;
+    'Box Wrapped'?: boolean;
+    'Latest Check Date'?: string;
+    'Latest Check Status'?: string[];
+    'Latest Check Notes'?: string[];
+    'Total Checks'?: number;
+    'All Content Checks'?: string[];
+    // Expansion fields
+    'Expansion'?: boolean;
+    'Base Game'?: string[]; // Link to base game record
+    'Game Expansions Link'?: string[]; // Link to expansion records (for base games)
+  };
+}
+
+// Content Check Types
+export interface ContentCheck {
+  id: string;
+  fields: {
+    'Record ID': string;
+    'Board Game'?: string[];
+    'Check Date'?: string;
+    'Inspector'?: string[];
+    'Status': 'Perfect Condition' | 'Minor Issues' | 'Major Issues' | 'Unplayable';
+    'Missing Pieces'?: string;
+    'Box Condition'?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Damaged';
+    'Card Condition'?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Damaged';
+    'Is Fake'?: boolean;
+    'Notes'?: string;
+    'Sleeved At Check'?: boolean;
+    'Box Wrapped At Check'?: boolean;
+    'Photos'?: Array<{
+      id: string;
+      url: string;
+      filename: string;
+      size: number;
+      type: string;
+      thumbnails?: {
+        small: { url: string; width: number; height: number };
+        large: { url: string; width: number; height: number };
+        full: { url: string; width: number; height: number };
+      };
+    }>;
   };
 }
 
@@ -90,17 +137,56 @@ export interface DiscordUpdate {
 export interface GameFilters {
   search?: string;
   categories?: string[];
+  categoryMatchMode?: 'AND' | 'OR';
   yearRange?: { min?: number; max?: number };
   playerCount?: { min?: number; max?: number };
   complexity?: { min?: number; max?: number };
-  quickFilter?: 'sixPlus' | 'couples' | 'party';
+  quickFilter?: 'sixPlus' | 'couples' | 'social';
+  bestPlayerCount?: number;
 }
 
-export type SortOption = 'alphabetical' | 'year' | 'maxPlayers' | 'complexity' | 'dateAcquired';
+export type SortOption = 'alphabetical' | 'alphabeticalDesc' | 'year' | 'maxPlayers' | 'complexity' | 'dateAcquired' | 'lastChecked' | 'lastCheckedDesc' | 'totalChecks' | 'totalChecksDesc';
 
 // API Response Types
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+}
+
+// BoardGameGeek API Types
+export interface BGGGameData {
+  id: number;
+  name: string;
+  description: string;
+  yearPublished: number;
+  minPlayers: number;
+  maxPlayers: number;
+  bestPlayerCount?: number;
+  playingTime: number;
+  minAge: number;
+  complexity: number; // Weight/complexity rating (1-5)
+  categories: string[];
+  mechanisms: string[];
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  allImages?: string[];
+  isExpansion: boolean;
+  expandsGameId?: number;
+  expandsGameName?: string;
+}
+
+// Create Game Input Types
+export interface CreateGameInput {
+  bggId: number;
+  costPrice?: number;
+  gameSize?: string;
+  deposit?: number;
+  isExpansion: boolean;
+  baseGameId?: string;
+  selectedImages?: {
+    boxImage: string;
+    gameplayImage?: string;
+  };
+  customImageUrls?: string[]; // Additional custom image URLs
 }

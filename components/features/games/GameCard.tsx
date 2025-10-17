@@ -2,14 +2,15 @@
 
 import Image from 'next/image';
 import { BoardGame } from '@/types';
-import { Users, Calendar, Brain } from 'lucide-react';
+import { Users, Calendar, Brain, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
 
 interface GameCardProps {
   game: BoardGame;
   onClick: () => void;
+  isStaff?: boolean;
 }
 
-export function GameCard({ game, onClick }: GameCardProps) {
+export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
   const firstImage = game.fields.Images?.[0];
   const imageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
 
@@ -20,13 +21,22 @@ export function GameCard({ game, onClick }: GameCardProps) {
     >
       <div className="aspect-square relative overflow-hidden rounded-t-lg bg-muted">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={game.fields['Game Name']}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-          />
+          <>
+            <Image
+              src={imageUrl}
+              alt={game.fields['Game Name']}
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+            />
+
+            {/* Year badge - top right overlay */}
+            {game.fields['Year Released'] && (
+              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium">
+                {game.fields['Year Released']}
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <span className="text-sm">No image</span>
@@ -34,50 +44,72 @@ export function GameCard({ game, onClick }: GameCardProps) {
         )}
       </div>
 
-      <div className="p-4">
+      <div className="p-3">
         <h3 className="font-semibold text-sm line-clamp-2 mb-2">
           {game.fields['Game Name']}
         </h3>
 
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {game.fields['Max. Players (BG)'] && (
+        {/* Categories */}
+        {game.fields.Categories && game.fields.Categories.length > 0 && (
+          <div className="mb-2 text-xs text-muted-foreground">
+            {game.fields.Categories.join(', ')}
+          </div>
+        )}
+
+        {/* Compact horizontal info row */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {game.fields['Max. Players'] && (
             <div className="flex items-center gap-1">
               <Users className="h-3 w-3" />
-              <span>
-                {game.fields['Min Players (BG)'] || 1}-{game.fields['Max. Players (BG)']} players
-              </span>
+              <span>{game.fields['Min Players'] || 1}-{game.fields['Max. Players']}</span>
             </div>
           )}
 
-          {game.fields['Year Released'] && (
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>{game.fields['Year Released']}</span>
-            </div>
-          )}
-
-          {game.fields['Complexity / Difficulty'] && (
+          {game.fields['Complexity'] && (
             <div className="flex items-center gap-1">
               <Brain className="h-3 w-3" />
-              <span>Complexity: {game.fields['Complexity / Difficulty']}/5</span>
+              <div className="flex">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span key={i} className={i < game.fields['Complexity']! ? 'text-primary' : 'text-muted'}>
+                    ●
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {game.fields.Categories && game.fields.Categories.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {game.fields.Categories.slice(0, 2).map((category) => (
-              <span
-                key={category}
-                className="inline-block rounded-full bg-secondary px-2 py-0.5 text-xs"
-              >
-                {category}
-              </span>
-            ))}
-            {game.fields.Categories.length > 2 && (
-              <span className="text-xs text-muted-foreground">
-                +{game.fields.Categories.length - 2}
-              </span>
+        {/* Staff-only check info */}
+        {isStaff && (
+          <div className="mt-3 pt-3 border-t text-xs space-y-1">
+            {game.fields['Latest Check Status'] && (
+              <div className="flex items-center gap-1.5">
+                {game.fields['Latest Check Status'] === 'Complete' && (
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                )}
+                {game.fields['Latest Check Status'] === 'Issues Found' && (
+                  <AlertCircle className="h-3 w-3 text-yellow-600" />
+                )}
+                {game.fields['Latest Check Status'] === 'Missing' && (
+                  <XCircle className="h-3 w-3 text-red-600" />
+                )}
+                <span className="text-muted-foreground">
+                  {game.fields['Latest Check Status']}
+                </span>
+              </div>
+            )}
+            {game.fields['Latest Check Date'] && (
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                <span className="text-muted-foreground">
+                  {new Date(game.fields['Latest Check Date']).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {game.fields['Total Checks'] !== undefined && (
+              <div className="text-muted-foreground">
+                Checks: {game.fields['Total Checks']}
+              </div>
             )}
           </div>
         )}

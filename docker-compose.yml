@@ -9,28 +9,51 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Node Environment
       - NODE_ENV=production
+
+      # Airtable Configuration (Required)
       - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
-      - AIRTABLE_BASE_ID=${AIRTABLE_BASE_ID}
+      - AIRTABLE_CUSTOMER_BASE_ID=${AIRTABLE_CUSTOMER_BASE_ID}
       - AIRTABLE_CUSTOMER_TABLE_ID=${AIRTABLE_CUSTOMER_TABLE_ID}
+      - AIRTABLE_GAMES_BASE_ID=${AIRTABLE_GAMES_BASE_ID}
       - AIRTABLE_GAMES_TABLE_ID=${AIRTABLE_GAMES_TABLE_ID}
-      - AIRTABLE_EVENTS_TABLE_ID=${AIRTABLE_EVENTS_TABLE_ID}
       - AIRTABLE_GAMES_VIEW_ID=${AIRTABLE_GAMES_VIEW_ID}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - AIRTABLE_EVENTS_TABLE_ID=${AIRTABLE_EVENTS_TABLE_ID}
+
+      # Authentication (Optional)
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+      # Discord Integration (Optional)
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+
+      # Facebook Integration (Optional)
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
       - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
       - FACEBOOK_ACCESS_TOKEN=${FACEBOOK_ACCESS_TOKEN}
+
+      # n8n Integration (Optional)
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
       - N8N_API_KEY=${N8N_API_KEY}
-      - REDIS_URL=redis://redis-cache:6379
+
+      # Google Maps (Optional)
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+
+      # Redis Cache (Optional - uses in-memory if not provided)
+      - REDIS_URL=${REDIS_URL:-redis://redis-cache:6379}
     depends_on:
       - redis-cache
     restart: unless-stopped
     networks:
       - sipnplay-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis-cache:
     image: redis:7-alpine
@@ -39,10 +62,15 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     restart: unless-stopped
     networks:
       - sipnplay-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 volumes:
   redis-data:

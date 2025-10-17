@@ -1,0 +1,220 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { ContentCheck } from '@/types';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image } from 'lucide-react';
+import { format } from 'date-fns';
+
+interface ContentCheckHistoryProps {
+  open: boolean;
+  onClose: () => void;
+  gameId: string;
+  gameName: string;
+}
+
+export function ContentCheckHistory({
+  open,
+  onClose,
+  gameId,
+  gameName,
+}: ContentCheckHistoryProps) {
+  const [checks, setChecks] = useState<ContentCheck[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && gameId) {
+      fetchChecks();
+    }
+  }, [open, gameId]);
+
+  const fetchChecks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/content-checks?gameId=${gameId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch content checks');
+      }
+      const data = await response.json();
+      setChecks(data.checks || []);
+    } catch (err) {
+      console.error('Error fetching content checks:', err);
+      setError('Failed to load content check history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Perfect Condition':
+        return <Shield className="w-5 h-5 text-green-600" />;
+      case 'Minor Issues':
+        return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
+      case 'Major Issues':
+        return <AlertTriangle className="w-5 h-5 text-orange-600" />;
+      case 'Unplayable':
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      default:
+        return <Shield className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Perfect Condition':
+        return 'border-green-200 bg-green-50';
+      case 'Minor Issues':
+        return 'border-yellow-200 bg-yellow-50';
+      case 'Major Issues':
+        return 'border-orange-200 bg-orange-50';
+      case 'Unplayable':
+        return 'border-red-200 bg-red-50';
+      default:
+        return 'border-gray-200 bg-gray-50';
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="text-xl">Content Check History</SheetTitle>
+          <p className="text-sm text-muted-foreground">{gameName}</p>
+        </SheetHeader>
+
+        <div className="mt-6">
+          {loading && (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading content checks...
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          )}
+
+          {!loading && !error && checks.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No content checks recorded for this game yet.
+            </div>
+          )}
+
+          {!loading && !error && checks.length > 0 && (
+            <div className="space-y-4">
+              {checks.map((check, index) => (
+                <div
+                  key={check.id}
+                  className={`border-2 rounded-lg p-4 ${getStatusColor(check.fields.Status)}`}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(check.fields.Status)}
+                      <h3 className="font-semibold text-lg">{check.fields.Status}</h3>
+                    </div>
+                    {index === 0 && (
+                      <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        Latest
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-sm">
+                    {check.fields['Check Date'] && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {format(new Date(check.fields['Check Date']), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
+                    )}
+                    {check.fields.Inspector && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <User className="w-4 h-4" />
+                        <span>Inspector: {check.fields.Inspector[0] || 'Unknown'}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conditions */}
+                  {(check.fields['Box Condition'] || check.fields['Card Condition']) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-sm">
+                      {check.fields['Box Condition'] && (
+                        <div className="flex items-center gap-2">
+                          <Box className="w-4 h-4 text-muted-foreground" />
+                          <span>Box: {check.fields['Box Condition']}</span>
+                        </div>
+                      )}
+                      {check.fields['Card Condition'] && (
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                          <span>Cards: {check.fields['Card Condition']}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Status badges */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {check.fields['Sleeved At Check'] && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <Package className="w-3 h-3" />
+                        Sleeved
+                      </span>
+                    )}
+                    {check.fields['Box Wrapped At Check'] && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <Package className="w-3 h-3" />
+                        Wrapped
+                      </span>
+                    )}
+                    {check.fields['Is Fake'] && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <XCircle className="w-3 h-3" />
+                        Counterfeit
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Missing Pieces */}
+                  {check.fields['Missing Pieces'] && (
+                    <div className="mb-3 p-2 bg-white rounded border border-red-200">
+                      <p className="text-sm font-medium text-red-800 mb-1">
+                        Missing Pieces:
+                      </p>
+                      <p className="text-sm text-red-700">
+                        {check.fields['Missing Pieces']}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {check.fields.Notes && (
+                    <div className="mb-3 p-2 bg-white rounded border">
+                      <p className="text-sm font-medium mb-1">Notes:</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {check.fields.Notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Photos indicator */}
+                  {check.fields.Photos && check.fields.Photos.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Image className="w-4 h-4" />
+                      <span>{check.fields.Photos.length} photo(s) attached</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
