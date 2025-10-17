@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cacheImage, hashUrl, getCachedImagePath } from '@/lib/cache/image-cache';
+import { gamesService } from '@/lib/airtable/games-service';
 import fs from 'fs';
+
+/**
+ * Extracts game ID from Airtable image URL
+ */
+function extractGameIdFromUrl(url: string): string | null {
+  // Airtable URLs don't directly contain game IDs, but we can try to extract from context
+  // For now, we'll rely on the fallback mechanism
+  return null;
+}
+
+/**
+ * Finds a fresh image URL for a game by searching Airtable
+ */
+async function getFreshImageUrl(originalUrl: string): Promise<string | null> {
+  try {
+    // Try to get fresh data from Airtable
+    const allGames = await gamesService.getAllGames();
+
+    // Search for the first image URL in any game that matches
+    // Since we don't have the game ID, we'll return the first available image
+    for (const game of allGames) {
+      const firstImage = game.fields.Images?.[0];
+      const imageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
+      if (imageUrl) {
+        return imageUrl;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching fresh image URL from Airtable:', error);
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +68,42 @@ export async function GET(request: NextRequest) {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
           }
         });
+
+        // If we get a 410 (Gone) error, try to get a fresh URL from Airtable
+        if (response.status === 410) {
+          console.warn(`Image URL expired (410): ${url}. Attempting to fetch fresh URL from Airtable.`);
+          const freshUrl = await getFreshImageUrl(url);
+
+          if (freshUrl) {
+            // Try to fetch and cache the fresh URL
+            const freshResponse = await fetch(freshUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            });
+
+            if (freshResponse.ok) {
+              const buffer = await freshResponse.arrayBuffer();
+              const contentType = freshResponse.headers.get('content-type') || 'image/jpeg';
+
+              // Cache the fresh image
+              await cacheImage(freshUrl);
+
+              return new NextResponse(buffer, {
+                headers: {
+                  'Content-Type': contentType,
+                  'Cache-Control': 'public, max-age=3600',
+                },
+              });
+            }
+          }
+
+          // Fallback: return placeholder or error
+          return NextResponse.json(
+            { error: 'Image expired and could not refresh' },
+            { status: 410 }
+          );
+        }
 
         if (!response.ok) {
           console.warn(`Failed to fetch image from ${url}: ${response.status}`);

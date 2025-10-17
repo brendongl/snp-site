@@ -34,7 +34,9 @@
       "Bash(git tag:*)",
       "Read(//c/Users/Brendon/Documents/Claude/**)",
       "Bash(docker build:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(cmd /c taskkill /PID 2152 /F)",
+      "Bash(cmd /c \"wmic process where ProcessId=2152 delete\")"
     ],
     "deny": [],
     "ask": []

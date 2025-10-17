@@ -37,18 +37,42 @@ export async function GET(request: Request) {
   try {
     // Try to get games from cache first
     let allGames = getCachedGames();
+    let shouldRefreshCache = false;
 
-    // If no cache exists, fetch from Airtable and cache it
-    if (!allGames) {
-      console.log('Cache miss - fetching from Airtable');
-      allGames = await gamesService.getAllGames();
-      setCachedGames(allGames);
-      console.log(`Cached ${allGames.length} games`);
+    // Check if cache needs refresh (older than 1 hour for URL freshness)
+    if (allGames) {
+      const metadata = require('@/lib/cache/games-cache').getCacheMetadata();
+      if (metadata.lastUpdated) {
+        const cacheAge = Date.now() - new Date(metadata.lastUpdated).getTime();
+        const oneHour = 60 * 60 * 1000;
+        if (cacheAge > oneHour) {
+          console.log('Cache is stale (>1 hour old) - refreshing for fresh Airtable URLs');
+          shouldRefreshCache = true;
+        }
+      }
+    }
 
-      // Start background image caching (don't await)
-      cacheGameImages(allGames).catch(err =>
-        console.error('Error in background image caching:', err)
-      );
+    // If no cache exists or cache is stale, fetch from Airtable and cache it
+    if (!allGames || shouldRefreshCache) {
+      try {
+        console.log('Fetching fresh games from Airtable');
+        allGames = await gamesService.getAllGames();
+        setCachedGames(allGames);
+        console.log(`Cached ${allGames.length} games with fresh URLs`);
+
+        // Start background image caching (don't await)
+        cacheGameImages(allGames).catch(err =>
+          console.error('Error in background image caching:', err)
+        );
+      } catch (fetchError) {
+        // If fresh fetch fails, fall back to cached data if available
+        if (allGames) {
+          console.warn('Failed to fetch fresh games, using cached data:', fetchError);
+        } else {
+          // No cache and fetch failed
+          throw fetchError;
+        }
+      }
     } else {
       console.log(`Cache hit - returning ${allGames.length} games`);
     }
