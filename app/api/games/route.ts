@@ -35,47 +35,19 @@ async function cacheGameImages(games: any[]) {
 
 export async function GET(request: Request) {
   try {
-    // Try to get games from cache first
-    let allGames = getCachedGames();
-    let shouldRefreshCache = false;
+    // Always fetch fresh from Airtable to ensure URLs are valid
+    // Airtable image URLs expire within hours, so we prioritize freshness
+    console.log('Fetching fresh games from Airtable for URL freshness');
+    let allGames = await gamesService.getAllGames();
 
-    // Check if cache needs refresh (older than 1 hour for URL freshness)
-    if (allGames) {
-      const metadata = require('@/lib/cache/games-cache').getCacheMetadata();
-      if (metadata.lastUpdated) {
-        const cacheAge = Date.now() - new Date(metadata.lastUpdated).getTime();
-        const oneHour = 60 * 60 * 1000;
-        if (cacheAge > oneHour) {
-          console.log('Cache is stale (>1 hour old) - refreshing for fresh Airtable URLs');
-          shouldRefreshCache = true;
-        }
-      }
-    }
+    // Cache it for subsequent requests
+    setCachedGames(allGames);
+    console.log(`Cached ${allGames.length} games with fresh URLs`);
 
-    // If no cache exists or cache is stale, fetch from Airtable and cache it
-    if (!allGames || shouldRefreshCache) {
-      try {
-        console.log('Fetching fresh games from Airtable');
-        allGames = await gamesService.getAllGames();
-        setCachedGames(allGames);
-        console.log(`Cached ${allGames.length} games with fresh URLs`);
-
-        // Start background image caching (don't await)
-        cacheGameImages(allGames).catch(err =>
-          console.error('Error in background image caching:', err)
-        );
-      } catch (fetchError) {
-        // If fresh fetch fails, fall back to cached data if available
-        if (allGames) {
-          console.warn('Failed to fetch fresh games, using cached data:', fetchError);
-        } else {
-          // No cache and fetch failed
-          throw fetchError;
-        }
-      }
-    } else {
-      console.log(`Cache hit - returning ${allGames.length} games`);
-    }
+    // Start background image caching (don't await)
+    cacheGameImages(allGames).catch(err =>
+      console.error('Error in background image caching:', err)
+    );
 
     // Get categories for filter options
     const allCategories = gamesService.getAllCategories(allGames);
@@ -87,6 +59,25 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error in games API:', error);
+
+    // If fetch fails, try to use cache as fallback
+    try {
+      console.warn('Failed to fetch fresh games from Airtable, attempting to use cache');
+      const cachedGames = getCachedGames();
+      if (cachedGames && cachedGames.length > 0) {
+        console.log(`Fallback: returning ${cachedGames.length} cached games (URLs may be expired)`);
+        const allCategories = gamesService.getAllCategories(cachedGames);
+        return NextResponse.json({
+          games: cachedGames,
+          totalCount: cachedGames.length,
+          categories: allCategories,
+        });
+      }
+    } catch (fallbackError) {
+      console.error('Fallback cache retrieval also failed:', fallbackError);
+    }
+
+    // All options failed
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch games';
     const errorCause = (error as any)?.cause?.code;
     const isTimeout = errorMessage.includes('aborted') ||
