@@ -35,14 +35,21 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
         url.searchParams.append('offset', offset);
       }
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${AIRTABLE_API_KEY}`,
         },
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
+
       if (!response.ok) {
-        throw new Error(`Airtable API error: ${response.statusText}`);
+        const errorBody = await response.text().catch(() => 'Unable to read error body');
+        throw new Error(`Airtable API error: ${response.status} ${response.statusText} - ${errorBody}`);
       }
 
       const data: AirtableResponse = await response.json();
@@ -109,14 +116,21 @@ export async function getChecksForGame(gameId: string): Promise<ContentCheck[]> 
         url.searchParams.append('offset', offset);
       }
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${AIRTABLE_API_KEY}`,
         },
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
+
       if (!response.ok) {
-        throw new Error(`Airtable API error: ${response.statusText}`);
+        const errorBody = await response.text().catch(() => 'Unable to read error body');
+        throw new Error(`Airtable API error: ${response.status} ${response.statusText} - ${errorBody}`);
       }
 
       const data: AirtableResponse = await response.json();

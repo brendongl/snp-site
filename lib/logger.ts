@@ -38,21 +38,28 @@ class Logger {
   constructor() {
     // Ensure logs directory exists
     this.logDir = join(process.cwd(), 'logs');
-    if (!existsSync(this.logDir)) {
-      mkdirSync(this.logDir, { recursive: true });
-    }
+    try {
+      if (!existsSync(this.logDir)) {
+        mkdirSync(this.logDir, { recursive: true });
+      }
 
-    // Create daily log files
-    const dateStr = new Date().toISOString().split('T')[0];
-    this.currentLogFile = join(this.logDir, `app-${dateStr}.log`);
-    this.errorLogFile = join(this.logDir, `errors-${dateStr}.log`);
+      // Create daily log files
+      const dateStr = new Date().toISOString().split('T')[0];
+      this.currentLogFile = join(this.logDir, `app-${dateStr}.log`);
+      this.errorLogFile = join(this.logDir, `errors-${dateStr}.log`);
 
-    // Create files if they don't exist
-    if (!existsSync(this.currentLogFile)) {
-      writeFileSync(this.currentLogFile, '');
-    }
-    if (!existsSync(this.errorLogFile)) {
-      writeFileSync(this.errorLogFile, '');
+      // Create files if they don't exist
+      if (!existsSync(this.currentLogFile)) {
+        writeFileSync(this.currentLogFile, '');
+      }
+      if (!existsSync(this.errorLogFile)) {
+        writeFileSync(this.errorLogFile, '');
+      }
+    } catch (error) {
+      console.warn('Unable to create log files (permission denied). Logging to console only.');
+      // Set dummy paths so the logger still works
+      this.currentLogFile = '';
+      this.errorLogFile = '';
     }
   }
 
@@ -120,6 +127,11 @@ class Logger {
   }
 
   private writeToFile(entry: LogEntry) {
+    // Skip file writing if log files couldn't be created
+    if (!this.currentLogFile || !this.errorLogFile) {
+      return;
+    }
+
     try {
       const fileLog = this.formatFileLog(entry);
       appendFileSync(this.currentLogFile, fileLog);
@@ -129,7 +141,7 @@ class Logger {
         appendFileSync(this.errorLogFile, fileLog);
       }
     } catch (error) {
-      console.error('Failed to write to log file:', error);
+      // Silently fail - don't spam console with permission errors
     }
   }
 

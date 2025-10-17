@@ -35,8 +35,15 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error in content checks API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch content checks';
+    const isTimeout = errorMessage.includes('aborted') || errorMessage.includes('ETIMEDOUT');
+
     return NextResponse.json(
-      { error: 'Failed to fetch content checks' },
+      {
+        error: isTimeout
+          ? 'Request timeout - unable to reach Airtable. Check network connectivity.'
+          : errorMessage
+      },
       { status: 500 }
     );
   }

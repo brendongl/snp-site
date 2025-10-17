@@ -35,13 +35,15 @@ export function ContentCheckHistory({
     try {
       const response = await fetch(`/api/content-checks?gameId=${gameId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch content checks');
+        const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(data.error || 'Failed to fetch content checks');
       }
       const data = await response.json();
       setChecks(data.checks || []);
     } catch (err) {
       console.error('Error fetching content checks:', err);
-      setError('Failed to load content check history');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load content check history';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,15 @@ export function ContentCheckHistory({
           )}
 
           {error && (
-            <div className="text-center py-8 text-red-600">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+              <p className="font-medium text-red-800 mb-2">Failed to Load Content Checks</p>
+              <p className="text-sm text-red-600">{error}</p>
+              {error.includes('timeout') && (
+                <p className="text-xs text-red-500 mt-2">
+                  This is likely a Docker networking issue. Check your container's network settings.
+                </p>
+              )}
+            </div>
           )}
 
           {!loading && !error && checks.length === 0 && (

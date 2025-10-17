@@ -12,7 +12,11 @@ interface GameCardProps {
 
 export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
   const firstImage = game.fields.Images?.[0];
-  const imageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
+  const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
+  // Use cached image proxy if URL exists
+  const imageUrl = originalImageUrl
+    ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
+    : undefined;
 
   return (
     <div

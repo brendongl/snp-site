@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getCacheMetadata } from '@/lib/cache/games-cache';
+import { getCacheStats } from '@/lib/cache/image-cache';
 
 export async function GET() {
   // Test DNS resolution
@@ -70,10 +72,26 @@ export async function GET() {
     };
   }
 
+  // Get cache statistics
+  const gamesCache = getCacheMetadata();
+  const imageCache = getCacheStats();
+
   return NextResponse.json({
     status: airtableTest.success ? 'healthy' : 'unhealthy',
     envCheck,
     airtableTest,
+    cache: {
+      games: {
+        count: gamesCache.count,
+        lastUpdated: gamesCache.lastUpdated,
+      },
+      images: {
+        count: imageCache.totalImages,
+        sizeMB: imageCache.totalSizeMB,
+        oldestCache: imageCache.oldestCache,
+        newestCache: imageCache.newestCache,
+      },
+    },
   }, {
     status: airtableTest.success ? 200 : 500
   });

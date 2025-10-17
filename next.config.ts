@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    // Allow unoptimized images from our API proxy
+    unoptimized: false,
   },
 };
 

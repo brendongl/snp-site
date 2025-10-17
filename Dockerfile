@@ -61,8 +61,8 @@ RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Create data directory for cache with proper permissions
-RUN mkdir -p data
-RUN chown nextjs:nodejs data
+RUN mkdir -p data data/images logs
+RUN chown -R nextjs:nodejs data logs
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
