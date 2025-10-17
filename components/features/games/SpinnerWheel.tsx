@@ -28,18 +28,20 @@ export function SpinnerWheel({ games, open, onClose, onComplete }: SpinnerWheelP
   const [selectedGame, setSelectedGame] = useState<BoardGame | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [translateY, setTranslateY] = useState(0);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const reelRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Create tripled game array for infinite scroll effect
   const tripledGames = [...games, ...games, ...games];
 
-  // Reset when opening - start at middle section
+  // Reset when opening - start at middle section and clear loaded images
   useEffect(() => {
     if (open && games.length > 0) {
       setSelectedGame(null);
       setIsSpinning(false);
       setCurrentIndex(0);
+      setLoadedImages(new Set());
       // Position at middle section minus half viewport to center some images
       const startOffset = -(games.length * ICON_HEIGHT - ICON_HEIGHT * 1.5);
       setTranslateY(startOffset);
@@ -115,6 +117,10 @@ export function SpinnerWheel({ games, open, onClose, onComplete }: SpinnerWheelP
     roll();
   };
 
+  const handleImageLoad = (gameId: string) => {
+    setLoadedImages(prev => new Set(prev).add(gameId));
+  };
+
   const handleClose = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -182,14 +188,34 @@ export function SpinnerWheel({ games, open, onClose, onComplete }: SpinnerWheelP
                       >
                         <div className="relative w-24 h-24 rounded-lg overflow-hidden">
                           {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={game.fields['Game Name']}
-                              fill
-                              className="object-cover"
-                              sizes="96px"
-                              priority={index < games.length * 2} // Preload first two sets
-                            />
+                            <>
+                              {/* Blurred background layer - only show after image loads */}
+                              {loadedImages.has(game.id) && imageUrl && (
+                                <div
+                                  className="absolute inset-0"
+                                  style={{
+                                    backgroundImage: `url(${imageUrl})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    filter: 'blur(10px)',
+                                    zIndex: 0
+                                  }}
+                                />
+                              )}
+
+                              {/* Sharp image layer on top - uses object-contain to fit entire image */}
+                              {imageUrl && (
+                                <Image
+                                  src={imageUrl}
+                                  alt={game.fields['Game Name']}
+                                  fill
+                                  className="object-contain relative z-10"
+                                  sizes="96px"
+                                  priority={index < games.length * 2}
+                                  onLoad={() => handleImageLoad(game.id)}
+                                />
+                              )}
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-700 text-gray-400 text-xs">
                               No Image

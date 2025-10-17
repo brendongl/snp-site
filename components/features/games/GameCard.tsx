@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { BoardGame } from '@/types';
 import { Users, Calendar, Brain, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
@@ -11,6 +12,13 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Reset image loaded state when game changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [game.id]);
+
   const firstImage = game.fields.Images?.[0];
   const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
   // Use cached image proxy if URL exists
@@ -27,17 +35,33 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
       <div className="aspect-square relative overflow-hidden rounded-t-lg bg-muted">
         {imageUrl ? (
           <>
+            {/* Blurred background layer - only show after image loads to fill gaps from aspect ratio differences */}
+            {imageLoaded && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(10px)',
+                  zIndex: 0
+                }}
+              />
+            )}
+
+            {/* Sharp image layer on top - uses object-contain to fit entire image without cropping */}
             <Image
               src={imageUrl}
               alt={game.fields['Game Name']}
               fill
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-contain transition-transform group-hover:scale-105 relative z-10"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+              onLoad={() => setImageLoaded(true)}
             />
 
             {/* Year badge - top right overlay */}
             {game.fields['Year Released'] && (
-              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium">
+              <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium z-20">
                 {game.fields['Year Released']}
               </div>
             )}

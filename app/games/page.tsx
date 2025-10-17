@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images } from 'lucide-react';
 import { VERSION, BUILD_DATE } from '@/lib/version';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button';
@@ -38,6 +38,7 @@ function GamesPageContent() {
   const [showAddGameDialog, setShowAddGameDialog] = useState(false);
   const [staffSortOption, setStaffSortOption] = useState<SortOption | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
 
   const [filters, setFilters] = useState<FilterType>({
     search: '',
@@ -429,7 +430,7 @@ function GamesPageContent() {
       </div>
 
       {/* Search and Filters - Collapsible */}
-      <div className="sticky top-0 z-10 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
+      <div className="sticky top-0 z-50 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
         {isHeaderCollapsed ? (
           // Collapsed view - slim bar with active filters
           <div className="flex items-center justify-between gap-2 py-2 flex-wrap">
@@ -522,6 +523,16 @@ function GamesPageContent() {
 
               <div className="flex flex-wrap gap-2">
                 <Button
+                  variant={picturesOnlyMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPicturesOnlyMode(!picturesOnlyMode)}
+                >
+                  <Images className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Pictures Only</span>
+                  <span className="sm:hidden">Pictures</span>
+                </Button>
+
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={handleRandomGame}
@@ -587,16 +598,67 @@ function GamesPageContent() {
       </div>
 
       {/* Games Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-        {filteredAndSortedGames.map((game) => (
-          <GameCard
-            key={game.id}
-            game={game}
-            onClick={() => setSelectedGame(game)}
-            isStaff={isStaff}
-          />
-        ))}
-      </div>
+      {picturesOnlyMode ? (
+        // Pictures Only Mode - 3 column grid with just images
+        <div className="grid grid-cols-3 gap-2 pt-4">
+          {filteredAndSortedGames.map((game) => {
+            const firstImage = game.fields.Images?.[0];
+            const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
+            const imageUrl = originalImageUrl
+              ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
+              : undefined;
+
+            return (
+              <div
+                key={game.id}
+                className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity group"
+                onClick={() => {
+                  setPicturesOnlyMode(false);
+                  setSelectedGame(game);
+                }}
+              >
+                {imageUrl ? (
+                  <>
+                    {/* Blurred background */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: `url(${imageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'blur(10px)',
+                        zIndex: 0
+                      }}
+                    />
+                    {/* Sharp image */}
+                    <img
+                      src={imageUrl}
+                      alt={game.fields['Game Name']}
+                      className="w-full h-full object-contain relative z-10"
+                    />
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted">
+                    <span className="text-xs text-muted-foreground">No image</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        // Normal Mode - 5 column grid with cards
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 pt-4">
+          {filteredAndSortedGames.map((game) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              onClick={() => setSelectedGame(game)}
+              isStaff={isStaff}
+            />
+          ))}
+        </div>
+      )}
 
       {/* No results */}
       {filteredAndSortedGames.length === 0 && (
