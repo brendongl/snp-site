@@ -45,13 +45,25 @@ function loadMetadata(): CacheMetadataStore {
   }
 }
 
-// Save metadata
+// Save metadata with atomic write (write to temp file, then rename)
 function saveMetadata(metadata: CacheMetadataStore) {
   try {
     ensureImageCacheDir();
-    fs.writeFileSync(CACHE_METADATA_FILE, JSON.stringify(metadata, null, 2), 'utf-8');
+    const tempFile = `${CACHE_METADATA_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(metadata, null, 2), 'utf-8');
+    // Atomic rename to prevent corruption if process crashes mid-write
+    fs.renameSync(tempFile, CACHE_METADATA_FILE);
   } catch (error) {
     console.error('Error saving image cache metadata:', error);
+    // Clean up temp file if it exists
+    try {
+      const tempFile = `${CACHE_METADATA_FILE}.tmp`;
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    } catch (cleanupError) {
+      // Ignore cleanup errors
+    }
   }
 }
 
