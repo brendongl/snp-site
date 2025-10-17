@@ -261,8 +261,11 @@ function GamesPageContent() {
           return nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: 'base' });
         case 'year':
           return (b.fields['Year Released'] || 0) - (a.fields['Year Released'] || 0);
-        case 'maxPlayers':
-          return (b.fields['Max. Players'] || 0) - (a.fields['Max. Players'] || 0);
+        case 'maxPlayers': {
+          const maxA = a.fields['Max. Players'] === 'No Limit' ? 999 : parseInt(a.fields['Max. Players'] || '0');
+          const maxB = b.fields['Max. Players'] === 'No Limit' ? 999 : parseInt(b.fields['Max. Players'] || '0');
+          return maxB - maxA;
+        }
         case 'complexity':
           return (a.fields['Complexity'] || 0) - (b.fields['Complexity'] || 0);
         case 'lastChecked':
