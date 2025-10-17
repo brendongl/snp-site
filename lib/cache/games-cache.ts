@@ -50,7 +50,8 @@ export function setCachedGames(games: BoardGame[]): void {
     fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), 'utf-8');
   } catch (error) {
     console.error('Error writing cache:', error);
-    throw error;
+    // Don't throw - allow app to continue without file cache
+    // This is especially important in Docker environments with permission issues
   }
 }
 
@@ -101,7 +102,7 @@ export function setCachedContentChecks(checks: ContentCheck[]): void {
     fs.writeFileSync(CONTENT_CHECKS_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf-8');
   } catch (error) {
     console.error('Error writing content checks cache:', error);
-    throw error;
+    // Don't throw - allow app to continue without file cache
   }
 }
 
@@ -143,6 +144,6 @@ export function mergeGamesIntoCache(updatedGames: BoardGame[]): void {
     console.log(`Merged ${updatedGames.length} updated games into cache of ${existingGames.length} games. Total: ${mergedGames.length}`);
   } catch (error) {
     console.error('Error merging games into cache:', error);
-    throw error;
+    // Don't throw - allow app to continue without file cache
   }
 }
