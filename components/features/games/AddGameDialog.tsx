@@ -631,7 +631,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
             </Button>
             <Button
               type="submit"
-              disabled={loading || success || !bggId || (previewData && !selectedBoxImage)}
+              disabled={loading || success || !bggId || !!(previewData && !selectedBoxImage)}
             >
               {loading ? (
                 <>
