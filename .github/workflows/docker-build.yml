@@ -1,0 +1,132 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Read version from lib/version.ts
+        id: version
+        run: |
+          VERSION=$(grep "VERSION = " lib/version.ts | sed "s/.*VERSION = '\(.*\)';/\1/")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Send Discord notification
+        if: success()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Discord webhook URL not configured, skipping notification"
+            exit 0
+          fi
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "✅ Sip N'\'' Play Portal Deployed",
+                "description": "New version successfully built and pushed to registry",
+                "color": 5763719,
+                "fields": [
+                  {
+                    "name": "Version",
+                    "value": "v${{ steps.version.outputs.VERSION }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "[`${{ github.sha }}`.substr(0,7)](${{ github.event.head_commit.url }})",
+                    "inline": false
+                  },
+                  {
+                    "name": "Image",
+                    "value": "ghcr.io/${{ github.repository }}:latest",
+                    "inline": false
+                  }
+                ],
+                "timestamp": "${{ github.event.head_commit.timestamp }}"
+              }]
+            }' \
+            $DISCORD_WEBHOOK_URL
+
+      - name: Send Discord notification on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Discord webhook URL not configured, skipping notification"
+            exit 0
+          fi
+          curl -H "Content-Type: application/json" \
+            -d '{
+              "embeds": [{
+                "title": "❌ Sip N'\'' Play Portal Build Failed",
+                "description": "Docker build or push failed",
+                "color": 15158332,
+                "fields": [
+                  {
+                    "name": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "[`${{ github.sha }}`.substr(0,7)](${{ github.event.head_commit.url }})",
+                    "inline": false
+                  }
+                ],
+                "timestamp": "${{ github.event.head_commit.timestamp }}"
+              }]
+            }' \
+            $DISCORD_WEBHOOK_URL
