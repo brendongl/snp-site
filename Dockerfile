@@ -24,12 +24,23 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Set dummy environment variables for build (runtime will use actual values)
 # These prevent build-time errors when Next.js tries to validate env vars
-ENV AIRTABLE_API_KEY=dummy_key_for_build
-ENV AIRTABLE_GAMES_BASE_ID=dummy_base_id
-ENV AIRTABLE_GAMES_TABLE_ID=dummy_table_id
-ENV AIRTABLE_GAMES_VIEW_ID=dummy_view_id
-ENV AIRTABLE_CUSTOMER_BASE_ID=dummy_base_id
-ENV AIRTABLE_CUSTOMER_TABLE_ID=dummy_table_id
+ENV AIRTABLE_API_KEY=dummy_key_for_build \
+    AIRTABLE_GAMES_BASE_ID=dummy_base_id \
+    AIRTABLE_GAMES_TABLE_ID=dummy_table_id \
+    AIRTABLE_GAMES_VIEW_ID=dummy_view_id \
+    AIRTABLE_CUSTOMER_BASE_ID=dummy_base_id \
+    AIRTABLE_CUSTOMER_TABLE_ID=dummy_table_id \
+    AIRTABLE_EVENTS_TABLE_ID=dummy_table_id \
+    NEXTAUTH_URL=http://localhost:3000 \
+    NEXTAUTH_SECRET=dummy_secret_for_build_only \
+    DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/dummy \
+    FACEBOOK_APP_ID=dummy_app_id \
+    FACEBOOK_APP_SECRET=dummy_secret \
+    FACEBOOK_PAGE_ID=dummy_page_id \
+    FACEBOOK_ACCESS_TOKEN=dummy_token \
+    N8N_WEBHOOK_URL=https://dummy.n8n.com/webhook/dummy \
+    N8N_API_KEY=dummy_api_key \
+    GOOGLE_MAPS_API_KEY=dummy_maps_key
 
 RUN npm run build
 
