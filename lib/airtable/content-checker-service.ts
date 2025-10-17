@@ -4,10 +4,51 @@ import { logger } from '@/lib/logger';
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const BASE_ID = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
 const CONTENT_CHECK_TABLE_ID = 'tblHWhNrHc9r3u42Q';
+const STAFF_TABLE_ID = 'tblMTy5HcxmTzPMNf';
 
 interface AirtableResponse {
   records: any[];
   offset?: string;
+}
+
+/**
+ * Fetch staff records and create a map of ID to Name
+ */
+async function fetchStaffMap(): Promise<Record<string, string>> {
+  if (!AIRTABLE_API_KEY) {
+    return {};
+  }
+
+  try {
+    const url = new URL(
+      `https://api.airtable.com/v0/${BASE_ID}/${STAFF_TABLE_ID}`
+    );
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn('Content Check', 'Failed to fetch staff records', { status: response.status });
+      return {};
+    }
+
+    const data: AirtableResponse = await response.json();
+    const staffMap: Record<string, string> = {};
+
+    data.records.forEach((record) => {
+      if (record.fields['Staff Name']) {
+        staffMap[record.id] = record.fields['Staff Name'];
+      }
+    });
+
+    return staffMap;
+  } catch (error) {
+    logger.warn('Content Check', 'Error fetching staff map', error instanceof Error ? error : new Error(String(error)));
+    return {};
+  }
 }
 
 /**
@@ -57,13 +98,18 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
       offset = data.offset;
     } while (offset);
 
+    // Fetch staff map to convert Inspector IDs to names
+    const staffMap = await fetchStaffMap();
+
     return allRecords.map((record) => ({
       id: record.id,
       fields: {
         'Record ID': record.fields['Record ID'],
         'Board Game': record.fields['Board Game'],
         'Check Date': record.fields['Check Date'],
-        'Inspector': record.fields['Inspector'],
+        'Inspector': record.fields['Inspector'] && Array.isArray(record.fields['Inspector'])
+          ? record.fields['Inspector'].map((id: string) => staffMap[id] || id)
+          : record.fields['Inspector'],
         'Status': record.fields['Status'],
         'Missing Pieces': record.fields['Missing Pieces'],
         'Box Condition': record.fields['Box Condition'],
