@@ -16,8 +16,10 @@ export async function initMixpanel() {
     });
     isInitialized = true;
 
-    // Get geolocation data and set as user properties
-    await setGeolocationProperties();
+    // Get geolocation data in background (don't block initialization)
+    setGeolocationProperties().catch(() => {
+      // Silently fail - analytics should never break the app
+    });
   } catch (error) {
     console.error('Failed to initialize Mixpanel:', error);
   }
@@ -26,7 +28,19 @@ export async function initMixpanel() {
 // Fetch geolocation data from IP-based service
 async function setGeolocationProperties() {
   try {
-    const response = await fetch('https://ipapi.co/json/');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch('https://ipapi.co/json/', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn('Geolocation API returned status:', response.status);
+      return;
+    }
+
     const data = await response.json();
 
     mixpanel.register({
@@ -37,8 +51,10 @@ async function setGeolocationProperties() {
       timezone: data.timezone || 'Unknown',
     });
   } catch (error) {
-    console.warn('Failed to fetch geolocation:', error);
     // Silently fail - analytics shouldn't break the app
+    if (error instanceof Error && error.name !== 'AbortError') {
+      console.warn('Failed to fetch geolocation:', error.message);
+    }
   }
 }
 
