@@ -141,7 +141,7 @@ export interface GameFilters {
   yearRange?: { min?: number; max?: number };
   playerCount?: { min?: number; max?: number };
   complexity?: { min?: number; max?: number };
-  quickFilter?: 'sixPlus' | 'couples' | 'social';
+  quickFilter?: 'sixPlus' | 'couples' | 'social' | 'noChecks';
   bestPlayerCount?: number;
 }
 

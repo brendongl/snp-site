@@ -169,14 +169,16 @@ curl -X POST http://localhost:3000/api/games/refresh?full=true
 3. Update [lib/airtable/games-service.ts](lib/airtable/games-service.ts) - field references
 4. If new filter needed, follow "Adding a New Filter" steps above
 
-### Deploying to Unraid
+### Deploying to Railway
 After pushing to GitHub:
-```bash
-# Option 1: Watchtower auto-pulls (if configured)
-# Option 2: Manual rebuild
-docker pull ghcr.io/brendongl/snp-site:latest
-docker compose up -d
-```
+1. GitHub Actions automatically builds Docker image
+2. Push to `ghcr.io/brendongl/snp-site:latest`
+3. Railway detects new image and auto-deploys
+4. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed setup
+
+**Manual Deploy (if needed):**
+- Force redeploy via Railway dashboard: Settings → Restart
+- Or make a new commit and push to trigger rebuild
 
 ## Key Files Reference
 
@@ -231,10 +233,11 @@ docker compose up -d
    - GitHub Actions automatically builds Docker image
    - Image pushed to `ghcr.io/brendongl/snp-site:latest`
 
-4. **Deploy to Unraid**
-   - Pull latest image or rebuild Docker container
-   - Container runs on configured port
-   - Data persists in `data/` volume
+4. **Deploy to Railway**
+   - Railway watches your repo for changes
+   - Auto-deploys on GitHub push
+   - Visit `https://sipnplay.cafe` to see live changes
+   - See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for setup details
 
 ## Architecture Notes
 
@@ -355,8 +358,10 @@ See `.claude/settings.local.json` for Claude Code extension preferences.
 
 ---
 
-**Last Updated**: October 17, 2025
-**Current Version**: 1.0.5
+**Last Updated**: October 18, 2025
+**Current Version**: 1.0.6
+**Hosting**: Railway → Cloudflare
+**Domain**: https://sipnplay.cafe
 
 ## Architecture Notes
 

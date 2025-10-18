@@ -1,199 +1,342 @@
-# Docker Deployment Guide
+# Docker & Production Build Guide
 
-## Quick Start
+This guide covers how the app is built, containerized, and deployed to Railway.
 
-### Using Docker Compose
+---
 
-1. Copy `.env.example` to `.env` and fill in your Airtable credentials:
-```bash
-cp .env.example .env
+## Overview
+
+The app uses a **multi-stage Docker build** for optimized production images:
+
+```
+Dockerfile (Multi-Stage Build)
+    ↓
+Stage 1: deps      → Install node_modules
+    ↓
+Stage 2: builder   → Build Next.js app (npm run build)
+    ↓
+Stage 3: runner    → Final production image (minimal size)
+    ↓
+Push to GitHub Container Registry (GHCR)
+    ↓
+Railway auto-detects & deploys
+    ↓
+https://sipnplay.cafe
 ```
 
-2. Edit `.env` with your values:
-```bash
-AIRTABLE_API_KEY=key_xxxxxxxxxxxxx
-AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
-AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
-AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE
+---
+
+## Dockerfile Breakdown
+
+### Stage 1: Dependencies (`deps`)
+```dockerfile
+FROM node:20-alpine AS deps
+# Install libc6-compat for Alpine compatibility
+# Copy package.json + package-lock.json
+# Run: npm ci (clean install)
 ```
 
-3. Build and run:
-```bash
-docker-compose up -d
+- Uses Alpine Linux (small base image)
+- Caches dependencies layer for faster rebuilds
+
+### Stage 2: Builder (`builder`)
+```dockerfile
+FROM base AS builder
+# Copy node_modules from deps stage
+# Copy entire codebase
+# Set dummy environment variables (for build)
+# Run: npm run build
+# Outputs to .next/ directory
 ```
 
-4. Access the application at `http://localhost:3000`
+- Builds Next.js app
+- Generates standalone output (no dependencies needed in final image)
 
-### Using Docker CLI
+### Stage 3: Runner (`runner`)
+```dockerfile
+FROM base AS runner
+# Copy .next/static and .next/standalone from builder
+# Create data/ directory for persistent cache
+# Set user to non-root (security)
+# Expose port 3000
+# Start: node server.js
+```
 
+- Final production image
+- Minimal size (only runtime files)
+- Persistent storage for cache
+
+---
+
+## Build & Push (GitHub Actions)
+
+**Automatic on every push to `main`:**
+
+1. GitHub Actions workflow (`.github/workflows/docker-build.yml`) triggers
+2. Builds multi-stage image
+3. Tags as:
+   - `ghcr.io/brendongl/snp-site:latest`
+   - `ghcr.io/brendongl/snp-site:v1.0.6` (version-specific)
+4. Pushes to GitHub Container Registry
+5. Railway detects new image and auto-deploys
+
+**No manual Docker commands needed** - it's fully automated!
+
+---
+
+## Local Docker Testing (Optional)
+
+### Build Locally
 ```bash
-docker build -t sipnplay-portal .
+# Build image (takes 3-5 minutes first time)
+docker build -t snp-site:local .
+```
 
+### Run Locally
+```bash
+# Run with required environment variables
 docker run -d \
-  --name sipnplay-portal \
+  --name snp-site-test \
   -p 3000:3000 \
-  -e AIRTABLE_API_KEY=your_key \
-  -e AIRTABLE_GAMES_BASE_ID=your_base_id \
-  -e AIRTABLE_GAMES_TABLE_ID=your_table_id \
-  -e AIRTABLE_GAMES_VIEW_ID=your_view_id \
-  sipnplay-portal
+  -e AIRTABLE_API_KEY=key_xxxxxxxxxxxxx \
+  -e AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu \
+  -e AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr \
+  -e AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE \
+  snp-site:local
+
+# Or with docker-compose (if .env is set up)
+docker-compose up
 ```
 
-## Unraid Setup
-
-### Method 1: Docker Compose (Recommended)
-
-1. Install "Docker Compose Manager" plugin from Community Applications
-2. Create a new stack with the `docker-compose.yml` from this repo
-3. Add environment variables in the Unraid UI
-4. Deploy the stack
-
-### Method 2: Manual Docker Container
-
-1. Go to Docker tab in Unraid
-2. Click "Add Container"
-3. Fill in the following:
-
-**Container Settings:**
-- Name: `sipnplay-portal`
-- Repository: `your-registry/sipnplay-portal:latest` (after pushing to registry)
-- Port: `3000` -> `3000`
-
-**Environment Variables (Required):**
-```
-AIRTABLE_API_KEY=key_xxxxxxxxxxxxx
-AIRTABLE_CUSTOMER_BASE_ID=appoZWe34JHo21N1z
-AIRTABLE_CUSTOMER_TABLE_ID=tblfat1kxUvaNnfaQ
-AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
-AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
-AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE
+### View Logs
+```bash
+docker logs -f snp-site-test
 ```
 
-**Environment Variables (Optional):**
-```
-NEXTAUTH_URL=http://your-server:3000
-NEXTAUTH_SECRET=generate-with-openssl
-DISCORD_WEBHOOK_URL=your-webhook-url
-FACEBOOK_APP_ID=your-app-id
-FACEBOOK_APP_SECRET=your-app-secret
-FACEBOOK_PAGE_ID=your-page-id
-FACEBOOK_ACCESS_TOKEN=your-token
-N8N_WEBHOOK_URL=your-n8n-webhook
-N8N_API_KEY=your-n8n-key
-GOOGLE_MAPS_API_KEY=your-maps-key
-REDIS_URL=redis://your-redis:6379
+### Stop Container
+```bash
+docker stop snp-site-test
+docker rm snp-site-test
 ```
 
-4. Click "Apply"
+---
 
-### Redis Setup (Optional but Recommended)
+## Production Build Optimization
 
-For better performance, deploy Redis:
+### Multi-Stage Benefits
 
-1. Add another container: `redis:7-alpine`
-2. Name: `sipnplay-redis`
-3. Port: `6379` -> `6379`
-4. Volume: `/mnt/user/appdata/sipnplay-redis` -> `/data`
-5. Command: `redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru`
+**Without multi-stage:**
+- Final image size: ~500 MB (includes node_modules)
+- Deploy time: 2-3 minutes
+- Runtime: Slow startup
 
-Then update the web container's `REDIS_URL` to: `redis://sipnplay-redis:6379`
+**With multi-stage:**
+- Final image size: ~150 MB (no node_modules)
+- Deploy time: 30-60 seconds
+- Runtime: Fast startup
 
-## Environment Variables Reference
+### Output File Tracing
 
-### Required Variables
-- `AIRTABLE_API_KEY` - Your Airtable API key
-- `AIRTABLE_GAMES_BASE_ID` - Games Airtable base ID
-- `AIRTABLE_GAMES_TABLE_ID` - Games table ID
-- `AIRTABLE_GAMES_VIEW_ID` - Games view ID (optional if you want all records)
+Next.js generates only necessary files:
+```bash
+# In .next/standalone/
+node server.js  # Single command to start
+```
 
-### Optional Variables
-- `AIRTABLE_CUSTOMER_BASE_ID` - Customer base ID (if using customer features)
-- `AIRTABLE_CUSTOMER_TABLE_ID` - Customer table ID
-- `AIRTABLE_EVENTS_TABLE_ID` - Events table ID
-- `NEXTAUTH_URL` - Full URL of your deployment (e.g., http://192.168.1.100:3000)
-- `NEXTAUTH_SECRET` - Secret for authentication (generate with `openssl rand -base64 32`)
-- `REDIS_URL` - Redis connection URL (defaults to redis://redis-cache:6379)
-- `DISCORD_WEBHOOK_URL` - Discord webhook for notifications
-- `FACEBOOK_*` - Facebook integration credentials
-- `N8N_*` - n8n integration credentials
-- `GOOGLE_MAPS_API_KEY` - Google Maps API key
+This reduces image size and startup time.
+
+---
+
+## Persistent Storage on Railway
+
+### Directory Structure
+```
+Container /app/
+├── .next/           ← Next.js build (read-only)
+├── public/          ← Static files
+├── node_modules/    ← Dependencies (NOT included, installed at runtime)
+└── data/            ← PERSISTENT (survives redeploys)
+    ├── games-cache.json
+    ├── image-cache-metadata.json
+    ├── images/      ← Cached game images
+    └── logs/        ← Application logs
+```
+
+### Persistent Data
+- Games cache (1-hour TTL)
+- Image cache (content-deduped)
+- Application logs
+- Survives app restarts and redeployments
+
+---
+
+## Environment Variables at Build Time
+
+The Dockerfile sets dummy values for build-time:
+
+```dockerfile
+ENV AIRTABLE_API_KEY=dummy_key_for_build \
+    AIRTABLE_GAMES_BASE_ID=dummy_base_id \
+    ...
+```
+
+**Why?** Next.js validates environment variables during build. We use dummy values because:
+1. Real values aren't needed to build (they're used at runtime)
+2. Build is public in GitHub Actions (secrets wouldn't be safe here)
+3. Railway provides real values at runtime
+
+---
 
 ## Building for Production
 
-To build and push to a registry:
+### Using GitHub (Recommended)
+1. Update version in `lib/version.ts` and `package.json`
+2. Commit and push to `main`
+3. GitHub Actions builds automatically
+4. Railway auto-deploys
 
+**You don't run Docker commands** - it's all automatic!
+
+### Manual Build (if needed)
 ```bash
-# Build
-docker build -t your-registry/sipnplay-portal:0.2.0 .
-docker build -t your-registry/sipnplay-portal:latest .
+# Build and tag with version
+docker build -t ghcr.io/brendongl/snp-site:1.0.6 .
+docker build -t ghcr.io/brendongl/snp-site:latest .
 
-# Push
-docker push your-registry/sipnplay-portal:0.2.0
-docker push your-registry/sipnplay-portal:latest
+# Push to GitHub Container Registry (requires auth)
+docker login ghcr.io -u brendongl
+docker push ghcr.io/brendongl/snp-site:1.0.6
+docker push ghcr.io/brendongl/snp-site:latest
 ```
+
+---
+
+## Troubleshooting Docker Builds
+
+### Build fails: "npm run build" error
+**Fix:**
+```bash
+# Clean and rebuild locally
+rm -rf .next node_modules
+npm ci
+npm run build
+```
+
+### Build fails: Out of memory
+- Railway free tier: 512 MB
+- Try: `npm run build` locally first to verify it works
+
+### Container won't start: "Cannot find module"
+**Fix:**
+1. Check `.dockerignore` doesn't exclude necessary files
+2. Verify `package.json` lists all dependencies
+3. Check Dockerfile copies required files
+
+### Port 3000 already in use
+**Fix:** Railway uses port 3000, but you can:
+1. Change `EXPOSE 3000` in Dockerfile (not recommended)
+2. Or use different port locally: `docker run -p 3001:3000`
+
+---
 
 ## Health Checks
 
-The container includes health checks:
-- Web: `http://localhost:3000/api/health`
-- Redis: `redis-cli ping`
-
-Monitor container health:
+### In-Container Health
 ```bash
-docker ps
-docker inspect sipnplay-portal | grep Health -A 10
+# From inside container
+curl http://localhost:3000/api/health
+# Returns: { "status": "healthy", "airtable": "connected", ... }
 ```
 
-## Logs
-
-View logs:
+### Docker Health Check
 ```bash
-# All logs
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f sipnplay-web
-
-# Last 100 lines
-docker logs --tail 100 sipnplay-portal
+docker inspect snp-site-test | grep Health -A 10
 ```
 
-## Troubleshooting
+### Railway Health Monitoring
+1. Railway dashboard → Metrics tab
+2. View CPU, Memory, Network usage
+3. Check deployment status
 
-### Container won't start
-1. Check logs: `docker logs sipnplay-portal`
-2. Verify environment variables are set
-3. Ensure Airtable credentials are valid
+---
 
-### Redis connection issues
-1. Check Redis is running: `docker ps | grep redis`
-2. Verify network connectivity: `docker network ls`
-3. Check REDIS_URL format: `redis://host:6379`
+## Docker Compose (Local Development)
 
-### Port already in use
-Change the host port in docker-compose.yml:
+If you want to run full stack locally:
+
 ```yaml
-ports:
-  - "3001:3000"  # Change 3001 to any available port
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
+      - AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
+      - AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
+      - AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 ```
+
+**Use:**
+```bash
+# Create .env file with AIRTABLE_API_KEY
+echo "AIRTABLE_API_KEY=key_xxx" > .env
+
+# Start stack
+docker-compose up
+
+# Stop
+docker-compose down
+```
+
+---
 
 ## Performance Tuning
 
-### Redis Memory
-Adjust Redis memory limit in docker-compose.yml:
-```yaml
-command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-```
+### Build Optimization
+- Alpine Linux base (small)
+- Multi-stage build (removes build dependencies)
+- Layer caching (npm ci layer cached)
 
-### Container Resources
-Add resource limits:
-```yaml
-deploy:
-  resources:
-    limits:
-      cpus: '2'
-      memory: 1G
-    reservations:
-      cpus: '0.5'
-      memory: 512M
-```
+### Runtime Optimization
+- Standalone Next.js build
+- Minimal dependencies in image
+- Persistent cache reduces API calls
+
+### Deployment Time
+- Local build: ~3-5 minutes
+- GitHub Actions push: ~5-7 minutes total
+- Railway redeploy: ~1-2 minutes
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| [Dockerfile](Dockerfile) | Multi-stage build configuration |
+| [.dockerignore](.dockerignore) | Files to exclude from image |
+| [.github/workflows/docker-build.yml](.github/workflows/docker-build.yml) | GitHub Actions auto-build |
+| [package.json](package.json) | Dependencies (used in Docker build) |
+
+---
+
+## Next Steps
+
+- **For Development:** See [CLAUDE.md](CLAUDE.md)
+- **For Production:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+- **For Railway Setup:** See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
+
+---
+
+**Last Updated:** October 18, 2025
+**Docker Base:** Node 20 Alpine
+**Image Size:** ~150 MB
+**Build Time:** ~5 minutes (first), ~2 minutes (cached)

@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SlidersHorizontal, Users, Heart, UsersRound, X, Sparkles, Info } from 'lucide-react';
+import { SlidersHorizontal, Users, Heart, UsersRound, X, Sparkles, Info, AlertCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -20,7 +20,7 @@ import { GameFilters as FilterType } from '@/types';
 
 interface GameFiltersProps {
   filters: FilterType;
-  onQuickFilter: (filter: 'sixPlus' | 'couples' | 'social' | null) => void;
+  onQuickFilter: (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | null) => void;
   onOpenAdvancedFilter: () => void;
   onClearAll: () => void;
   activeFiltersCount: number;
@@ -41,6 +41,7 @@ export function GameFilters({
     if (filters.quickFilter === 'sixPlus') return '6+ Players';
     if (filters.quickFilter === 'couples') return 'Couples';
     if (filters.quickFilter === 'social') return 'Social';
+    if (filters.quickFilter === 'noChecks') return 'Games w/ No Checks';
     return 'None';
   };
 
@@ -50,14 +51,14 @@ export function GameFilters({
         {isStaff && (
           // Staff mode: Separate row for special filters dropdown
           <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-            <span className="text-sm font-medium text-muted-foreground">Staff Filters:</span>
+            <span className="text-sm font-medium text-muted-foreground">Special Filters:</span>
             <Select
               value={filters.quickFilter || 'none'}
               onValueChange={(value) => {
                 if (value === 'none') {
                   onQuickFilter(null);
                 } else {
-                  onQuickFilter(value as 'sixPlus' | 'couples' | 'social');
+                  onQuickFilter(value as 'sixPlus' | 'couples' | 'social' | 'noChecks');
                 }
               }}
             >
@@ -83,6 +84,12 @@ export function GameFilters({
                   <div className="flex items-center gap-2">
                     <UsersRound className="h-4 w-4" />
                     Social
+                  </div>
+                </SelectItem>
+                <SelectItem value="noChecks">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Games w/ No Checks
                   </div>
                 </SelectItem>
               </SelectContent>

@@ -2,6 +2,8 @@
 
 A comprehensive customer portal website for Sip n Play Cafe - a board game and video game cafe serving as a social hub for expats and locals.
 
+**Live:** [https://sipnplay.cafe](https://sipnplay.cafe)
+
 ## Features
 
 - **Authentication System**: Login connected to CustomerCRM Airtable database
@@ -14,18 +16,23 @@ A comprehensive customer portal website for Sip n Play Cafe - a board game and v
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 with TypeScript
+- **Framework**: Next.js 15 with TypeScript (Turbopack)
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Database**: Airtable (via custom adapter)
+- **Database**: Airtable
 - **Authentication**: NextAuth.js
-- **Caching**: Redis
-- **Deployment**: Docker on Unraid
-- **Version Control**: Private GitHub repository
+- **Caching**: Multi-layer cache (file-based + browser)
+- **Hosting**: Railway
+- **DNS**: Cloudflare
+- **CI/CD**: GitHub Actions (auto-build)
+- **Version Control**: GitHub repository
 
-## Development Setup
+## Quick Start - Development
 
 1. Clone the repository
-2. Copy `.env.example` to `.env.local` and fill in your credentials
+2. Copy `.env.example` to `.env.local` and fill in credentials:
+   ```bash
+   AIRTABLE_API_KEY=key_xxxxxxxxxxxxx
+   ```
 3. Install dependencies:
    ```bash
    npm install
@@ -36,24 +43,19 @@ A comprehensive customer portal website for Sip n Play Cafe - a board game and v
    ```
 5. Open [http://localhost:3000](http://localhost:3000)
 
-## Docker Development
+## Production Deployment
 
-To run Redis for caching in development:
-```bash
-docker-compose -f docker-compose.dev.yml up
+**Hosting Stack:** Railway → GitHub Actions → Cloudflare
+
+```
+Your Code Push → GitHub Actions Builds Docker → Railway Deploys → Cloudflare Routes → sipnplay.cafe
 ```
 
-## Production Deployment (Unraid)
-
-1. Build the Docker image:
-   ```bash
-   docker build -t sipnplay-portal .
-   ```
-
-2. Run with docker-compose:
-   ```bash
-   docker-compose up -d
-   ```
+**See detailed guides:**
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Complete workflow and infrastructure
+- [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) - Railway setup with Cloudflare
+- [DOCKER.md](DOCKER.md) - Docker build & optimization
+- [CLAUDE.md](CLAUDE.md) - Development workflow for Claude Code
 
 ## Project Structure
 

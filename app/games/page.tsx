@@ -245,6 +245,12 @@ function GamesPageContent() {
 
         return minPlayers >= 2 && hasSocialCategory;
       });
+    } else if (filters.quickFilter === 'noChecks') {
+      filtered = filtered.filter(game => {
+        const totalChecks = game.fields['Total Checks'];
+        // Show games with no checks (undefined, 0, or null)
+        return !totalChecks || totalChecks === 0;
+      });
     }
 
     // Sorting - use staff sort if set, otherwise regular sort
@@ -303,7 +309,7 @@ function GamesPageContent() {
   };
 
   // Handle quick filter
-  const handleQuickFilter = (filter: 'sixPlus' | 'couples' | 'social' | null) => {
+  const handleQuickFilter = (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | null) => {
     setFilters(prev => ({ ...prev, quickFilter: filter || undefined }));
   };
 
@@ -528,8 +534,8 @@ function GamesPageContent() {
                   onClick={() => setPicturesOnlyMode(!picturesOnlyMode)}
                 >
                   <Images className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Pictures Only</span>
-                  <span className="sm:hidden">Pictures</span>
+                  <span className="hidden sm:inline">Gallery Mode</span>
+                  <span className="sm:hidden">Gallery</span>
                 </Button>
 
                 <Button
@@ -578,7 +584,7 @@ function GamesPageContent() {
                       <SelectValue placeholder="Staff Sort..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Staff Sort</SelectItem>
+                      <SelectItem value="none">Staff Sorting Options</SelectItem>
                       <SelectItem value="lastChecked">Last Checked ↓</SelectItem>
                       <SelectItem value="lastCheckedDesc">Last Checked ↑</SelectItem>
                       <SelectItem value="totalChecks">Total Checks ↓</SelectItem>
