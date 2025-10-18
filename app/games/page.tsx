@@ -86,16 +86,35 @@ function GamesPageContent() {
         ? '/api/games/refresh?full=true'
         : '/api/games/refresh';
 
-      const response = await fetch(url, { method: 'POST' });
+      // Increase timeout for refresh - can take longer
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), isHardRefresh ? 60000 : 30000);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error('Failed to refresh cache');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to refresh cache');
       }
 
       // Fetch updated games
       await fetchGames();
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh');
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Refresh took too long. Please try again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Failed to refresh');
+      }
     } finally {
       setRefreshing(false);
       setHardRefreshing(false);
@@ -402,20 +421,22 @@ function GamesPageContent() {
               <span className="sm:hidden">Add</span>
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleRefresh(false)}
-            disabled={refreshing || hardRefreshing}
-          >
-            {refreshing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">Refresh Data</span>
-            <span className="sm:hidden">Refresh</span>
-          </Button>
+          {isStaff && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRefresh(false)}
+              disabled={refreshing || hardRefreshing}
+            >
+              {refreshing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Refresh Data</span>
+              <span className="sm:hidden">Refresh</span>
+            </Button>
+          )}
           {isStaff && (
             <Button
               variant="outline"
