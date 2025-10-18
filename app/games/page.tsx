@@ -21,6 +21,7 @@ import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images } fro
 import { VERSION, BUILD_DATE } from '@/lib/version';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button';
+import { trackGameViewed, trackAdvancedFiltersSelected, trackSpecialFilterCount } from '@/lib/analytics/mixpanel';
 
 function GamesPageContent() {
   const isStaff = useStaffMode();
@@ -332,6 +333,35 @@ function GamesPageContent() {
     setFilters(prev => ({ ...prev, quickFilter: filter || undefined }));
   };
 
+  // Handle advanced filters with tracking
+  const handleApplyAdvancedFilters = (newFilters: FilterType) => {
+    setFilters(newFilters);
+
+    // Track advanced filters applied
+    trackAdvancedFiltersSelected({
+      search: newFilters.search,
+      categories: newFilters.categories || [],
+      playerCount: newFilters.playerCount,
+      yearRange: newFilters.yearRange,
+      complexity: newFilters.complexity,
+      bestPlayerCount: newFilters.bestPlayerCount,
+      categoryMatchMode: newFilters.categoryMatchMode,
+    });
+
+    // Track special filter count (number of active filters)
+    const activeFilters: string[] = [];
+    if (newFilters.search) activeFilters.push('search');
+    if (newFilters.categories?.length) activeFilters.push('categories');
+    if (newFilters.playerCount?.min || newFilters.playerCount?.max) activeFilters.push('playerCount');
+    if (newFilters.yearRange?.min || newFilters.yearRange?.max) activeFilters.push('yearRange');
+    if (newFilters.complexity?.min || newFilters.complexity?.max) activeFilters.push('complexity');
+    if (newFilters.bestPlayerCount) activeFilters.push('bestPlayerCount');
+
+    if (activeFilters.length > 0) {
+      trackSpecialFilterCount(activeFilters.length, activeFilters);
+    }
+  };
+
   // Handle clear all filters
   const handleClearAll = () => {
     setFilters({
@@ -370,6 +400,14 @@ function GamesPageContent() {
   const handleSpinnerComplete = (game: BoardGame) => {
     setShowSpinner(false);
     setSelectedGame(game);
+    // Track game view
+    trackGameViewed(game.id, game.fields['Game Name'] || 'Unknown');
+  };
+
+  const handleGameCardClick = (game: BoardGame) => {
+    setSelectedGame(game);
+    // Track game view
+    trackGameViewed(game.id, game.fields['Game Name'] || 'Unknown');
   };
 
   if (loading) {
@@ -680,7 +718,7 @@ function GamesPageContent() {
             <GameCard
               key={game.id}
               game={game}
-              onClick={() => setSelectedGame(game)}
+              onClick={() => handleGameCardClick(game)}
               isStaff={isStaff}
             />
           ))}
@@ -699,7 +737,7 @@ function GamesPageContent() {
         open={showAdvancedFilters}
         onClose={() => setShowAdvancedFilters(false)}
         filters={filters}
-        onApplyFilters={setFilters}
+        onApplyFilters={handleApplyAdvancedFilters}
         availableCategories={categories}
       />
 
