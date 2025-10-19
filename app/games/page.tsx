@@ -21,6 +21,7 @@ import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images } fro
 import { VERSION, BUILD_DATE } from '@/lib/version';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 import { trackGameViewed, trackAdvancedFiltersSelected, trackSpecialFilterCount } from '@/lib/analytics/mixpanel';
 
 function GamesPageContent() {
@@ -442,6 +443,7 @@ function GamesPageContent() {
             >
               v{VERSION}
             </div>
+            {isStaff && <StaffMenu />}
           </div>
           <p className="text-muted-foreground">
             Browse our collection of {games.length} board games
