@@ -177,7 +177,7 @@ Railway must have these variables set for the app to work:
 AIRTABLE_API_KEY = key_xxxxxxxxxxxxx
 AIRTABLE_GAMES_BASE_ID = apppFvSDh2JBc0qAu
 AIRTABLE_GAMES_TABLE_ID = tblIuIJN5q3W6oXNr
-AIRTABLE_GAMES_VIEW_ID = viwHMUIuvp0H2S1vE
+AIRTABLE_GAMES_VIEW_ID = viwRxfowOlqk8LkAd
 ```
 
 ### Optional (add as needed)

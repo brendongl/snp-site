@@ -1,6 +1,18 @@
 import Airtable from 'airtable';
 import { BoardGame, GameFilters, SortOption } from '@/types';
 
+// Configure Node.js to prefer IPv4 for Airtable connections
+// This helps with Railway/Docker environments that may have IPv6 routing issues
+if (typeof globalThis !== 'undefined') {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = function(...args: any[]) {
+    const options = args[1] || {};
+    // Force IPv4 for all fetch requests to avoid DNS/routing issues
+    options.family = 4;
+    return originalFetch.apply(globalThis, [args[0], options]);
+  } as any;
+}
+
 class GamesService {
   private base: Airtable.Base;
   private tableId: string;
@@ -15,10 +27,14 @@ class GamesService {
       console.warn('Warning: AIRTABLE_API_KEY is not set');
     }
 
-    const airtable = new Airtable({ apiKey });
+    // Configure Airtable with extended timeout for Railway environments
+    const airtable = new Airtable({
+      apiKey,
+      requestTimeout: 30000, // 30 seconds (Railway is sometimes slow)
+    });
     this.base = airtable.base(baseId);
     this.tableId = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
-    this.viewId = process.env.AIRTABLE_GAMES_VIEW_ID || 'viwHMUIuvp0H2S1vE';
+    this.viewId = process.env.AIRTABLE_GAMES_VIEW_ID || 'viwRxfowOlqk8LkAd';
   }
 
   async getAllGames(): Promise<BoardGame[]> {

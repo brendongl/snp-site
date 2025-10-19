@@ -6,7 +6,7 @@ This document provides a reference for the Airtable base schema for the SNP Boar
 - **Base ID**: `apppFvSDh2JBc0qAu`
 - **Table ID**: `tblIuIJN5q3W6oXNr`
 - **Table Name**: "BG List"
-- **View ID (Default)**: `viwHMUIuvp0H2S1vE` (BG View [DO NOT EDIT FILTER])
+- **View ID (Default)**: `viwRxfowOlqk8LkAd` (BG View [DO NOT EDIT FILTER])
 
 ## Key Fields
 
@@ -98,7 +98,7 @@ This document provides a reference for the Airtable base schema for the SNP Boar
 1. **BG Gallery SHARED DO NOT EDIT** (`viwUp2KUiPMYF8FWg`) - Gallery view
 2. **BG Gallery copy** (`viwMn9CZKVyYtuvcI`) - Gallery view
 3. **BG Rental** (`viwDz5cAQ4gZak5d5`) - Gallery view
-4. **BG View [DO NOT EDIT FILTER]** (`viwHMUIuvp0H2S1vE`) - Grid view (default)
+4. **BG View [DO NOT EDIT FILTER]** (`viwRxfowOlqk8LkAd`) - Grid view (default)
 5. **BG View copy** (`viwZkWTqrVHmTnYVQ`) - Grid view
 6. **claudeview** (`viw75e7ZqtCCH7wVW`) - Grid view
 7. **BGContentsneverChecked** (`viwgUFQslwbgtJ65G`) - Grid view

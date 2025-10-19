@@ -101,7 +101,7 @@ docker run -d \
   -e AIRTABLE_API_KEY=key_xxxxxxxxxxxxx \
   -e AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu \
   -e AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr \
-  -e AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE \
+  -e AIRTABLE_GAMES_VIEW_ID=viwRxfowOlqk8LkAd \
   snp-site:local
 
 # Or with docker-compose (if .env is set up)
@@ -276,7 +276,7 @@ services:
       - AIRTABLE_API_KEY=${AIRTABLE_API_KEY}
       - AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
       - AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
-      - AIRTABLE_GAMES_VIEW_ID=viwHMUIuvp0H2S1vE
+      - AIRTABLE_GAMES_VIEW_ID=viwRxfowOlqk8LkAd
 
   redis:
     image: redis:7-alpine
