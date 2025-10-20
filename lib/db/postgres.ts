@@ -124,17 +124,44 @@ export async function getRecentPlayLogs(
 /**
  * Get all staff members from cache
  */
-export async function getStaffList(): Promise<Array<{ id: string; name: string }>> {
+export async function getStaffList(): Promise<Array<{ id: string; name: string; type: string }>> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT staff_id, staff_name FROM staff_list ORDER BY staff_name ASC`
+      `SELECT staff_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
     );
 
     return result.rows.map(row => ({
       id: row.staff_id,
       name: row.staff_name,
+      type: row.staff_type || 'Staff',
     }));
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Get staff member by email
+ */
+export async function getStaffByEmail(email: string): Promise<{ id: string; name: string; type: string } | null> {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT staff_id, staff_name, staff_type FROM staff_list WHERE staff_email = $1`,
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.staff_id,
+      name: row.staff_name,
+      type: row.staff_type || 'Staff',
+    };
   } finally {
     client.release();
   }
@@ -143,7 +170,7 @@ export async function getStaffList(): Promise<Array<{ id: string; name: string }
 /**
  * Sync staff list from Airtable to cache
  */
-export async function syncStaffListFromAirtable(staffData: Array<{ id: string; name: string }>): Promise<boolean> {
+export async function syncStaffListFromAirtable(staffData: Array<{ id: string; name: string; email: string; type: string }>): Promise<boolean> {
   const client = await pool.connect();
   try {
     // Clear existing data
@@ -152,8 +179,8 @@ export async function syncStaffListFromAirtable(staffData: Array<{ id: string; n
     // Insert new data
     for (const staff of staffData) {
       await client.query(
-        `INSERT INTO staff_list (staff_id, staff_name) VALUES ($1, $2)`,
-        [staff.id, staff.name]
+        `INSERT INTO staff_list (staff_id, staff_name, staff_email, staff_type) VALUES ($1, $2, $3, $4)`,
+        [staff.id, staff.name, staff.email, staff.type]
       );
     }
 

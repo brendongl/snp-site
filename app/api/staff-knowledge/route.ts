@@ -108,3 +108,125 @@ export async function GET() {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const apiKey = process.env.AIRTABLE_API_KEY;
+    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
+    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
+
+    if (!apiKey || !baseId || !knowledgeTableId) {
+      throw new Error('Missing Airtable configuration');
+    }
+
+    const url = new URL(request.url);
+    const recordId = url.searchParams.get('id');
+
+    if (!recordId) {
+      return NextResponse.json(
+        { error: 'Missing record ID' },
+        { status: 400 }
+      );
+    }
+
+    // Delete record from Airtable
+    const deleteResponse = await fetch(
+      `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}/${recordId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      const errorData = await deleteResponse.json().catch(() => ({}));
+      throw new Error(`Airtable API error: ${(errorData as any).error?.message || deleteResponse.statusText}`);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Knowledge entry deleted successfully',
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error deleting knowledge entry:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete knowledge entry';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const apiKey = process.env.AIRTABLE_API_KEY;
+    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
+    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
+
+    if (!apiKey || !baseId || !knowledgeTableId) {
+      throw new Error('Missing Airtable configuration');
+    }
+
+    const url = new URL(request.url);
+    const recordId = url.searchParams.get('id');
+    const { confidenceLevel, notes } = await request.json();
+
+    if (!recordId) {
+      return NextResponse.json(
+        { error: 'Missing record ID' },
+        { status: 400 }
+      );
+    }
+
+    // Update record in Airtable
+    const updateResponse = await fetch(
+      `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}/${recordId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            ...(confidenceLevel && { 'Confidence Level': confidenceLevel }),
+            ...(notes !== undefined && { 'Notes': notes }),
+          },
+        }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json().catch(() => ({}));
+      throw new Error(`Airtable API error: ${(errorData as any).error?.message || updateResponse.statusText}`);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Knowledge entry updated successfully',
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error updating knowledge entry:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update knowledge entry';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+      },
+      { status: 500 }
+    );
+  }
+}

@@ -4,11 +4,20 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
 export function StaffMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const [staffName, setStaffName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const isAdmin = useAdminMode();
+
+  // Get staff name from localStorage
+  useEffect(() => {
+    const name = localStorage.getItem('staff_name');
+    setStaffName(name);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -28,6 +37,7 @@ export function StaffMenu() {
     localStorage.removeItem('staff_email');
     localStorage.removeItem('staff_name');
     localStorage.removeItem('staff_id');
+    localStorage.removeItem('staff_type');
     setIsOpen(false);
     router.push('/');
   };
@@ -47,6 +57,17 @@ export function StaffMenu() {
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-50">
+          {/* Logged in as header */}
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-muted-foreground mb-1">Logged in as</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {staffName}
+              <span className={`ml-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                ({isAdmin ? 'admin' : 'staff'})
+              </span>
+            </p>
+          </div>
+
           <nav className="py-2">
             {/* Play Logs */}
             <Link

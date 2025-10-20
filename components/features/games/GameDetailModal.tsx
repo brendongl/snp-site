@@ -11,12 +11,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BoardGame } from '@/types';
-import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { ContentCheckBadge } from '@/components/features/content-check/ContentCheckBadge';
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
 import { AddGameKnowledgeDialog } from '@/components/features/staff/AddGameKnowledgeDialog';
+import { EditGameDialog } from '@/components/features/games/EditGameDialog';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
 interface GameDetailModalProps {
   game: BoardGame | null;
@@ -26,9 +28,11 @@ interface GameDetailModalProps {
 
 export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
   const isStaff = useStaffMode();
+  const isAdmin = useAdminMode();
   const [showHistory, setShowHistory] = useState(false);
   const [showContentCheck, setShowContentCheck] = useState(false);
   const [showAddKnowledge, setShowAddKnowledge] = useState(false);
+  const [showEditGame, setShowEditGame] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const [expansions, setExpansions] = useState<BoardGame[]>([]);
@@ -129,6 +133,17 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <h3 className="text-sm font-semibold">Staff Section</h3>
               <div className="flex flex-col sm:flex-row gap-2">
+                {isAdmin && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowEditGame(true)}
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit Game
+                  </Button>
+                )}
                 <Button
                   variant="default"
                   size="sm"
@@ -419,6 +434,15 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
             onClose={() => setShowAddKnowledge(false)}
             gameId={game.id}
             gameName={game.fields['Game Name']}
+          />
+        )}
+
+        {/* Edit Game Dialog */}
+        {isAdmin && (
+          <EditGameDialog
+            game={game}
+            open={showEditGame}
+            onClose={() => setShowEditGame(false)}
           />
         )}
       </DialogContent>

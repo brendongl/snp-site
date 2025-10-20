@@ -215,3 +215,123 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    if (!AIRTABLE_API_KEY) {
+      return NextResponse.json(
+        { error: 'Airtable API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const url = new URL(request.url);
+    const recordId = url.searchParams.get('id');
+
+    if (!recordId) {
+      return NextResponse.json(
+        { error: 'Missing record ID' },
+        { status: 400 }
+      );
+    }
+
+    // Delete record from Airtable
+    const deleteResponse = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}/${recordId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        },
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      const errorData = await deleteResponse.json().catch(() => ({}));
+      throw new Error(`Airtable API error: ${(errorData as any).error?.message || deleteResponse.statusText}`);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Play log deleted successfully',
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error deleting play log:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete play log';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    if (!AIRTABLE_API_KEY) {
+      return NextResponse.json(
+        { error: 'Airtable API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const url = new URL(request.url);
+    const recordId = url.searchParams.get('id');
+    const { sessionDate, notes } = await request.json();
+
+    if (!recordId) {
+      return NextResponse.json(
+        { error: 'Missing record ID' },
+        { status: 400 }
+      );
+    }
+
+    // Update record in Airtable
+    const updateResponse = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}/${recordId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            ...(sessionDate && { 'Session Date': sessionDate }),
+            ...(notes !== undefined && { 'Notes': notes }),
+          },
+        }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json().catch(() => ({}));
+      throw new Error(`Airtable API error: ${(errorData as any).error?.message || updateResponse.statusText}`);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Play log updated successfully',
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error updating play log:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update play log';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+      },
+      { status: 500 }
+    );
+  }
+}

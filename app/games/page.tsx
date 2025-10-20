@@ -21,12 +21,14 @@ import {
 import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images } from 'lucide-react';
 import { VERSION, BUILD_DATE } from '@/lib/version';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { ScrollToTopButton } from '@/components/ui/scroll-to-top-button';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 import { trackGameViewed, trackAdvancedFiltersSelected, trackSpecialFilterCount } from '@/lib/analytics/mixpanel';
 
 function GamesPageContent() {
   const isStaff = useStaffMode();
+  const isAdmin = useAdminMode();
   const [games, setGames] = useState<BoardGame[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -468,7 +470,7 @@ function GamesPageContent() {
               🔐 Staff Login
             </Button>
           )}
-          {isStaff && (
+          {isAdmin && (
             <Button
               variant="default"
               size="sm"

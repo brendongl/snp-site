@@ -41,19 +41,37 @@ function SignInContent() {
     try {
       setIsLoading(true);
 
+      // Verify email exists in Airtable Staff table
+      const verifyResponse = await fetch('/api/staff/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!verifyResponse.ok) {
+        setError('Email not found in staff directory');
+        return;
+      }
+
+      const staffData = await verifyResponse.json();
+
       // Extract name from email (part before @)
       const nameParts = email.split('@')[0].split('.');
       const displayName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 
-      // Store in localStorage (simple auth for staff)
+      // Store in localStorage
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', displayName);
-      localStorage.setItem('staff_id', btoa(email)); // Simple encoding for ID
+      localStorage.setItem('staff_id', btoa(email));
+
+      // Store staff type (Admin or Staff)
+      const staffType = staffData.type || 'Staff';
+      localStorage.setItem('staff_type', staffType);
 
       setSuccess(true);
       setEmail('');
 
-      // Redirect after short delay
+      // Redirect
       setTimeout(() => {
         router.push(getRedirectUrl());
       }, 500);

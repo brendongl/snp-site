@@ -24,7 +24,9 @@
       "Bash(curl -s https://status.docker.com/)",
       "Bash(curl -s https://status.airtable.com/)",
       "Bash(curl -s -I https://registry-1.docker.io/v2/library/node/manifests/20-slim)",
-      "Bash(curl -s -I https://registry-1.docker.io/v2/library/node/manifests/20-alpine)"
+      "Bash(curl -s -I https://registry-1.docker.io/v2/library/node/manifests/20-alpine)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(curl -s -X POST http://localhost:3001/api/staff/verify-email )"
     ],
     "deny": [],
     "ask": []

@@ -140,7 +140,82 @@ interface BoardGame {
 ## Last Updated
 Generated: 2025-10-16
 
+## Sip N Play Base - Staff Table
+
+### Base Information
+- **Base ID**: `appjD3LJhXYjp0tXm`
+- **Base Name**: "Sip N Play"
+- **Table ID**: `tblLthDOTzCPbSdAA`
+- **Table Name**: "Staff"
+
+### Key Fields for Authentication
+
+#### Email
+- **Field ID**: `fld4SyFL1xB27u4rQ`
+- **Type**: `email`
+- **Purpose**: Used to match login credentials
+- **Required**: Yes
+
+#### Type (CRITICAL FOR ADMIN DETECTION)
+- **Field ID**: `fldr6YlEuDLksBHIW`
+- **Type**: `singleSelect`
+- **Purpose**: Determines if user is Admin or Staff
+- **Options** (choices):
+  - `Part-Time` (yellowLight1)
+  - `Full-Time` (greenLight1)
+  - `Casual` (tealLight2)
+  - `Assistant` (cyanDark1)
+  - `Terminated` (redBright)
+  - `Probation` (grayLight2)
+  - **`Admin` (redLight1)** ← **THIS DETERMINES ADMIN ACCESS**
+
+### Other Staff Fields
+- **Name** (`fld5qB1HlvUNNxn2z`): `singleLineText` - Staff member name
+- **Active** (`fldB0Oi1D2lTo2Ghv`): `checkbox` - Is staff currently active
+- **Contract sent** (`fldu9GsyKufJNq018`): `checkbox` - Has contract been sent
+- **Has 🔑** (`fld6WY1bIvMFpUwHR`): `checkbox` - Has keys
+- **Roles** (`fld8zDf7Dgj3v8SVa`): `multipleSelects` - Staff roles
+  - Options: Boss, Game Master, Counterhand, Marketting
+- **Contact Ph** (`fldFNKKpgdoJMDDde`): `singleLineText`
+- **Date of Hire** (`fldXyJWlpe2j7QmX2`): `date` (format: local/l)
+- **Bank account** (`fld1q0rHShcBUtOOX`): `multilineText`
+- **Home Address** (`fld1WrzU93umQdgGc`): `multilineText`
+- **Emergency Contact Name** (`fldBcGt2pKCoApBSU`): `singleLineText`
+- **Emergency Contact Ph No** (`fldGVszTgZEhOtxvZ`): `singleLineText`
+
+### Relationship/Link Fields
+- **staffeval** (`fldOeSxagBo3JuKCk`): `multipleRecordLinks` → Staff Evaluation records
+- **CashFlow** (`fldmXRqy5Feptw41y`): `multipleRecordLinks` → CashFlow records
+- **CommisionsTable** (`fldpzEzYbGDpEPM07`): `multipleRecordLinks` → Commission records
+
+### Authentication Logic
+
+When a user logs in with their email:
+
+1. Query Airtable Staff table where `Email == user_email`
+2. Retrieve the record and read the **`Type`** field
+3. Check the Type value:
+   - **If Type == "Admin"** → Set `staff_type: "Admin"` in localStorage
+   - **Otherwise** → Set `staff_type: "Staff"` in localStorage
+4. Admin features are only visible when `staff_type === "Admin"`
+
+### Example TypeScript Interface
+
+```typescript
+interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  type: "Admin" | "Full-Time" | "Part-Time" | "Casual" | "Assistant" | "Probation" | "Terminated";
+  active: boolean;
+  roles?: string[];
+  dateOfHire?: string;
+}
+```
+
 ## References
 - Airtable API: https://airtable.com/developers/web/api/introduction
-- Base ID: apppFvSDh2JBc0qAu
-- Table ID: tblIuIJN5q3W6oXNr
+- SNP Games List Base ID: `apppFvSDh2JBc0qAu`
+- SNP Games Table ID: `tblIuIJN5q3W6oXNr`
+- Sip N Play Base ID: `appjD3LJhXYjp0tXm`
+- Sip N Play Staff Table ID: `tblLthDOTzCPbSdAA`
