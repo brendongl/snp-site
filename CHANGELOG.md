@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.3.5] - 2025-10-20
+
+### Fixed
+- **Authentication Using PostgreSQL Cache**: Staging now uses cached staff data instead of Airtable API
+  - `POST /api/staff/verify-email` now queries PostgreSQL `staff_list` table
+  - Fixes "fetch failed" errors on staging environment
+  - Eliminates Airtable API timeout issues during login
+  - Staff data must be synced to PostgreSQL via `scripts/sync-staff-to-staging.js` (47 staff members)
+  - Requires `DATABASE_URL` environment variable set on Railway
+
+### Prerequisites
+- PostgreSQL `staff_list` table created via `scripts/create-staff-table.js`
+- Staff members synced from Airtable to PostgreSQL (completed in previous deployment)
+- `DATABASE_URL` configured on Railway staging environment
+
+### Performance
+- Login now queries local PostgreSQL cache instead of Airtable API
+- Faster response times for staff authentication
+- More reliable on staging with reduced network dependency
+
 ## [1.3.4] - 2025-10-20
 
 ### Fixed
