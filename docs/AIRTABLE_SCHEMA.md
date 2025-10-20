@@ -213,9 +213,69 @@ interface StaffMember {
 }
 ```
 
+## SNP Games List Base - Play Logs Table
+
+### Base Information
+- **Base ID**: `apppFvSDh2JBc0qAu` (SNP Games List)
+- **Table ID**: `tblggfqeM2zQaDUEI`
+- **Table Name**: "Play Logs"
+
+### Key Fields
+
+#### Linked Record Fields (for creating relations)
+- **Game** (`fldbpBouq2IK7OOZb`): `multipleRecordLinks` → BG List table
+  - Stores the game that was played
+  - When creating a record: Pass array of game IDs: `[gameId]`
+
+- **Logged By** (`fldWXUcDBFcIiVzbL`): `multipleRecordLinks` → Staff table (Sip N Play base)
+  - Stores which staff member logged the play session
+  - When creating a record: Pass array of staff record IDs: `[staffRecordId]`
+
+#### Date/Time Field
+- **Session Date** (`fldpVByTZBkdjD6fJ`): `dateTime` (format: local/l, time: 12hour/h:mma)
+  - When the game was played
+  - Must be ISO 8601 format when POSTing to Airtable
+
+#### Text Field
+- **Notes** (`fldVWpXwr60JyRIF8`): `multilineText`
+  - Optional notes about the play session
+
+#### Auto-Generated Field
+- **Play Log Entry** (`fldWe3lnHqEpZAjF5`): `autoNumber` - READ ONLY
+  - Auto-generated unique ID for each play log entry
+
+### Creating a Play Log Record
+
+**Endpoint**: `POST https://api.airtable.com/v0/apppFvSDh2JBc0qAu/tblggfqeM2zQaDUEI`
+
+**Payload**:
+```json
+{
+  "records": [
+    {
+      "fields": {
+        "Game": ["recXXXXXXXXXXXXXX"],     // Array with game ID from BG List
+        "Logged By": ["recYYYYYYYYYYYYYY"],  // Array with staff record ID from Sip N Play Staff table
+        "Session Date": "2025-10-20T12:00:00.000Z",  // ISO 8601 format
+        "Notes": "Optional notes here"      // Optional
+      }
+    }
+  ]
+}
+```
+
+### Important Notes
+- Play Logs table is in the **SNP Games List base** (`apppFvSDh2JBc0qAu`), NOT Sip N Play base
+- Linked record fields require arrays even if only one ID: `["recXXX"]`, not `"recXXX"`
+- Game IDs come from BG List table (`tblIuIJN5q3W6oXNr`)
+- Staff record IDs come from Sip N Play Staff table (`tblLthDOTzCPbSdAA` in `appjD3LJhXYjp0tXm`)
+
 ## References
 - Airtable API: https://airtable.com/developers/web/api/introduction
-- SNP Games List Base ID: `apppFvSDh2JBc0qAu`
-- SNP Games Table ID: `tblIuIJN5q3W6oXNr`
-- Sip N Play Base ID: `appjD3LJhXYjp0tXm`
-- Sip N Play Staff Table ID: `tblLthDOTzCPbSdAA`
+- **SNP Games List Base ID**: `apppFvSDh2JBc0qAu`
+  - BG List Table: `tblIuIJN5q3W6oXNr`
+  - Play Logs Table: `tblggfqeM2zQaDUEI`
+  - Content Check Log Table: `tblHWhNrHc9r3u42Q`
+- **Sip N Play Base ID**: `appjD3LJhXYjp0tXm`
+  - Staff Table: `tblLthDOTzCPbSdAA` (with Admin Type field)
+  - Staff Game Knowledge Table: `tblgdqR2DTAcjVFBd`

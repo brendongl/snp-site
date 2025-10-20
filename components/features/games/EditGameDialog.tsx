@@ -53,10 +53,10 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
         body: JSON.stringify({
           gameName: formData.gameName,
           description: formData.description,
-          yearReleased: parseInt(formData.yearReleased) || null,
+          yearReleased: formData.yearReleased ? parseInt(formData.yearReleased as string) : null,
           minPlayers: formData.minPlayers,
           maxPlayers: formData.maxPlayers,
-          complexity: parseInt(formData.complexity.toString()) || 0,
+          complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
         }),
       });
 

@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity } = await request.json();
-    const gameId = params.id;
+    const { id: gameId } = await params;
 
     // Note: For local dev, we're just returning success
     // In production, this would call the Airtable API to update the record

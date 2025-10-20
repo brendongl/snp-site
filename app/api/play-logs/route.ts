@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_GAMES_BASE_ID = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
+const AIRTABLE_SIP_N_PLAY_BASE_ID = process.env.AIRTABLE_SIP_N_PLAY_BASE_ID || 'appjD3LJhXYjp0tXm';
 const AIRTABLE_PLAY_LOGS_TABLE_ID = process.env.AIRTABLE_PLAY_LOGS_TABLE_ID || 'tblggfqeM2zQaDUEI';
 const AIRTABLE_GAMES_TABLE_ID = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
-const AIRTABLE_STAFF_TABLE_ID = process.env.AIRTABLE_STAFF_TABLE_ID || 'tblGIyQNmhcsK4Qlg';
+const AIRTABLE_STAFF_TABLE_ID = process.env.AIRTABLE_STAFF_TABLE_ID || 'tblLthDOTzCPbSdAA';
 
 // Simple cache for lookups
 let gameNameCache: Record<string, string> = {};
@@ -40,7 +41,7 @@ async function getStaffName(staffId: string): Promise<string> {
 
   try {
     const response = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_STAFF_TABLE_ID}/${staffId}`,
+      `https://api.airtable.com/v0/${AIRTABLE_SIP_N_PLAY_BASE_ID}/${AIRTABLE_STAFF_TABLE_ID}/${staffId}`,
       {
         headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
       }
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch play logs from Airtable
+    // Fetch play logs from Airtable (Play Logs table is in SNP Games List base)
     const response = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}`,
       {
@@ -155,6 +156,22 @@ export async function POST(request: Request) {
     }
 
     // Create record in Airtable Play Logs table
+    const payload = {
+      records: [
+        {
+          fields: {
+            'Game': [gameId],
+            'Logged By': [staffRecordId],
+            'Session Date': sessionDate || new Date().toISOString(),
+            'Notes': notes || '',
+          },
+        },
+      ],
+    };
+
+    console.log(`[play-logs POST] Creating play log with payload:`, JSON.stringify(payload, null, 2));
+    console.log(`[play-logs POST] Using base: ${AIRTABLE_GAMES_BASE_ID}, table: ${AIRTABLE_PLAY_LOGS_TABLE_ID}`);
+
     const airtableResponse = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}`,
       {
@@ -163,18 +180,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${AIRTABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          records: [
-            {
-              fields: {
-                'Game': [gameId],
-                'Logged By': [staffRecordId],
-                'Session Date': sessionDate || new Date().toISOString(),
-                'Notes': notes || '',
-              },
-            },
-          ],
-        }),
+        body: JSON.stringify(payload),
       }
     );
 
@@ -235,7 +241,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Delete record from Airtable
+    // Delete record from Airtable (Play Logs table is in SNP Games List base)
     const deleteResponse = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}/${recordId}`,
       {
@@ -292,7 +298,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Update record in Airtable
+    // Update record in Airtable (Play Logs table is in SNP Games List base)
     const updateResponse = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}/${recordId}`,
       {
