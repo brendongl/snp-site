@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s -X POST http://localhost:3000/api/play-logs )"
+      "Bash(curl -s -X POST http://localhost:3000/api/play-logs )",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Use staffListRecordId in StaffLoginDialog for Play Logs linking\n\nStaffLoginDialog was still storing staffId (Sip N Play Staff table record ID)\ninstead of staffListRecordId (SNP Games List StaffList record ID) in the\nstaff_record_id localStorage key.\n\nThis is now corrected to match the signin page behavior, ensuring Play Logs\ncan properly link to the correct StaffList record.\n\nUser must re-login via the dialog for the fix to take effect.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
