@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════════
+SESSION CLEANUP SUMMARY - October 20, 2025
+═══════════════════════════════════════════════════════════════════════════════
+
+PROJECT STRUCTURE CLEANUP
+═════════════════════════
+
+✓ Root Directory (3 files only)
+  - README.md              → Project overview
+  - CLAUDE.md             → Development workflow guide  
+  - CHANGELOG.md          → Version history & release notes
+
+✓ Documentation Moved to /docs/
+  - DEPLOYMENT.md
+  - DOCKER.md
+  - GITHUB_ACTIONS_SETUP.md
+  - RAILWAY_DEPLOYMENT.md
+
+✗ Temporary Files Removed
+  - DOCS_INDEX.md          (replaced by proper documentation in /docs/)
+  - PROJECT_CLEANUP_REPORT.md  (session notes - not needed after completion)
+
+✓ Documentation Directory (/docs/ - 12 files)
+  - AIRTABLE_SCHEMA.md     (UPDATED with critical Staff vs StaffList info)
+  - board-games-catalog.md
+  - caching-system.md
+  - content-checker.md
+  - DEPLOYMENT.md
+  - DISCORD_NOTIFICATIONS.md
+  - DOCKER.md
+  - GITHUB_ACTIONS_SETUP.md
+  - IMAGE_CACHING.md
+  - RAILWAY_DEPLOYMENT.md
+  - staff-mode.md
+  - TROUBLESHOOTING.md
+
+
+CHANGELOG UPDATES
+═════════════════
+
+Added comprehensive v1.3.4 release notes documenting:
+
+✓ Fixed Issues
+  - Play Logs API using wrong Airtable base
+  - Response body double-read error in PlayLogDialog
+  - TypeScript compilation errors
+  - StaffLoginDialog storing wrong record ID
+  
+✓ Architecture Improvements
+  - Multi-base record linking strategy
+  - Staff vs StaffList table clarification
+  
+✓ Added v1.3.1-1.3.3 entries (previously missing)
+  - Next.js 15 dynamic rendering fix
+  - Staff table base reference correction
+  - Admin detection bug fix
+
+
+AIRTABLE_SCHEMA.md ENHANCEMENTS
+════════════════════════════════
+
+✓ New Section: "Important: Staff Table vs StaffList Table"
+  - Explains why two staff tables exist
+  - Documents Airtable's cross-base linking limitation
+  - Provides clear usage guidelines
+  - Includes example authentication flow
+
+✓ New StaffList Table Documentation
+  - Base Information
+  - Purpose and architecture
+  - Key fields reference
+  - When to use each table
+
+✓ Updated References
+  - Added StaffList table IDs
+  - Clarified base contents
+  - Complete table mapping
+
+
+FILES NOT CHANGED (Per User Guidelines)
+═══════════════════════════════════════
+
+✓ No uncommitted code changes
+✓ No version files modified
+✓ CHANGELOG.md only - documentation cleanup only
+✓ No git commits made (local cleanup only)
+
+
+KEY ARCHITECTURAL DOCUMENTATION
+═════════════════════════════════
+
+Critical Discovery Now Documented:
+
+STAFF TABLE (Sip N Play Base)
+  ID: tblLthDOTzCPbSdAA
+  Base: appjD3LJhXYjp0tXm
+  Use For:
+    - User authentication
+    - Type field checking (Admin/Staff detection)
+    - Email verification
+
+STAFFLIST TABLE (SNP Games List Base)
+  ID: tblGIyQNmhcsK4Qlg
+  Base: apppFvSDh2JBc0qAu
+  Use For:
+    - Linked records in Play Logs
+    - Any Airtable relationships within SNP Games List base
+    - Workaround for Airtable's inability to link between bases
+
+WHY TWO TABLES?
+  Airtable cannot create linked records between different bases.
+  StaffList is a synced copy of Staff table in the SNP Games List base,
+  allowing Play Logs "Logged By" field to link to staff records.
+
+
+WORKFLOW FOR FUTURE DEVELOPERS
+═══════════════════════════════
+
+When working with staff-related features:
+
+1. For AUTHENTICATION → Use Staff table (Sip N Play)
+2. For LINKING IN PLAY LOGS → Use StaffList table (SNP Games List)
+3. Both tables sync automatically
+4. Store both record IDs:
+   - staff_id: Staff table (authentication)
+   - staff_record_id: StaffList table (Play Logs linking)
+
+This pattern prevents "Record ID does not exist" errors when creating
+cross-base relationships.
+
+
+STATUS: LOCAL CLEANUP COMPLETE
+══════════════════════════════════════════════════════════════════════════════
+All documentation organized per CLAUDE.md guidelines.
+Ready for production deployment.

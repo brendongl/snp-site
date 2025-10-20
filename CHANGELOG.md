@@ -12,6 +12,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.3.4] - 2025-10-20
+
+### Fixed
+- **Play Logs API Base ID Correction**: Play Logs table is in SNP Games List base, not Sip N Play base
+  - GET /api/play-logs: Now queries correct base (AIRTABLE_GAMES_BASE_ID)
+  - POST /api/play-logs: Creates records in correct base
+  - DELETE /api/play-logs: Deletes from correct base
+  - PATCH /api/play-logs: Updates records in correct base
+  - Error "Record ID does not exist" now resolved by using correct base
+
+- **Play Logs Staff Linking Architecture**: Implemented proper multi-base record linking
+  - Staff authentication uses Staff table (Sip N Play base)
+  - Play Logs "Logged By" links to StaffList table (SNP Games List base)
+  - Reason: Airtable cannot link records between different bases
+  - `/api/staff/verify-email` now returns both staffId and staffListRecordId
+  - Client stores both: `staff_id` (Sip N Play) and `staff_record_id` (SNP Games List)
+
+- **Response Body Reading Error**: Fixed "body stream already read" error in PlayLogDialog
+  - Response body can only be read once in Fetch API
+  - Now read as text first, then parse JSON for proper error handling
+
+- **Type Safety**: Fixed Next.js 15 route handler params Promise type
+  - app/api/games/[id]/edit/route.ts: Updated params type to Promise<{ id: string }>
+
+- **TypeScript Compilation**: Fixed type errors in EditGameDialog.tsx
+  - Proper type assertions for parseInt() operations
+
+- **StaffLoginDialog Record ID**: Now correctly stores StaffList record ID
+  - Was storing Sip N Play Staff table ID (wrong for Play Logs linking)
+  - Now stores StaffList table ID for proper Play Logs linking
+
+### Technical
+- Enhanced `app/api/staff/verify-email/route.ts`:
+  - Queries Staff table (Sip N Play) for authentication
+  - Also queries StaffList table (SNP Games List) to get matching record ID
+  - Returns both IDs for different purposes
+- Updated `app/auth/signin/page.tsx`:
+  - Stores staff_id (Staff table) and staff_record_id (StaffList table)
+- Updated `components/features/staff/StaffLoginDialog.tsx`:
+  - Stores correct staffListRecordId for Play Logs linking
+- Updated `docs/AIRTABLE_SCHEMA.md`:
+  - Added critical architecture note: Staff vs StaffList table usage
+  - Documented when to use each table for different operations
+  - Added complete StaffList table reference
+
+### Documentation
+- **CRITICAL NOTE**: Updated schema documentation explaining why StaffList table exists
+  - Staff table (Sip N Play): Used for authentication, Type field checking
+  - StaffList table (SNP Games List): Used for linked records within SNP Games List base
+  - This is a workaround for Airtable's inability to link records between bases
+
+## [1.3.3] - 2025-10-20
+
+### Fixed
+- **Admin Detection in StaffLoginDialog**: Fixed critical bug where admin users showed as staff
+  - StaffLoginDialog was missing localStorage.setItem for staff_type
+  - Both signin page and dialog now correctly store staff_type field
+
+## [1.3.2] - 2025-10-20
+
+### Fixed
+- **Staff Table Base Reference**: Changed staff verification to use correct Sip N Play base
+  - Was querying games base for staff table (wrong)
+  - Now queries Sip N Play base for staff authentication (correct)
+
+## [1.3.1] - 2025-10-20
+
+### Fixed
+- **Next.js 15 Dynamic Rendering**: Added force-dynamic to signin page
+  - Prevents static prerendering that conflicts with useSearchParams()
+
 ## [1.3.0] - 2025-10-20
 
 ### Added
