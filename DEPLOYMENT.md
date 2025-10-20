@@ -406,6 +406,18 @@ curl -X POST https://sipnplay.cafe/api/games/refresh?full=true
 
 ---
 
-**Last Updated:** October 18, 2025
-**Current Version:** 1.0.6
+---
+
+## For First-Time Railway Setup
+
+If you're setting up Railway for the first time, see [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for complete step-by-step instructions including:
+- Creating a Railway account
+- Connecting your GitHub repository
+- Configuring environment variables
+- Adding your custom domain via Cloudflare DNS
+
+---
+
+**Last Updated:** October 20, 2025
+**Current Version:** 1.2.0
 **Infrastructure:** Railway + Cloudflare + GitHub Actions

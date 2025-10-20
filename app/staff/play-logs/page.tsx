@@ -22,7 +22,6 @@ export default function PlayLogsPage() {
   const [playLogs, setPlayLogs] = useState<PlayLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'recent' | 'game'>('recent');
 
   // Check authentication
   useEffect(() => {
@@ -61,22 +60,10 @@ export default function PlayLogsPage() {
     fetchPlayLogs();
   }, [staffName]);
 
-  // Sort play logs
+  // Sort by most recent first
   const sortedLogs = [...playLogs].sort((a, b) => {
-    if (sortBy === 'recent') {
-      return new Date(b.playDate || 0).getTime() - new Date(a.playDate || 0).getTime();
-    } else {
-      return (a.gameName || '').localeCompare(b.gameName || '');
-    }
+    return new Date(b.playDate || 0).getTime() - new Date(a.playDate || 0).getTime();
   });
-
-  const getStatusColor = (date?: string) => {
-    if (!date) return 'text-gray-400';
-    const daysSince = Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSince === 0) return 'text-green-600';
-    if (daysSince <= 7) return 'text-blue-600';
-    return 'text-gray-600';
-  };
 
   const formatDate = (date?: string) => {
     if (!date) return 'N/A';
@@ -109,20 +96,8 @@ export default function PlayLogsPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Controls */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <label htmlFor="sort" className="text-sm font-medium">Sort by:</label>
-            <select
-              id="sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recent' | 'game')}
-              className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="game">Game Name</option>
-            </select>
-          </div>
+        {/* Results count */}
+        <div className="mb-6">
           <p className="text-sm text-muted-foreground">
             {sortedLogs.length} play log{sortedLogs.length !== 1 ? 's' : ''}
           </p>
@@ -154,49 +129,35 @@ export default function PlayLogsPage() {
           </div>
         )}
 
-        {/* Play Logs List */}
+        {/* Play Logs List - Table Format */}
         {!isLoading && !error && sortedLogs.length > 0 && (
-          <div className="space-y-4">
-            {sortedLogs.map((log) => (
-              <div
-                key={log.id}
-                className="border border-border rounded-lg p-4 hover:bg-accent transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{log.gameName || 'Unknown Game'}</h3>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(log.playDate)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        <span>{log.playedBy || 'Unknown'}</span>
-                      </div>
-                      {log.playerCount && (
-                        <div className="flex items-center gap-1">
-                          <span>👥 {log.playerCount} player{log.playerCount !== 1 ? 's' : ''}</span>
-                        </div>
-                      )}
-                      {log.duration && (
-                        <div className="flex items-center gap-1">
-                          <span>⏱️ {log.duration}</span>
-                        </div>
-                      )}
-                    </div>
-                    {log.notes && (
-                      <p className="mt-3 text-sm text-foreground bg-muted p-2 rounded">
-                        {log.notes}
-                      </p>
-                    )}
-                  </div>
-                  <div className={`flex items-center gap-1 ${getStatusColor(log.playDate)}`}>
-                    <Play className="w-5 h-5" />
+          <div className="border border-border rounded-lg overflow-hidden">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
+              <div className="col-span-2">Date</div>
+              <div className="col-span-4">Game</div>
+              <div className="col-span-3">Logged By</div>
+              <div className="col-span-3">Notes</div>
+            </div>
+
+            {/* Table Rows */}
+            <div className="divide-y divide-border">
+              {sortedLogs.map((log, idx) => (
+                <div
+                  key={log.id}
+                  className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-start hover:bg-accent transition-colors ${
+                    idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                  }`}
+                >
+                  <div className="col-span-2 font-medium">{formatDate(log.playDate)}</div>
+                  <div className="col-span-4 font-medium text-foreground">{log.gameName || 'Unknown Game'}</div>
+                  <div className="col-span-3 text-muted-foreground">{log.playedBy || 'Unknown'}</div>
+                  <div className="col-span-3 text-muted-foreground truncate" title={log.notes}>
+                    {log.notes || '—'}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

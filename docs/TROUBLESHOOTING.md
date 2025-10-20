@@ -1,269 +1,145 @@
 # Troubleshooting Guide
 
-## Network Timeout Errors (ETIMEDOUT)
-
-### Symptoms
-- "Failed to load content check history"
-- "Network timeout - Cannot reach Airtable API"
-- Games page fails to load with `fetch failed` error
-- Health endpoint shows unhealthy status
-
-### Root Cause
-Docker container cannot reach `api.airtable.com` due to network configuration issues.
-
-### Solutions
-
-#### Solution 1: Use Host Network Mode ⭐ (Recommended)
-
-**For Unraid:**
-1. Go to Docker tab
-2. Click on your container, select "Edit"
-3. Change **Network Type** from `Bridge` to `Host`
-4. Click "Apply"
-5. Container will restart automatically
-
-**Pros:**
-- Container uses host's network stack directly
-- Best performance
-- Easiest solution
-
-**Cons:**
-- Port conflicts if multiple containers use same ports
+Quick reference for common issues and solutions.
 
 ---
 
-#### Solution 2: Add DNS Servers
+## Deployment & Infrastructure Issues
 
-**For Unraid:**
-1. Go to Docker tab
-2. Click on your container, select "Edit"
-3. In **Extra Parameters** field, add:
-   ```
-   --dns 8.8.8.8 --dns 8.8.4.4
-   ```
-4. Click "Apply"
+### App Not Loading (Error 1016)
 
-**Pros:**
-- Keeps bridge network mode
-- Fixes DNS resolution issues
+**Symptom:** "Origin DNS error" from Cloudflare when visiting sipnplay.cafe
 
-**Cons:**
-- May not fix all network issues
+**Diagnosis:**
+1. Is Railway deployed? (Green status in dashboard)
+2. Is Cloudflare CNAME correct?
+3. Has DNS propagated? (Can take 5-30 minutes)
+
+**Fixes:**
+1. Verify Railway is deployed (check dashboard for green status)
+2. Check Cloudflare CNAME target is correct:
+   - Should point to: `snp-site-production.up.railway.app`
+3. Wait 5-10 minutes for DNS propagation
+4. Test DNS resolution: `nslookup sipnplay.cafe`
+
+**If still failing:**
+- Railway → Settings → Restart
+- Cloudflare → DNS → Edit CNAME and re-save
 
 ---
 
-#### Solution 3: Check Network Connectivity
+### Games Not Loading
 
-**Test from Unraid terminal:**
+**Symptom:** App loads but games list is empty
+
+**Fixes:**
+1. Check AIRTABLE_API_KEY in Railway dashboard → Variables tab
+2. Visit `/api/health` to check Airtable connectivity
+3. Check Railway logs for "Airtable" errors
+4. Try manual refresh: `curl -X POST https://sipnplay.cafe/api/games/refresh?full=true`
+
+---
+
+### Images Not Displaying
+
+**Symptom:** Game cards show broken image icon
+
+**Fixes:**
+1. Try hard refresh to recache images: `curl -X POST https://sipnplay.cafe/api/games/refresh?full=true`
+2. Check Railway logs for image fetch errors
+3. Verify Airtable image URLs are valid (they expire after ~12 hours)
+
+---
+
+### Build Fails on Push
+
+**Symptom:** GitHub Actions shows red ✗
+
+**Fixes:**
+1. Check GitHub Actions logs for build errors
+2. Verify `npm run build` works locally
+3. Check Node version: requires Node 20+
+4. Look for TypeScript errors: `npx tsc --noEmit`
+
+---
+
+### Cache Corruption or Performance Issues
+
+**Symptom:** Cache seems corrupt, or app is very slow
+
+**Fixes:**
+1. Delete: `data/image-cache-metadata.json` (will rebuild)
+2. Do a full refresh: `curl -X POST https://sipnplay.cafe/api/games/refresh?full=true`
+3. Check Railway metrics for memory/CPU spikes
+4. Try restart: Railway → Settings → Restart
+
+---
+
+## Local Development Issues
+
+### Dev Server Won't Start
+
+**Symptom:** `npm run dev` fails or hangs
+
+**Fixes:**
+1. Clean dependencies: `rm -rf node_modules && npm install && npm run dev`
+2. Kill old Node: `taskkill /F /IM node.exe` (Windows)
+3. Check `.env.local` has `AIRTABLE_API_KEY`
+
+---
+
+### Build Fails Locally
+
+**Symptom:** `npm run build` fails
+
+**Fixes:**
+1. Clean cache: `rm -rf .next && npm run build`
+2. Check TypeScript: `npx tsc --noEmit`
+3. Verify dependencies: `npm install`
+
+---
+
+## Testing & Verification
+
+### Health Check
+
 ```bash
-# Enter the container
-docker exec -it snp-site sh
-
-# Test DNS resolution
-nslookup api.airtable.com
-
-# Test HTTP connectivity
-wget -O- https://api.airtable.com
-
-# Exit container
-exit
+curl https://sipnplay.cafe/api/health
 ```
 
-**If DNS fails:**
-- Use Solution 2 (add DNS servers)
+Should return healthy status with Airtable connected.
 
-**If HTTP fails but DNS works:**
-- Check firewall rules
-- Check proxy settings
-- Try Solution 1 (host network mode)
+### Manual Cache Refresh
+
+**Incremental:** `curl -X POST https://sipnplay.cafe/api/games/refresh`
+
+**Full:** `curl -X POST https://sipnplay.cafe/api/games/refresh?full=true`
 
 ---
 
-#### Solution 4: Use Custom Bridge Network
+## Disaster Recovery
 
-**Create custom bridge network:**
-```bash
-docker network create --driver bridge snp-network
-```
+### App Completely Down
 
-**Run container with custom network:**
-```bash
-docker run -d \
-  --name snp-site \
-  --network snp-network \
-  --dns 8.8.8.8 \
-  [other options] \
-  snp-site
-```
+1. Railway auto-restarts crashed containers
+2. Manual restart: Railway → Settings → Restart
+3. Check Cloudflare CNAME is correct
+4. Verify latest build succeeded on GitHub Actions
 
----
+### Airtable Connectivity Lost
 
-## Permission Errors
+- App serves cached data gracefully
+- Cache is served as-is (even if stale)
+- No data loss, app stays online
+- Auto-syncs when Airtable recovers
 
-### Symptoms
-- `EACCES: permission denied, mkdir '/app/logs'`
-- `EACCES: permission denied, open '/app/data/games-cache.json'`
+### Domain/DNS Problems
 
-### Solution 1: Fix Host Volume Permissions
-
-**For Unraid:**
-```bash
-# Find where you mapped /app/data
-# Usually something like /mnt/user/appdata/snp-site/data
-
-chmod -R 777 /mnt/user/appdata/snp-site/data
-```
-
-### Solution 2: Run as Root (Less Secure)
-
-**In Docker template, Extra Parameters:**
-```
---user 0:0
-```
-
-### Solution 3: Map Volumes with Proper Permissions
-
-**In Unraid Docker template:**
-- Add container path: `/app/data`
-- Add host path: `/mnt/user/appdata/snp-site/data`
-- Mode: Read/Write
+1. Check Cloudflare CNAME: should be `@` → `snp-site-production.up.railway.app`
+2. Clear DNS cache: `ipconfig /flushdns` (Windows)
+3. Test: `nslookup sipnplay.cafe`
 
 ---
 
-## Image Caching Issues
-
-### Images not loading
-
-**Check cache status:**
-Visit `http://your-server:3000/api/health` and look for:
-```json
-{
-  "cache": {
-    "images": {
-      "count": 0,
-      "sizeMB": "0.00"
-    }
-  }
-}
-```
-
-**If count is 0:**
-- Images haven't been cached yet
-- Check network connectivity (same as above)
-- Clear games cache to trigger re-fetch and caching
-
-**Clear caches:**
-```bash
-docker exec -it snp-site sh
-rm /app/data/games-cache.json
-rm /app/data/image-cache-metadata.json
-rm -rf /app/data/images/*
-exit
-```
-
-Then restart container or visit `/api/games` to trigger fresh fetch.
-
----
-
-## Build Errors
-
-### TypeScript errors during build
-
-**Run local build:**
-```bash
-npm run build
-```
-
-**Common fixes:**
-- Update dependencies: `npm install`
-- Clear Next.js cache: `rm -rf .next`
-- Check for syntax errors in modified files
-
----
-
-## Airtable API Issues
-
-### Invalid API Key
-
-**Symptoms:**
-- "AIRTABLE_API_KEY is not set"
-- HTTP 401 Unauthorized
-
-**Solution:**
-Check environment variables in Docker template:
-```
-AIRTABLE_API_KEY=your_actual_key_here
-AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
-AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
-```
-
-### Rate Limiting
-
-**Symptoms:**
-- HTTP 429 Too Many Requests
-- Slow responses
-
-**Solution:**
-- Use the cache system (already implemented)
-- Reduce refresh frequency
-- Wait for rate limit to reset
-
----
-
-## Performance Issues
-
-### Slow page loads
-
-**Check cache:**
-Visit `/api/health` to see if caches are populated.
-
-**If caches are empty:**
-- Wait for initial cache population
-- Check network connectivity
-
-**If caches are full:**
-- Check server resources (CPU, RAM, disk)
-- Check Docker resource limits
-
-### High memory usage
-
-**Reduce cache size:**
-Edit `lib/cache/games-cache.ts` and `lib/cache/image-cache.ts` to limit cache entries.
-
----
-
-## Getting Help
-
-### Collect Diagnostic Information
-
-1. **Check health endpoint:**
-   ```bash
-   curl http://your-server:3000/api/health | jq
-   ```
-
-2. **Check container logs:**
-   ```bash
-   docker logs snp-site --tail 100
-   ```
-
-3. **Test network from inside container:**
-   ```bash
-   docker exec -it snp-site sh
-   wget -O- https://api.airtable.com
-   ```
-
-4. **Check Docker network:**
-   ```bash
-   docker network inspect bridge
-   ```
-
-### Report Issue
-
-Include:
-- Error message from UI
-- Container logs
-- Health endpoint output
-- Network test results
-- Docker configuration (network mode, DNS, etc.)
-
-GitHub Issues: https://github.com/brendongl/snp-site/issues
+**Last Updated:** October 20, 2025
+**Current Version:** 1.2.0

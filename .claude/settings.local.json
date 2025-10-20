@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(curl -s http://localhost:3001/api/games)",
-      "Bash(curl -s http://localhost:3001/)"
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(curl -s http://localhost:3004/api/play-logs)",
+      "Bash(curl -s http://localhost:3004/staff/play-logs)",
+      "Bash(timeout 10 curl -s http://localhost:3000/)",
+      "Bash(timeout 10 curl -s http://localhost:3001/staff/add-knowledge)",
+      "Bash(timeout 15 curl -s http://localhost:3001/api/staff-knowledge)",
+      "Bash(timeout 10 curl -s http://localhost:3005/staff/add-knowledge)",
+      "Bash(timeout 10 curl -s http://localhost:3005/api/games)",
+      "Bash(git commit -m \"v1.2.1 - cleanup: Remove outdated docs and add project hygiene guidelines\n\nRemoved:\n- 6 outdated session/status markdown files (CATEGORIES_FIX_SUMMARY.md, SESSION_SUMMARY.md, STATUS.md, MIGRATION_SUMMARY.md, etc)\n- 2 duplicate documentation files from docs/ (README.md, CHANGELOG.md)\n- 10+ test screenshots from .playwright-mcp/\n\nUpdated:\n- CLAUDE.md: Add ''Documentation & Project Hygiene'' section with clear guidelines to prevent future mess\n- DEPLOYMENT.md: Add reference to first-time Railway setup guide\n- .gitignore: Exclude test screenshots (.playwright-mcp/**/*.png)\n- docs/TROUBLESHOOTING.md: Created comprehensive troubleshooting guide\n\nThis cleanup consolidates documentation, removes outdated files, and establishes clear rules:\n- Max 3 top-level .md files (README, CLAUDE, CHANGELOG)\n- All detailed docs in /docs/ directory\n- No session notes or status files in root\n- Test artifacts to .gitignore\n\nSee PROJECT_CLEANUP_REPORT.md for full details.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
     ],
     "deny": [],
     "ask": []

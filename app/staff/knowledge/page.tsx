@@ -5,29 +5,29 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface ContentCheckEntry {
+interface StaffKnowledgeEntry {
   id: string;
-  gameId: string;
+  staffMember: string;
   gameName: string;
-  checkDate: string;
-  inspector: string;
-  status: string;
+  confidenceLevel: string;
+  taughtBy: string | null;
   notes: string;
+  canTeach: boolean;
 }
 
 const RECORDS_PER_PAGE = 20;
-const STATUSES = ['Perfect Condition', 'Minor Issues', 'Major Issues', 'Unplayable'];
+const CONFIDENCE_LEVELS = ['Beginner', 'Intermediate', 'Expert', 'Instructor'];
 
-export default function CheckHistoryPage() {
+export default function KnowledgePage() {
   const router = useRouter();
   const [staffName, setStaffName] = useState<string | null>(null);
-  const [allChecks, setAllChecks] = useState<ContentCheckEntry[]>([]);
+  const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'recent' | 'staff'>('recent');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'staff'>('staff');
+  const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
-  const [showMyChecksOnly, setShowMyChecksOnly] = useState(false);
+  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Check authentication
@@ -40,100 +40,86 @@ export default function CheckHistoryPage() {
     setStaffName(name);
   }, [router]);
 
-  // Fetch content check data
+  // Fetch staff knowledge data
   useEffect(() => {
     if (!staffName) return;
 
-    const fetchChecks = async () => {
+    const fetchKnowledge = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch('/api/content-checks-detailed');
+        const response = await fetch('/api/staff-knowledge');
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch content checks: ${response.statusText}`);
+          throw new Error(`Failed to fetch knowledge: ${response.statusText}`);
         }
 
         const data = await response.json();
-        setAllChecks(data.checks || []);
+        setAllKnowledge(data.knowledge || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load content checks');
-        setAllChecks([]);
+        setError(err instanceof Error ? err.message : 'Failed to load knowledge');
+        setAllKnowledge([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchChecks();
+    fetchKnowledge();
   }, [staffName]);
 
   // Get unique staff members for dropdown
-  const uniqueStaff = Array.from(new Set(allChecks.map(c => c.inspector))).sort();
+  const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
 
-  // Filter and sort checks
-  const filteredAndSortedChecks = (() => {
-    let filtered = allChecks;
+  // Filter and sort knowledge
+  const filteredAndSortedKnowledge = (() => {
+    let filtered = allKnowledge;
 
     // Filter to current user if toggle is on
-    if (showMyChecksOnly && staffName) {
-      filtered = filtered.filter(check => check.inspector === staffName);
+    if (showMyKnowledgeOnly && staffName) {
+      filtered = filtered.filter(k => k.staffMember === staffName);
     }
 
     // Filter by selected staff member
     if (selectedStaff) {
-      filtered = filtered.filter(check => check.inspector === selectedStaff);
+      filtered = filtered.filter(k => k.staffMember === selectedStaff);
     }
 
-    // Filter by selected status
-    if (selectedStatus) {
-      filtered = filtered.filter(check => check.status === selectedStatus);
+    // Filter by selected confidence level
+    if (selectedConfidence) {
+      filtered = filtered.filter(k => k.confidenceLevel === selectedConfidence);
     }
 
-    // Sort based on selected option
+    // Sort by staff member
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'recent') {
-        return new Date(b.checkDate).getTime() - new Date(a.checkDate).getTime();
-      } else if (sortBy === 'staff') {
-        return (a.inspector || '').localeCompare(b.inspector || '');
-      }
-      return 0;
+      return (a.staffMember || '').localeCompare(b.staffMember || '');
     });
 
     return sorted;
   })();
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedChecks.length / RECORDS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAndSortedKnowledge.length / RECORDS_PER_PAGE);
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const paginatedChecks = filteredAndSortedChecks.slice(startIndex, startIndex + RECORDS_PER_PAGE);
+  const paginatedKnowledge = filteredAndSortedKnowledge.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
   // Reset to page 1 when filtering or sorting changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, showMyChecksOnly, selectedStatus, selectedStaff]);
+  }, [sortBy, showMyKnowledgeOnly, selectedConfidence, selectedStaff]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Perfect Condition':
-        return 'text-green-700 bg-green-50';
-      case 'Minor Issues':
+  const getConfidenceColor = (level: string) => {
+    switch (level) {
+      case 'Beginner':
+        return 'text-blue-700 bg-blue-50';
+      case 'Intermediate':
         return 'text-yellow-700 bg-yellow-50';
-      case 'Major Issues':
-        return 'text-orange-700 bg-orange-50';
-      case 'Unplayable':
-        return 'text-red-700 bg-red-50';
+      case 'Expert':
+        return 'text-green-700 bg-green-50';
+      case 'Instructor':
+        return 'text-purple-700 bg-purple-50';
       default:
         return 'text-gray-700 bg-gray-50';
     }
-  };
-
-  const formatDate = (date: string) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   return (
@@ -148,7 +134,7 @@ export default function CheckHistoryPage() {
             </Link>
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Content Check History</h1>
+            <h1 className="text-3xl font-bold">Staff Game Knowledge</h1>
             <p className="text-muted-foreground mt-2">
               {staffName && `Logged in as ${staffName}`}
             </p>
@@ -162,65 +148,39 @@ export default function CheckHistoryPage() {
         <div className="mb-6 space-y-4">
           {/* Sort Options */}
           <div className="flex flex-wrap gap-3 items-center">
-            {/* Sort by Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSortBy('recent')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sortBy === 'recent'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                Most Recent
-              </button>
-              <button
-                onClick={() => setSortBy('staff')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  sortBy === 'staff'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                Sort by Staff
-              </button>
-            </div>
-
             {/* Staff Dropdown */}
-            {sortBy === 'staff' && (
-              <select
-                value={selectedStaff || ''}
-                onChange={(e) => setSelectedStaff(e.target.value || null)}
-                className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <option value="">All Staff</option>
-                {uniqueStaff.map(staff => (
-                  <option key={staff} value={staff}>{staff}</option>
-                ))}
-              </select>
-            )}
-
-            {/* Status Filter Dropdown */}
             <select
-              value={selectedStatus || ''}
-              onChange={(e) => setSelectedStatus(e.target.value || null)}
+              value={selectedStaff || ''}
+              onChange={(e) => setSelectedStaff(e.target.value || null)}
               className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
             >
-              <option value="">All Status</option>
-              {STATUSES.map(status => (
-                <option key={status} value={status}>{status}</option>
+              <option value="">All Staff</option>
+              {uniqueStaff.map(staff => (
+                <option key={staff} value={staff}>{staff}</option>
               ))}
             </select>
 
-            {/* My Checks Only Checkbox */}
+            {/* Confidence Level Filter Dropdown */}
+            <select
+              value={selectedConfidence || ''}
+              onChange={(e) => setSelectedConfidence(e.target.value || null)}
+              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+            >
+              <option value="">All Levels</option>
+              {CONFIDENCE_LEVELS.map(level => (
+                <option key={level} value={level}>{level}</option>
+              ))}
+            </select>
+
+            {/* My Knowledge Only Checkbox */}
             <label className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-muted/50 transition-colors">
               <input
                 type="checkbox"
-                checked={showMyChecksOnly}
-                onChange={(e) => setShowMyChecksOnly(e.target.checked)}
+                checked={showMyKnowledgeOnly}
+                onChange={(e) => setShowMyKnowledgeOnly(e.target.checked)}
                 className="w-4 h-4 rounded cursor-pointer"
               />
-              My Checks Only
+              My Knowledge Only
             </label>
           </div>
         </div>
@@ -228,8 +188,8 @@ export default function CheckHistoryPage() {
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filteredAndSortedChecks.length} check{filteredAndSortedChecks.length !== 1 ? 's' : ''}
-            {showMyChecksOnly ? ' by you' : ''} — Showing page {currentPage} of {totalPages || 1}
+            {filteredAndSortedKnowledge.length} record{filteredAndSortedKnowledge.length !== 1 ? 's' : ''}
+            {showMyKnowledgeOnly ? ' of your knowledge' : ''} — Showing page {currentPage} of {totalPages || 1}
           </p>
         </div>
 
@@ -238,7 +198,7 @@ export default function CheckHistoryPage() {
           <div className="text-center py-12">
             <div className="inline-flex items-center gap-2">
               <Zap className="w-5 h-5 animate-spin" />
-              <span>Loading checks...</span>
+              <span>Loading knowledge...</span>
             </div>
           </div>
         )}
@@ -252,51 +212,55 @@ export default function CheckHistoryPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filteredAndSortedChecks.length === 0 && (
+        {!isLoading && !error && filteredAndSortedKnowledge.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {showMyChecksOnly ? 'No checks by you' : 'No content checks found'}
+              {showMyKnowledgeOnly ? 'No knowledge entries for you' : 'No knowledge entries found'}
             </p>
           </div>
         )}
 
-        {/* Content Checks Table */}
-        {!isLoading && !error && filteredAndSortedChecks.length > 0 && (
+        {/* Knowledge Table */}
+        {!isLoading && !error && filteredAndSortedKnowledge.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
             <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
               <div className="col-span-3">Game</div>
-              <div className="col-span-1.5">Date</div>
-              <div className="col-span-2">Inspector</div>
-              <div className="col-span-1.5">Status</div>
+              <div className="col-span-2">Staff Member</div>
+              <div className="col-span-2">Confidence Level</div>
+              <div className="col-span-1">Can Teach</div>
               <div className="col-span-4">Notes</div>
             </div>
 
             {/* Table Rows */}
             <div className="divide-y divide-border">
-              {paginatedChecks.map((check, idx) => (
+              {paginatedKnowledge.map((entry, idx) => (
                 <div
-                  key={check.id}
+                  key={entry.id}
                   className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
                     idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                   }`}
                 >
-                  <div className="col-span-3 font-medium truncate" title={check.gameName}>
-                    {check.gameName}
-                  </div>
-                  <div className="col-span-1.5 text-muted-foreground">
-                    {formatDate(check.checkDate)}
+                  <div className="col-span-3 font-medium truncate" title={entry.gameName}>
+                    {entry.gameName}
                   </div>
                   <div className="col-span-2 text-muted-foreground">
-                    {check.inspector}
+                    {entry.staffMember}
                   </div>
-                  <div className="col-span-1.5">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(check.status)}`}>
-                      {check.status}
+                  <div className="col-span-2">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
+                      {entry.confidenceLevel}
                     </span>
                   </div>
-                  <div className="col-span-4 text-muted-foreground truncate" title={check.notes}>
-                    {check.notes || '—'}
+                  <div className="col-span-1">
+                    {entry.canTeach ? (
+                      <span className="text-green-600 font-semibold">✓</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </div>
+                  <div className="col-span-4 text-muted-foreground truncate" title={entry.notes}>
+                    {entry.notes || '—'}
                   </div>
                 </div>
               ))}

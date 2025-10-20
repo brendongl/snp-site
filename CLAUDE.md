@@ -356,10 +356,111 @@ NEXTAUTH_URL=https://your-domain.com
 
 See `.claude/settings.local.json` for Claude Code extension preferences.
 
+## Documentation & Project Hygiene
+
+### Documentation Guidelines
+
+**Root Documentation (Only 3 files):**
+- `README.md` - Project overview (what is this?)
+- `CLAUDE.md` - Development workflow (this file)
+- `CHANGELOG.md` - Version history
+
+**Detailed Documentation** → `/docs/` directory only:
+- Architecture guides, feature docs, setup instructions, troubleshooting
+- Never create detailed docs in root directory
+
+**Never Commit:**
+- Session notes (CATEGORIES_FIX_SUMMARY.md, SESSION_SUMMARY.md, STATUS.md)
+- Status updates or temporary summaries
+- Test screenshots or artifacts
+- .env files or secrets
+
+### File Lifecycle & Naming
+
+| What | Where | How |
+|------|-------|-----|
+| New feature work | Feature branch + PR | Describe in PR body, not separate file |
+| Session summary | PR description | Summarize work, delete temp notes |
+| Status update | Git commit messages | Don't create STATUS.md |
+| Bug fix notes | Code comments | Not a FIX_SUMMARY.md file |
+| Test screenshots | .gitignore | Never commit to version control |
+| Deprecated docs | Git history | Archive via tags, delete from root |
+
+### Rules to Prevent Mess
+
+1. **One Purpose Per File** - Don't mix concerns
+2. **No Session Notes in Root** - Archive to git history via commits
+3. **No Duplicate Documentation** - One file per topic
+4. **Max 3 Top-Level .md Files** - README, CLAUDE, CHANGELOG only
+5. **Keep Detailed Docs in `/docs/`** - Separate from root
+6. **Test Artifacts to .gitignore** - Never version control screenshots/logs
+7. **No Status Updates** - Use git commits and PR descriptions instead
+
+### When Adding Documentation
+
+Ask yourself:
+- "Does this file already exist for this topic?" → If yes, update it
+- "Will this be outdated in 2 weeks?" → If yes, put in code comment, not separate file
+- "Is this a session note?" → If yes, summarize in PR, don't commit
+- "Is this root-level or docs/-level?" → Most detailed docs go in `/docs/`
+
+### Documentation Structure
+
+```
+✅ GOOD: Few files, clear organization
+README.md              ← GitHub landing page
+CLAUDE.md             ← Dev guide (this file)
+CHANGELOG.md          ← Version history
+
+docs/
+├── DEPLOYMENT.md              ← Infrastructure setup
+├── TROUBLESHOOTING.md        ← Common issues & fixes
+├── DOCKER.md                 ← Build process reference
+├── AIRTABLE_SCHEMA.md       ← Database schema
+└── [feature docs...]          ← Feature-specific documentation
+
+❌ AVOID: Many files in root
+CATEGORIES_FIX_SUMMARY.md     ← One-time task, delete after done
+SESSION_SUMMARY.md             ← Session notes, delete after commit
+STATUS.md                      ← Status updates, use git commits instead
+MIGRATION_SUMMARY.md           ← Historical info, archive to git
+```
+
+### Workflow Examples
+
+**Adding a Feature:**
+```
+1. Create feature branch: git checkout -b feature/my-feature
+2. Implement feature and commit regularly
+3. Create Pull Request with description (not a FEATURE_SUMMARY.md)
+4. Summarize work in PR body
+5. Merge PR
+6. If docs need updating, edit docs/* files
+7. Never leave FEATURE_SUMMARY.md or SESSION_SUMMARY.md behind
+```
+
+**Fixing a Bug:**
+```
+1. Add code comments explaining the fix
+2. Commit with descriptive message
+3. Update docs/TROUBLESHOOTING.md if applicable
+4. Don't create FIX_SUMMARY.md or BUG_NOTES.md
+```
+
+**Major Migration:**
+```
+1. Work in dedicated branch
+2. Commit with clear messages
+3. On merge, git tags the commit (archives to history)
+4. Delete temporary notes/summaries
+5. Update DEPLOYMENT.md or relevant docs
+6. Never leave MIGRATION_SUMMARY.md in root
+```
+
 ---
 
-**Last Updated**: October 18, 2025
-**Current Version**: 1.0.6
+**Last Updated**: October 20, 2025
+**Current Version**: 1.2.0
 **Hosting**: Railway → Cloudflare
 **Domain**: https://sipnplay.cafe
 
