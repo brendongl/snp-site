@@ -49,6 +49,7 @@ export function StaffLoginDialog({ isOpen, onClose, onLoginSuccess }: StaffLogin
       localStorage.setItem('staff_name', verifyData.staffName);
       localStorage.setItem('staff_id', verifyData.staffId); // Airtable record ID
       localStorage.setItem('staff_record_id', verifyData.staffId); // Alias for clarity
+      localStorage.setItem('staff_type', verifyData.type || 'Staff'); // Admin or Staff
 
       // Close dialog and trigger success (which reloads the page)
       setEmail('');
