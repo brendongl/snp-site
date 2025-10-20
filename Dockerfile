@@ -1,10 +1,9 @@
 # Multi-stage build for optimized production image
-FROM node:20.18.1-alpine AS base
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+# libc6-compat not needed for Debian-based slim image
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
