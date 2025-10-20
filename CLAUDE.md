@@ -13,11 +13,23 @@ npm run migrate:content-checks  # One-time migration for content checks
 ```
 
 ### Before Any Git Push
-✅ **ALWAYS:**
+✅ **CRITICAL WORKFLOW - ALL CHANGES GO TO STAGING FIRST:**
+
+**ALL revisions (minor or major) MUST go to the `staging` branch first for testing.** The `main` branch is production-only and is only updated when explicitly instructed with "push to main".
+
+**Standard Deployment Workflow:**
 1. Update version in `lib/version.ts` AND `package.json`
 2. Run `npm run build` to verify no errors
 3. Use the commit template below
-4. Push to GitHub
+4. Push to `staging` branch: `git push origin staging`
+5. Test on staging environment (user will confirm via "push to main")
+6. After user confirms, merge to `main`: `git push origin main`
+
+**Important:**
+- Always commit to `staging` by default
+- **NEVER push to `main` unless user explicitly says "push to main"**
+- Staging environment URL will be different from sipnplay.cafe (production)
+- Only merge to main when ready for production deployment
 
 ### Version Numbering
 - **MAJOR.MINOR.PATCH** (semantic versioning)
@@ -35,6 +47,22 @@ Brief description of changes
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
+
+### Branch Strategy
+**Two-Branch Deployment Model:**
+- **`staging` branch** - Testing environment for all new features/fixes
+  - Railway auto-deploys from this branch
+  - Used for QA before production
+  - All development work commits here first
+- **`main` branch** - Production environment (sipnplay.cafe)
+  - Only updated after user confirms changes are ready
+  - Trigger phrase: "push to main"
+  - Railway auto-deploys from this branch to production
+
+**Workflow Examples:**
+- New feature: Create commit → Push to staging → Test → User says "push to main" → Merge to main
+- Bug fix: Create commit → Push to staging → Verify fix → User says "push to main" → Merge to main
+- Hotfix: Same process, just faster turnaround
 
 ## Project Structure
 

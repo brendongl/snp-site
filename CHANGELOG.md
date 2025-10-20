@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Deployment Strategy
+**As of v1.3.0**, this project uses a two-branch deployment model:
+- **`staging` branch** - Testing environment (Railway auto-deploys)
+- **`main` branch** - Production environment → sipnplay.cafe (Railway auto-deploys)
+
+**All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
+
 ## [1.3.0] - 2025-10-20
 
 ### Added
