@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Loader2 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +22,11 @@ function SignInContent() {
       router.push(redirectTo);
     }
   }, [router, searchParams]);
+
+  // Get redirect URL from searchParams - deferring to effect
+  const getRedirectUrl = () => {
+    return searchParams.get('callbackUrl') || '/games?staff=true';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +55,7 @@ function SignInContent() {
 
       // Redirect after short delay
       setTimeout(() => {
-        const redirectTo = searchParams.get('callbackUrl') || '/games?staff=true';
-        router.push(redirectTo);
+        router.push(getRedirectUrl());
       }, 500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in');
