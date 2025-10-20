@@ -24,9 +24,10 @@ export default function KnowledgePage() {
   const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'staff'>('staff');
+  const [sortBy, setSortBy] = useState<'staff' | 'confidence'>('staff');
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
   const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -67,8 +68,9 @@ export default function KnowledgePage() {
     fetchKnowledge();
   }, [staffName]);
 
-  // Get unique staff members for dropdown
+  // Get unique staff members and game names for dropdowns
   const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
+  const uniqueGameNames = Array.from(new Set(allKnowledge.map(k => k.gameName))).sort();
 
   // Filter and sort knowledge
   const filteredAndSortedKnowledge = (() => {
@@ -84,13 +86,24 @@ export default function KnowledgePage() {
       filtered = filtered.filter(k => k.staffMember === selectedStaff);
     }
 
-    // Filter by selected confidence level
+    // Filter by selected game name
+    if (selectedGameName) {
+      filtered = filtered.filter(k => k.gameName === selectedGameName);
+    }
+
+    // Filter by selected confidence level (not removed, just moving to filtering not sorting)
     if (selectedConfidence) {
       filtered = filtered.filter(k => k.confidenceLevel === selectedConfidence);
     }
 
-    // Sort by staff member
+    // Sort based on selected sort option
     const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'confidence') {
+        const confidenceOrder = { 'Beginner': 0, 'Intermediate': 1, 'Expert': 2, 'Instructor': 3 };
+        return (confidenceOrder[a.confidenceLevel as keyof typeof confidenceOrder] || 0) -
+               (confidenceOrder[b.confidenceLevel as keyof typeof confidenceOrder] || 0);
+      }
+      // Default: sort by staff member
       return (a.staffMember || '').localeCompare(b.staffMember || '');
     });
 
@@ -105,7 +118,7 @@ export default function KnowledgePage() {
   // Reset to page 1 when filtering or sorting changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, showMyKnowledgeOnly, selectedConfidence, selectedStaff]);
+  }, [sortBy, showMyKnowledgeOnly, selectedConfidence, selectedStaff, selectedGameName]);
 
   const getConfidenceColor = (level: string) => {
     switch (level) {
@@ -146,9 +159,21 @@ export default function KnowledgePage() {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Controls */}
         <div className="mb-6 space-y-4">
-          {/* Sort Options */}
+          {/* Filters and Sort */}
           <div className="flex flex-wrap gap-3 items-center">
-            {/* Staff Dropdown */}
+            {/* Game Name Filter Dropdown */}
+            <select
+              value={selectedGameName || ''}
+              onChange={(e) => setSelectedGameName(e.target.value || null)}
+              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+            >
+              <option value="">All Games</option>
+              {uniqueGameNames.map(game => (
+                <option key={game} value={game}>{game}</option>
+              ))}
+            </select>
+
+            {/* Staff Filter Dropdown */}
             <select
               value={selectedStaff || ''}
               onChange={(e) => setSelectedStaff(e.target.value || null)}
@@ -170,6 +195,16 @@ export default function KnowledgePage() {
               {CONFIDENCE_LEVELS.map(level => (
                 <option key={level} value={level}>{level}</option>
               ))}
+            </select>
+
+            {/* Sort By Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'staff' | 'confidence')}
+              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+            >
+              <option value="staff">Sort by Staff</option>
+              <option value="confidence">Sort by Level</option>
             </select>
 
             {/* My Knowledge Only Checkbox */}
@@ -225,11 +260,12 @@ export default function KnowledgePage() {
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
             <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
-              <div className="col-span-3">Game</div>
+              <div className="col-span-2">Game</div>
               <div className="col-span-2">Staff Member</div>
               <div className="col-span-2">Confidence Level</div>
+              <div className="col-span-2">Was Taught By</div>
               <div className="col-span-1">Can Teach</div>
-              <div className="col-span-4">Notes</div>
+              <div className="col-span-3">Notes</div>
             </div>
 
             {/* Table Rows */}
@@ -241,7 +277,7 @@ export default function KnowledgePage() {
                     idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                   }`}
                 >
-                  <div className="col-span-3 font-medium truncate" title={entry.gameName}>
+                  <div className="col-span-2 font-medium truncate" title={entry.gameName}>
                     {entry.gameName}
                   </div>
                   <div className="col-span-2 text-muted-foreground">
@@ -252,6 +288,9 @@ export default function KnowledgePage() {
                       {entry.confidenceLevel}
                     </span>
                   </div>
+                  <div className="col-span-2 text-muted-foreground truncate" title={entry.taughtBy || 'Not specified'}>
+                    {entry.taughtBy || '—'}
+                  </div>
                   <div className="col-span-1">
                     {entry.canTeach ? (
                       <span className="text-green-600 font-semibold">✓</span>
@@ -259,7 +298,7 @@ export default function KnowledgePage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </div>
-                  <div className="col-span-4 text-muted-foreground truncate" title={entry.notes}>
+                  <div className="col-span-3 text-muted-foreground truncate" title={entry.notes}>
                     {entry.notes || '—'}
                   </div>
                 </div>

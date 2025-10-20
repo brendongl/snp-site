@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRecentPlayLog, cachePlayLog } from '@/lib/db/postgres';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,6 +110,106 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error: errorMessage
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    if (!AIRTABLE_API_KEY) {
+      return NextResponse.json(
+        { error: 'Airtable API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const { gameId, staffRecordId, staffName, sessionDate, notes } = await request.json();
+
+    // Validate required fields
+    if (!gameId || !staffRecordId || !staffName) {
+      return NextResponse.json(
+        { error: 'Missing required fields: gameId, staffRecordId, staffName' },
+        { status: 400 }
+      );
+    }
+
+    // Check PostgreSQL for recent play log (faster than Airtable)
+    let recentLog;
+    try {
+      recentLog = await checkRecentPlayLog(gameId);
+    } catch (dbError) {
+      console.error('Database error checking recent play log:', dbError);
+      // Don't fail - allow the log to be created if DB check fails
+    }
+
+    if (recentLog) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `This game has already been logged by ${recentLog.staffName} ${recentLog.minutesAgo} minute${recentLog.minutesAgo !== 1 ? 's' : ''} ago!`,
+        },
+        { status: 409 } // Conflict status
+      );
+    }
+
+    // Create record in Airtable Play Logs table
+    const airtableResponse = await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_PLAY_LOGS_TABLE_ID}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              fields: {
+                'Game': [gameId],
+                'Logged By': [staffRecordId],
+                'Session Date': sessionDate || new Date().toISOString(),
+                'Notes': notes || '',
+              },
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!airtableResponse.ok) {
+      const errorData = await airtableResponse.json();
+      throw new Error(`Airtable API error: ${errorData.error?.message || airtableResponse.statusText}`);
+    }
+
+    const airtableData = await airtableResponse.json();
+    const playLogId = airtableData.records[0]?.id;
+
+    // Cache the play log in PostgreSQL (non-blocking)
+    try {
+      await cachePlayLog(gameId, staffName);
+    } catch (cacheError) {
+      console.error('Error caching play log:', cacheError);
+      // Don't fail if caching fails - the record was created in Airtable
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        playLogId,
+        message: 'Play log created successfully',
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error creating play log:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create play log';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
       },
       { status: 500 }
     );

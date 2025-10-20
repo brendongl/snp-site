@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Zap, Check, X } from 'lucide-react';
+import { ArrowLeft, Zap, Check, LayoutGrid, List } from 'lucide-react';
 
 interface Game {
   id: string;
@@ -28,6 +28,7 @@ export default function AddKnowledgePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clearConfirmed, setClearConfirmed] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Check authentication
   useEffect(() => {
@@ -244,7 +245,7 @@ Click OK to confirm or Cancel to go back.`;
             </Link>
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Game Expert Tracker</h1>
+            <h1 className="text-3xl font-bold">Bulk Knowledge Updater</h1>
             <p className="text-muted-foreground mt-2">
               {staffName && `Logged in as ${staffName}`}
             </p>
@@ -308,6 +309,32 @@ Click OK to confirm or Cancel to go back.`;
                     {clearConfirmed ? '✓ Click again to clear all' : 'Clear All'}
                   </button>
 
+                  {/* View Toggle Buttons */}
+                  <div className="flex gap-1 border border-border rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                        viewMode === 'grid'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                      Images
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                        viewMode === 'list'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <List className="w-4 h-4" />
+                      List
+                    </button>
+                  </div>
+
                   <button
                     onClick={handleAllDone}
                     disabled={selectedGames.size === 0 || isSubmitting}
@@ -337,8 +364,8 @@ Click OK to confirm or Cancel to go back.`;
               </div>
             )}
 
-            {/* Games Gallery */}
-            {!isLoading && (
+            {/* Games Grid View */}
+            {!isLoading && viewMode === 'grid' && (
               <>
                 <div className="grid grid-cols-3 gap-6 mb-8">
                   {paginatedGames.map(game => (
@@ -380,6 +407,64 @@ Click OK to confirm or Cancel to go back.`;
                       </p>
                     </div>
                   ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mb-8">
+                    <button
+                      onClick={() => handleChangePage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
+                    >
+                      ← Previous
+                    </button>
+                    <div className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <button
+                      onClick={() => handleChangePage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Games List View */}
+            {!isLoading && viewMode === 'list' && (
+              <>
+                <div className="border border-border rounded-lg overflow-hidden mb-8">
+                  <div className="divide-y divide-border">
+                    {paginatedGames.map(game => (
+                      <div
+                        key={game.id}
+                        className="p-3 hover:bg-muted/50 transition-colors cursor-pointer flex items-center gap-3"
+                        onClick={() => toggleGameSelection(game.id)}
+                      >
+                        {/* Checkbox */}
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selectedGames.has(game.id)
+                              ? 'bg-green-500 border-green-600'
+                              : 'border-border bg-background'
+                          }`}
+                        >
+                          {selectedGames.has(game.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+
+                        {/* Game Name */}
+                        <span className="text-sm font-medium flex-1">
+                          {game.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Pagination */}

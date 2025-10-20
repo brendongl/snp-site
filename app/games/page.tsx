@@ -8,6 +8,7 @@ import { GameCard } from '@/components/features/games/GameCard';
 import { GameDetailModal } from '@/components/features/games/GameDetailModal';
 import { SpinnerWheel } from '@/components/features/games/SpinnerWheel';
 import { AddGameDialog } from '@/components/features/games/AddGameDialog';
+import { StaffLoginDialog } from '@/components/features/staff/StaffLoginDialog';
 import { BoardGame, GameFilters as FilterType, SortOption } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,7 @@ function GamesPageContent() {
   const [spinnerGames, setSpinnerGames] = useState<BoardGame[]>([]);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showAddGameDialog, setShowAddGameDialog] = useState(false);
+  const [showStaffLogin, setShowStaffLogin] = useState(false);
   const [staffSortOption, setStaffSortOption] = useState<SortOption | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
@@ -54,6 +56,12 @@ function GamesPageContent() {
       setIsHeaderCollapsed(saved === 'true');
     }
   }, []);
+
+  // Handle login success - refresh page to show staff mode
+  const handleLoginSuccess = () => {
+    // Trigger page refresh to pick up the new localStorage values
+    window.location.reload();
+  };
 
   // Fetch games from API (cached server-side)
   const fetchGames = async () => {
@@ -431,25 +439,35 @@ function GamesPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-full">
-      {/* Header */}
-      <div className="mb-4 flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl md:text-4xl font-bold">Board Game Collection</h1>
-            <div
-              className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help"
-              title={`Build date: ${BUILD_DATE}`}
-            >
-              v{VERSION}
+    <div className="min-h-screen">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="container mx-auto px-4 py-4 max-w-full">
+          <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold">Board Game Collection</h1>
+                <div
+                  className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help"
+                  title={`Build date: ${BUILD_DATE}`}
+                >
+                  v{VERSION}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Showing {games.length} games
+              </p>
             </div>
-            {isStaff && <StaffMenu />}
-          </div>
-          <p className="text-muted-foreground">
-            Browse our collection of {games.length} board games
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+          {!isStaff && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStaffLogin(true)}
+            >
+              🔐 Staff Login
+            </Button>
+          )}
           {isStaff && (
             <Button
               variant="default"
@@ -493,11 +511,14 @@ function GamesPageContent() {
               <span className="sm:hidden">Hard</span>
             </Button>
           )}
+          {isStaff && <StaffMenu />}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Search and Filters - Collapsible */}
-      <div className="sticky top-0 z-50 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
+      <div className="sticky top-16 z-30 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
         {isHeaderCollapsed ? (
           // Collapsed view - slim bar with active filters
           <div className="flex items-center justify-between gap-2 py-2 flex-wrap">
@@ -665,6 +686,7 @@ function GamesPageContent() {
       </div>
 
       {/* Games Grid */}
+      <div className="container mx-auto px-4 py-8 max-w-full">
       {picturesOnlyMode ? (
         // Pictures Only Mode - 3 column grid with just images
         <div className="grid grid-cols-3 gap-2 pt-4">
@@ -733,6 +755,7 @@ function GamesPageContent() {
           <p className="text-muted-foreground">No games found matching your criteria</p>
         </div>
       )}
+      </div>
 
       {/* Advanced Filters */}
       <AdvancedFilters
@@ -766,6 +789,13 @@ function GamesPageContent() {
           onSuccess={() => handleRefresh(false)}
         />
       )}
+
+      {/* Staff Login Dialog */}
+      <StaffLoginDialog
+        isOpen={showStaffLogin}
+        onClose={() => setShowStaffLogin(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
 
       {/* Floating Back to Top Button */}
       <ScrollToTopButton />

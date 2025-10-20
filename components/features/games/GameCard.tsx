@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { BoardGame } from '@/types';
 import { Users, Calendar, Brain, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { PlayLogDialog } from '@/components/features/staff/PlayLogDialog';
+import { useToast } from '@/lib/context/toast-context';
 
 interface GameCardProps {
   game: BoardGame;
@@ -12,12 +14,18 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
+  const { addToast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showPlayLogDialog, setShowPlayLogDialog] = useState(false);
 
   // Reset image loaded state when game changes
   useEffect(() => {
     setImageLoaded(false);
   }, [game.id]);
+
+  const handlePlayLogSuccess = (gameName: string) => {
+    addToast(`✓ Successfully logged ${gameName}`, 'success', 3000);
+  };
 
   const firstImage = game.fields.Images?.[0];
   const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
@@ -63,6 +71,26 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
             {game.fields['Year Released'] && (
               <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium z-20">
                 {game.fields['Year Released']}
+              </div>
+            )}
+
+            {/* Staff Play Log Button - bottom right overlay (always visible on mobile) */}
+            {isStaff && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPlayLogDialog(true);
+                  }}
+                  className="absolute bottom-3 right-3 z-20 flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 transition-colors"
+                  title="Log game play"
+                >
+                  <span className="text-xl">📊</span>
+                </button>
               </div>
             )}
           </>
@@ -143,6 +171,15 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
           </div>
         )}
       </div>
+
+      {/* Play Log Dialog */}
+      <PlayLogDialog
+        isOpen={showPlayLogDialog}
+        onClose={() => setShowPlayLogDialog(false)}
+        gameId={game.id}
+        gameName={game.fields['Game Name']}
+        onSuccess={handlePlayLogSuccess}
+      />
     </div>
   );
 }

@@ -1,0 +1,16 @@
+name: Sync Staff Daily
+
+on:
+  schedule:
+    # Run daily at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-staff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger staff list sync
+        run: |
+          curl -X POST https://sipnplay.cafe/api/staff-list/sync \
+            -H "Content-Type: application/json"

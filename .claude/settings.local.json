@@ -1,16 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -s http://localhost:3001/api/games)",
-      "Bash(curl -s http://localhost:3001/)",
-      "Bash(curl -s http://localhost:3004/api/play-logs)",
-      "Bash(curl -s http://localhost:3004/staff/play-logs)",
-      "Bash(timeout 10 curl -s http://localhost:3000/)",
-      "Bash(timeout 10 curl -s http://localhost:3001/staff/add-knowledge)",
-      "Bash(timeout 15 curl -s http://localhost:3001/api/staff-knowledge)",
-      "Bash(timeout 10 curl -s http://localhost:3005/staff/add-knowledge)",
-      "Bash(timeout 10 curl -s http://localhost:3005/api/games)",
-      "Bash(git commit -m \"v1.2.1 - cleanup: Remove outdated docs and add project hygiene guidelines\n\nRemoved:\n- 6 outdated session/status markdown files (CATEGORIES_FIX_SUMMARY.md, SESSION_SUMMARY.md, STATUS.md, MIGRATION_SUMMARY.md, etc)\n- 2 duplicate documentation files from docs/ (README.md, CHANGELOG.md)\n- 10+ test screenshots from .playwright-mcp/\n\nUpdated:\n- CLAUDE.md: Add ''Documentation & Project Hygiene'' section with clear guidelines to prevent future mess\n- DEPLOYMENT.md: Add reference to first-time Railway setup guide\n- .gitignore: Exclude test screenshots (.playwright-mcp/**/*.png)\n- docs/TROUBLESHOOTING.md: Created comprehensive troubleshooting guide\n\nThis cleanup consolidates documentation, removes outdated files, and establishes clear rules:\n- Max 3 top-level .md files (README, CLAUDE, CHANGELOG)\n- All detailed docs in /docs/ directory\n- No session notes or status files in root\n- Test artifacts to .gitignore\n\nSee PROJECT_CLEANUP_REPORT.md for full details.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
+      "Bash(npm run build)",
+      "Bash(npm install --save-dev @types/pg)",
+      "Bash(npm install pg)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000/games)",
+      "Bash(psql \"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" -c \"\nCREATE TABLE IF NOT EXISTS staff_list (\n  staff_id VARCHAR(50) PRIMARY KEY,\n  staff_name VARCHAR(255) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nCREATE INDEX IF NOT EXISTS idx_staff_name ON staff_list(staff_name);\n\nCOMMENT ON TABLE staff_list IS ''Cache of staff members from Airtable Staff table. Synced daily via POST /api/staff-list/sync'';\n\")",
+      "Bash(node scripts/create-staff-table.js)",
+      "Bash(curl -X POST http://localhost:3002/api/staff-list/sync)",
+      "Bash(git add .)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nv1.3.0 - Major feature release: Play Log System, Staff Game Knowledge, Toast Notifications\n\n### Added\n- **Play Log System** - Staff can log when games are played\n  - 📊 Floating button overlay on game cards (staff-only, mobile-friendly)\n  - Play Log dialog with Session Date/Time (defaults to now) and optional Notes\n  - Duplicate detection: Blocks if any staff logged same game within 1 hour\n  - Toast notifications showing \"Successfully logged [Game Name]\" on /games page\n  - PostgreSQL caching for fast duplicate detection\n  - Automatic cache cleanup for play logs older than 1 hour\n\n- **Staff Game Knowledge System** - Track and share game knowledge\n  - \"Add Knowledge\" button in game detail modal (staff-only)\n  - Dialog with fields: Confidence Level, Was Taught By (dropdown), Notes\n  - Confidence Levels: Beginner, Intermediate, Expert, Instructor\n  - Confirmation popup for Expert/Instructor levels\n  - Staff Game Knowledge page with updated filters and columns\n\n- **Staff List Caching** - PostgreSQL cache for Airtable staff members\n  - staff_list table in PostgreSQL synced daily from Airtable\n  - Fast dropdown population (no Airtable API call per dialog open)\n  - GitHub Actions workflow for daily cron job at 2 AM UTC\n\n- **Toast Notification System** - Global toast notifications\n  - ToastProvider context for managing notifications\n  - ToastContainer component with auto-dismiss (3 seconds)\n  - Success/Error/Info toast types with appropriate icons\n\n### Changed\n- Enhanced event propagation handling in dialogs\n- Staff Game Knowledge table layout adjusted for \"Was Taught By\" column\n- Play log time calculation now uses PostgreSQL EXTRACT(EPOCH) for accuracy\n- Renamed \"Game Expert Tracker\" to \"Bulk Knowledge Updater\"\n- Added view toggle (Images/List) to Bulk Knowledge Updater\n- Moved Bulk Knowledge Updater to sub-menu under Staff Knowledge in hamburger menu\n\n### Fixed\n- Mobile click handling on radio buttons in dialogs (removed hover tooltips)\n- Dialog closing unexpectedly after confirming Expert/Instructor level\n- Play log time calculations showing incorrect minutes ago\n- Staff list showing only existing members instead of full Staff table\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

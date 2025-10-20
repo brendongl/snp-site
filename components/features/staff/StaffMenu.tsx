@@ -69,24 +69,26 @@ export function StaffMenu() {
             </Link>
 
             {/* Staff Knowledge */}
-            <Link
-              href="/staff/knowledge"
-              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="text-lg">🧠</span>
-              <span>Staff Knowledge</span>
-            </Link>
+            <div className="py-1">
+              <Link
+                href="/staff/knowledge"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100 font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="text-lg">🧠</span>
+                <span>Staff Knowledge</span>
+              </Link>
 
-            {/* Game Expert Tracker */}
-            <Link
-              href="/staff/add-knowledge"
-              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="text-lg">⭐</span>
-              <span>Game Expert Tracker</span>
-            </Link>
+              {/* Bulk Knowledge Updater - Sub-item */}
+              <Link
+                href="/staff/add-knowledge"
+                className="flex items-center gap-2 px-4 py-2 pl-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300 text-sm"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="text-lg">⭐</span>
+                <span>Bulk Knowledge Updater</span>
+              </Link>
+            </div>
 
             {/* Divider */}
             <div className="my-2 border-t border-gray-200 dark:border-gray-700" />

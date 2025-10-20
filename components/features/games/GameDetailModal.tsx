@@ -15,6 +15,7 @@ import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, Ch
 import { ContentCheckBadge } from '@/components/features/content-check/ContentCheckBadge';
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
+import { AddGameKnowledgeDialog } from '@/components/features/staff/AddGameKnowledgeDialog';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 
 interface GameDetailModalProps {
@@ -27,6 +28,7 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
   const isStaff = useStaffMode();
   const [showHistory, setShowHistory] = useState(false);
   const [showContentCheck, setShowContentCheck] = useState(false);
+  const [showAddKnowledge, setShowAddKnowledge] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const [expansions, setExpansions] = useState<BoardGame[]>([]);
@@ -127,6 +129,15 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <h3 className="text-sm font-semibold">Staff Section</h3>
               <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowAddKnowledge(true)}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <Brain className="w-4 h-4" />
+                  Add Knowledge
+                </Button>
                 <Button
                   variant="default"
                   size="sm"
@@ -398,6 +409,16 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
               // Optionally refresh the game data here
               // For now, just close the dialog
             }}
+          />
+        )}
+
+        {/* Add Game Knowledge Dialog */}
+        {isStaff && (
+          <AddGameKnowledgeDialog
+            isOpen={showAddKnowledge}
+            onClose={() => setShowAddKnowledge(false)}
+            gameId={game.id}
+            gameName={game.fields['Game Name']}
           />
         )}
       </DialogContent>
