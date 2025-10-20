@@ -62,7 +62,8 @@ function SignInContent() {
       // Store in localStorage
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', displayName);
-      localStorage.setItem('staff_id', btoa(email));
+      localStorage.setItem('staff_id', staffData.staffId); // Sip N Play Staff table record ID
+      localStorage.setItem('staff_record_id', staffData.staffListRecordId); // SNP Games List StaffList table record ID (for Play Logs linking)
 
       // Store staff type (Admin or Staff)
       const staffType = staffData.type || 'Staff';

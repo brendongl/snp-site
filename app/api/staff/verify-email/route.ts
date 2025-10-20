@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_SIP_N_PLAY_BASE_ID = process.env.AIRTABLE_SIP_N_PLAY_BASE_ID || 'appjD3LJhXYjp0tXm';
 const AIRTABLE_STAFF_TABLE_ID = process.env.AIRTABLE_STAFF_TABLE_ID || 'tblLthDOTzCPbSdAA';
+const AIRTABLE_GAMES_BASE_ID = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
+const AIRTABLE_STAFFLIST_TABLE_ID = process.env.AIRTABLE_STAFFLIST_TABLE_ID || 'tblGIyQNmhcsK4Qlg';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Query Airtable Staff table for this email
+    // Query Airtable Staff table (Sip N Play base) for authentication
     const response = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_SIP_N_PLAY_BASE_ID}/${AIRTABLE_STAFF_TABLE_ID}?filterByFormula={Email}='${encodeURIComponent(email)}'`,
       {
@@ -53,14 +55,38 @@ export async function POST(request: Request) {
 
     // Return the first matching staff record
     const staffRecord = data.records[0];
-    const staffId = staffRecord.id;
     const staffName = staffRecord.fields['Name'] || 'Staff Member';
     const staffType = staffRecord.fields['Type'] || 'Staff';
+
+    // Also fetch the corresponding StaffList record ID from SNP Games List base
+    // (needed for linking Play Logs "Logged By" field within the same base)
+    let staffListRecordId = null;
+    try {
+      const staffListResponse = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_STAFFLIST_TABLE_ID}?filterByFormula={Email}='${encodeURIComponent(email)}'`,
+        {
+          headers: {
+            Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          },
+        }
+      );
+
+      if (staffListResponse.ok) {
+        const staffListData = await staffListResponse.json();
+        if (staffListData.records && staffListData.records.length > 0) {
+          staffListRecordId = staffListData.records[0].id;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching StaffList record ID:', err);
+      // Don't fail the auth if StaffList lookup fails - continue without it
+    }
 
     return NextResponse.json(
       {
         success: true,
-        staffId,
+        staffId: staffRecord.id,
+        staffListRecordId,
         staffName,
         email,
         type: staffType,

@@ -213,6 +213,26 @@ interface StaffMember {
 }
 ```
 
+## Important: Staff Table vs StaffList Table
+
+**CRITICAL ARCHITECTURE NOTE**: Airtable cannot create linked records between different bases. Therefore:
+
+- **Staff Table** (`tblLthDOTzCPbSdAA`) lives in **Sip N Play base** (`appjD3LJhXYjp0tXm`)
+  - Used for: Authentication (checking email, Type field for admin detection)
+  - When to use: Sign-in process, verifying user credentials
+
+- **StaffList Table** (`tblGIyQNmhcsK4Qlg`) lives in **SNP Games List base** (`apppFvSDh2JBc0qAu`)
+  - Used for: Linked records in Play Logs "Logged By" field
+  - This is a synced table (mirrors data from Sip N Play Staff table)
+  - When to use: For any Airtable linkages within SNP Games List base
+
+**Example Flow**:
+1. User signs in with email → Query **Staff table** (Sip N Play base) for authentication
+2. Get the user's Airtable record ID from **Staff table**
+3. Also fetch the same user's record ID from **StaffList table** (SNP Games List base)
+4. Store both IDs in localStorage: `staff_id` (for auth info) and `staff_record_id` (for Play Logs linking)
+5. When creating Play Log → Use `staff_record_id` (from StaffList) for the "Logged By" link
+
 ## SNP Games List Base - Play Logs Table
 
 ### Base Information
@@ -270,12 +290,37 @@ interface StaffMember {
 - Game IDs come from BG List table (`tblIuIJN5q3W6oXNr`)
 - Staff record IDs come from Sip N Play Staff table (`tblLthDOTzCPbSdAA` in `appjD3LJhXYjp0tXm`)
 
+## SNP Games List Base - StaffList Table
+
+### Base Information
+- **Base ID**: `apppFvSDh2JBc0qAu` (SNP Games List)
+- **Table ID**: `tblGIyQNmhcsK4Qlg`
+- **Table Name**: "StaffList"
+- **Type**: Synced table (mirrors Sip N Play Staff table)
+
+### Purpose
+Synced copy of the Staff table from Sip N Play base. Exists in SNP Games List base to enable:
+- Linked records in Play Logs "Logged By" field (within same base)
+- Lookups of staff information for games-related features
+
+### Key Fields
+Same fields as original **Sip N Play Staff table** (synced automatically):
+- **Email** - For matching/filtering
+- **Name** - Staff member name
+- **Type** - Single-select field (Admin, Full-Time, Part-Time, Casual, Assistant, Probation, Terminated)
+- Other fields synced from original Staff table
+
+### When to Use
+- Use **Staff Table** (`tblLthDOTzCPbSdAA` in Sip N Play base) for: Authentication, checking Type field, user verification
+- Use **StaffList Table** (`tblGIyQNmhcsK4Qlg` in SNP Games List base) for: Linked records in Play Logs, any Airtable relationships within SNP Games List base
+
 ## References
 - Airtable API: https://airtable.com/developers/web/api/introduction
 - **SNP Games List Base ID**: `apppFvSDh2JBc0qAu`
   - BG List Table: `tblIuIJN5q3W6oXNr`
   - Play Logs Table: `tblggfqeM2zQaDUEI`
+  - StaffList Table: `tblGIyQNmhcsK4Qlg` (synced from Sip N Play Staff)
   - Content Check Log Table: `tblHWhNrHc9r3u42Q`
 - **Sip N Play Base ID**: `appjD3LJhXYjp0tXm`
-  - Staff Table: `tblLthDOTzCPbSdAA` (with Admin Type field)
+  - Staff Table: `tblLthDOTzCPbSdAA` (with Admin Type field, original source)
   - Staff Game Knowledge Table: `tblgdqR2DTAcjVFBd`

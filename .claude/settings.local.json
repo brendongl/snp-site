@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(body stream already read\" error when logging games.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(curl -s -X POST http://localhost:3000/api/play-logs )"
     ],
     "deny": [],
     "ask": []
