@@ -64,7 +64,7 @@ class PlayLogsDbService {
           sl.staff_name AS staff_name
         FROM play_logs pl
         LEFT JOIN games g ON pl.game_id = g.id
-        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
+        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.stafflist_id
         ORDER BY pl.session_date DESC, pl.created_at DESC
       `);
 
