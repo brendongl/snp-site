@@ -66,8 +66,7 @@ export function PlayLogDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameId,
-          staffRecordId, // Must be StaffList record ID from SNP Games List base
-          staffName,
+          staffListId: staffRecordId, // Must be StaffList record ID from SNP Games List base
           sessionDate: new Date(sessionDate).toISOString(),
           notes: notes.trim() || '',
         }),

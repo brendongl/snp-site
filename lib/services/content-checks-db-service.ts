@@ -40,7 +40,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(`
         SELECT
           id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
         ORDER BY check_date DESC
@@ -61,7 +61,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `SELECT
           id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
         WHERE game_id = $1
@@ -84,7 +84,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `SELECT
           id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
         WHERE inspector_id = $1
@@ -107,7 +107,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `SELECT
           id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
         WHERE game_id = $1
@@ -135,11 +135,11 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `INSERT INTO content_checks (
           game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
         RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at`,
         [
           check.gameId,
@@ -226,7 +226,7 @@ class ContentChecksDbService {
         // No updates, return existing check
         const result = await this.pool.query(
           `SELECT id, game_id, inspector_id, check_date, status, missing_pieces,
-            box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
             photos, created_at, updated_at FROM content_checks WHERE id = $1`,
           [id]
         );
@@ -239,7 +239,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `UPDATE content_checks SET ${setClauses.join(', ')} WHERE id = $${paramCount}
         RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at`,
         values
       );
@@ -271,7 +271,7 @@ class ContentChecksDbService {
       const result = await this.pool.query(
         `SELECT
           id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved, box_wrapped,
+          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
         WHERE check_date >= $1 AND check_date <= $2
@@ -298,8 +298,8 @@ class ContentChecksDbService {
       cardCondition: row.card_condition,
       isFake: row.is_fake,
       notes: row.notes,
-      sleeved: row.sleeved,
-      boxWrapped: row.box_wrapped,
+      sleeved: row.sleeved_at_check,
+      boxWrapped: row.box_wrapped_at_check,
       photos: JSON.parse(row.photos || '[]'),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
