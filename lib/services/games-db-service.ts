@@ -76,7 +76,7 @@ class GamesDbService {
   async getAllGamesWithImages(): Promise<any[]> {
     try {
       // Single query with LEFT JOIN to get all games and their images
-      // Filter out expansions from the main gallery (they appear in parent game details)
+      // Filter out expansions - only show base games in main gallery
       const result = await this.pool.query(`
         SELECT
           g.id AS game_id,
@@ -108,7 +108,7 @@ class GamesDbService {
           ) AS images
         FROM games g
         LEFT JOIN game_images gi ON g.id = gi.game_id
-        WHERE g.is_expansion = false OR g.is_expansion IS NULL
+        WHERE g.base_game_id IS NULL
         GROUP BY g.id
         ORDER BY g.name ASC
       `);
@@ -151,7 +151,7 @@ class GamesDbService {
           id, name, description, categories, year_released, complexity,
           min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, is_expansion, game_expansions_link
+          sleeved, box_wrapped, base_game_id, game_expansions_link
         FROM games WHERE id = $1`,
         [id]
       );
@@ -198,9 +198,10 @@ class GamesDbService {
           id, name, description, categories, year_released, complexity,
           min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, is_expansion, game_expansions_link
+          sleeved, box_wrapped, base_game_id, game_expansions_link
         FROM games
-        WHERE name ILIKE $1 OR description ILIKE $1
+        WHERE (name ILIKE $1 OR description ILIKE $1)
+          AND base_game_id IS NULL
         ORDER BY name ASC`,
         [`%${searchTerm}%`]
       );
@@ -242,9 +243,10 @@ class GamesDbService {
           id, name, description, categories, year_released, complexity,
           min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, is_expansion, game_expansions_link
+          sleeved, box_wrapped, base_game_id, game_expansions_link
         FROM games
         WHERE categories::text ILIKE $1
+          AND base_game_id IS NULL
         ORDER BY name ASC`,
         [`%${category}%`]
       );
@@ -286,8 +288,9 @@ class GamesDbService {
           id, name, description, categories, year_released, complexity,
           min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, is_expansion, game_expansions_link
+          sleeved, box_wrapped, base_game_id, game_expansions_link
         FROM games
+        WHERE base_game_id IS NULL
         ORDER BY RANDOM()
         LIMIT 1`
       );
@@ -320,6 +323,50 @@ class GamesDbService {
       };
     } catch (error) {
       console.error('Error fetching random game from PostgreSQL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get expansions for a specific game
+   */
+  async getExpansions(gameId: string): Promise<BoardGame[]> {
+    try {
+      const result = await this.pool.query(
+        `SELECT
+          id, name, description, categories, year_released, complexity,
+          min_players, max_players, best_player_amount, date_of_acquisition,
+          latest_check_date, latest_check_status, latest_check_notes, total_checks,
+          sleeved, box_wrapped, base_game_id
+        FROM games
+        WHERE base_game_id = $1
+        ORDER BY name ASC`,
+        [gameId]
+      );
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        fields: {
+          'Game Name': row.name,
+          'Description': row.description,
+          'Categories': row.categories || [],
+          'Year Released': row.year_released,
+          'Complexity': row.complexity,
+          'Min Players': row.min_players,
+          'Max. Players': row.max_players,
+          'Best Player Amount': row.best_player_amount,
+          'Date of Aquisition': row.date_of_acquisition,
+          'Latest Check Date': row.latest_check_date,
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
+          'Total Checks': row.total_checks,
+          'Sleeved': row.sleeved,
+          'Box Wrapped': row.box_wrapped,
+          'Base Game ID': row.base_game_id,
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching expansions from PostgreSQL:', error);
       throw error;
     }
   }
@@ -372,15 +419,15 @@ class GamesDbService {
     try {
       await client.query('BEGIN');
 
-      // Insert game record
+      // Insert game record with base_game_id for expansion support
       const result = await client.query(
         `INSERT INTO games (
           id, name, description, categories, mechanisms, year_released,
           min_players, max_players, best_player_amount, complexity,
-          cost_price, game_size, deposit, is_expansion, base_game_id,
+          cost_price, game_size, deposit, base_game_id,
           bgg_id, date_of_acquisition, created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()
         ) RETURNING id`,
         [
           gameData.id,
@@ -396,7 +443,6 @@ class GamesDbService {
           gameData.costPrice || null,
           gameData.gameSize || null,
           gameData.deposit || null,
-          gameData.isExpansion || false,
           gameData.baseGameId || null,
           gameData.bggId || null,
           gameData.dateOfAcquisition || new Date().toISOString().split('T')[0],
