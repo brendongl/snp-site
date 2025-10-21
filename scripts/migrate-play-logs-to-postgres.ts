@@ -44,8 +44,8 @@ async function migratePlayLogs() {
 
     await playLogsTable
       .select()
-      .eachPage((records: any[], fetchNextPage) => {
-        records.forEach((record: any) => {
+      .eachPage((records: readonly any[], fetchNextPage: () => void) => {
+        (records as any[]).forEach((record: any) => {
           playLogs.push({
             id: record.id,
             fields: {

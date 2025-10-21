@@ -58,8 +58,8 @@ async function migrateGames() {
 
     await gamesTable
       .select()
-      .eachPage((records: any[], fetchNextPage) => {
-        records.forEach((record: any) => {
+      .eachPage((records: readonly any[], fetchNextPage: () => void) => {
+        (records as any[]).forEach((record: any) => {
           games.push({
             id: record.id,
             fields: {

@@ -44,8 +44,8 @@ async function migrateStaffKnowledge() {
 
     await knowledgeTable
       .select()
-      .eachPage((recordBatch: any[], fetchNextPage) => {
-        recordBatch.forEach((record: any) => {
+      .eachPage((recordBatch: readonly any[], fetchNextPage: () => void) => {
+        (recordBatch as any[]).forEach((record: any) => {
           records.push({
             id: record.id,
             fields: {

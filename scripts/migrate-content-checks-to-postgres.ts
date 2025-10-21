@@ -51,8 +51,8 @@ async function migrateContentChecks() {
 
     await checksTable
       .select()
-      .eachPage((records: any[], fetchNextPage) => {
-        records.forEach((record: any) => {
+      .eachPage((records: readonly any[], fetchNextPage: () => void) => {
+        (records as any[]).forEach((record: any) => {
           checks.push({
             id: record.id,
             fields: {
