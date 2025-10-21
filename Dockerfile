@@ -53,28 +53,34 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Install gosu for user switching in entrypoint
+RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Create data directory for cache with proper permissions
-RUN mkdir -p data data/images logs
-RUN chown -R nextjs:nodejs data logs
+# Don't create data directories here - they'll be created by entrypoint
+# This allows the entrypoint to properly handle mounted volumes
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-USER nextjs
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Don't switch to nextjs user here - entrypoint will do it after fixing permissions
+# USER nextjs is removed - entrypoint handles this
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
-CMD ["node", "server.js"]
+# Use entrypoint script instead of direct CMD
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
