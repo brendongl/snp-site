@@ -12,6 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.3.6] - 2025-10-21
+
+### Fixed
+- **Play Logs API - Record ID Mismatch**: Fixed "Record ID does not exist" error when logging play sessions
+  - `POST /api/staff/verify-email` now returns separate record IDs for Staff (Sip N Play) and StaffList (SNP Games List)
+  - Play Logs now correctly links to StaffList record ID from SNP Games List base
+  - Eliminates Airtable API 422 errors on Play Log creation
+
+- **Bulk Create API - Silent Failures**: Improved error handling for staff/add-knowledge bulk operations
+  - Changed from fail-fast to best-effort approach
+  - Each game record creation is independent; one failure doesn't stop others
+  - Returns detailed error information for each failed game with Airtable error codes
+  - Uses HTTP 207 (Multi-Status) for partial success scenarios
+  - Provides clear visibility into which games succeeded/failed
+
+- **Game Edit API - Not Persisting Updates**: Implemented actual Airtable updates for game editing
+  - `POST /api/games/[id]/edit` now sends PATCH request to Airtable BG List table
+  - Maps all editable fields: Game Name, Description, Year Released, Min Players, Max Players, Complexity
+  - Returns confirmation with updated fields and full record data
+  - Includes detailed error messages from Airtable on failure
+
+### Documentation
+- Updated `docs/AIRTABLE_SCHEMA.md` to clarify Staff Game Knowledge table location in SNP Games List base
+- Added section for SNP Games List Base - Staff Game Knowledge Table with purpose and field mapping
+
 ## [1.3.5] - 2025-10-20
 
 ### Fixed

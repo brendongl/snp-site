@@ -314,13 +314,28 @@ Same fields as original **Sip N Play Staff table** (synced automatically):
 - Use **Staff Table** (`tblLthDOTzCPbSdAA` in Sip N Play base) for: Authentication, checking Type field, user verification
 - Use **StaffList Table** (`tblGIyQNmhcsK4Qlg` in SNP Games List base) for: Linked records in Play Logs, any Airtable relationships within SNP Games List base
 
+## SNP Games List Base - Staff Game Knowledge Table
+
+### Base Information
+- **Base ID**: `apppFvSDh2JBc0qAu` (SNP Games List)
+- **Table ID**: `tblgdqR2DTAcjVFBd`
+- **Table Name**: "Staff Game Knowledge"
+
+### Purpose
+Tracks which staff members have expertise or knowledge about specific games. Used for the "Add Knowledge" feature where staff can mark games they are instructors/experts in.
+
+### Key Fields
+- **Staff Member**: Links to StaffList table (for same-base relationships)
+- **Game**: Links to BG List table
+- **Confidence Level**: Single-select field indicating expertise level
+
 ## References
 - Airtable API: https://airtable.com/developers/web/api/introduction
 - **SNP Games List Base ID**: `apppFvSDh2JBc0qAu`
   - BG List Table: `tblIuIJN5q3W6oXNr`
   - Play Logs Table: `tblggfqeM2zQaDUEI`
   - StaffList Table: `tblGIyQNmhcsK4Qlg` (synced from Sip N Play Staff)
+  - Staff Game Knowledge Table: `tblgdqR2DTAcjVFBd` ✓ IN THIS BASE
   - Content Check Log Table: `tblHWhNrHc9r3u42Q`
 - **Sip N Play Base ID**: `appjD3LJhXYjp0tXm`
   - Staff Table: `tblLthDOTzCPbSdAA` (with Admin Type field, original source)
-  - Staff Game Knowledge Table: `tblgdqR2DTAcjVFBd`
