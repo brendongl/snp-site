@@ -210,11 +210,11 @@ class ContentChecksDbService {
         values.push(updates.notes);
       }
       if (updates.sleeved !== undefined) {
-        setClauses.push(`sleeved = $${paramCount++}`);
+        setClauses.push(`sleeved_at_check = $${paramCount++}`);
         values.push(updates.sleeved);
       }
       if (updates.boxWrapped !== undefined) {
-        setClauses.push(`box_wrapped = $${paramCount++}`);
+        setClauses.push(`box_wrapped_at_check = $${paramCount++}`);
         values.push(updates.boxWrapped);
       }
       if (updates.photos !== undefined) {
