@@ -3,12 +3,7 @@ import { Pool } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const DATABASE_URL = process.env.DATABASE_URL;
 const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
-
-if (!DATABASE_URL) {
-  throw new Error('Missing DATABASE_URL environment variable');
-}
 
 /**
  * DELETE /api/games/[id]/images/[hash]
@@ -18,6 +13,15 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; hash: string }> }
 ) {
+  const DATABASE_URL = process.env.DATABASE_URL;
+
+  if (!DATABASE_URL) {
+    return NextResponse.json(
+      { error: 'Database configuration missing' },
+      { status: 500 }
+    );
+  }
+
   const pool = new Pool({ connectionString: DATABASE_URL });
 
   try {

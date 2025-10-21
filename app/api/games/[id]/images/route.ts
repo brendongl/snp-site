@@ -4,17 +4,7 @@ import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const DATABASE_URL = process.env.DATABASE_URL;
 const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
-
-if (!DATABASE_URL) {
-  throw new Error('Missing DATABASE_URL environment variable');
-}
-
-// Ensure image cache directory exists
-if (!fs.existsSync(IMAGE_CACHE_DIR)) {
-  fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true, mode: 0o755 });
-}
 
 /**
  * POST /api/games/[id]/images
@@ -24,6 +14,20 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const DATABASE_URL = process.env.DATABASE_URL;
+
+  if (!DATABASE_URL) {
+    return NextResponse.json(
+      { error: 'Database configuration missing' },
+      { status: 500 }
+    );
+  }
+
+  // Ensure image cache directory exists
+  if (!fs.existsSync(IMAGE_CACHE_DIR)) {
+    fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true, mode: 0o755 });
+  }
+
   const pool = new Pool({ connectionString: DATABASE_URL });
 
   try {
