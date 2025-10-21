@@ -1,0 +1,27 @@
+name: Run Image Migration on Railway
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_GAMES_BASE_ID: apppFvSDh2JBc0qAu
+          AIRTABLE_GAMES_TABLE_ID: tblIuIJN5q3W6oXNr
+        run: |
+          npx tsx scripts/migrate-images-to-volume.ts
