@@ -5,7 +5,7 @@
  * and used for cache busting and feature flags.
  */
 
-export const VERSION = '1.3.8';
+export const VERSION = '1.3.10';
 export const BUILD_DATE = '2025-10-21';
 export const CHANGELOG_URL = '/docs/CHANGELOG.md';
 
