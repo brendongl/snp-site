@@ -4,11 +4,54 @@ import { logger } from '@/lib/logger';
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const BASE_ID = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
 const CONTENT_CHECK_TABLE_ID = 'tblHWhNrHc9r3u42Q';
+const GAMES_TABLE_ID = 'tblIuIJN5q3W6oXNr';
 const STAFF_TABLE_ID = 'tblMTy5HcxmTzPMNf';
+
+// Simple cache for game name lookups
+let gameNameCache: Record<string, string> = {};
 
 interface AirtableResponse {
   records: any[];
   offset?: string;
+}
+
+/**
+ * Fetch a game name by ID
+ */
+async function getGameName(gameId: string): Promise<string> {
+  if (gameNameCache[gameId]) {
+    return gameNameCache[gameId];
+  }
+
+  if (!AIRTABLE_API_KEY) {
+    logger.warn('Content Check', 'AIRTABLE_API_KEY not set, cannot fetch game name');
+    return 'Unknown Game';
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.airtable.com/v0/${BASE_ID}/${GAMES_TABLE_ID}/${gameId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const name = data.fields['Game Name'] || 'Unknown Game';
+      gameNameCache[gameId] = name;
+      logger.debug('Content Check', `Resolved game ID ${gameId} to "${name}"`);
+      return name;
+    } else {
+      logger.warn('Content Check', `Failed to fetch game ${gameId}`, { status: response.status });
+    }
+  } catch (error) {
+    logger.warn('Content Check', `Error fetching game ${gameId}`, error instanceof Error ? error : new Error(String(error)));
+  }
+
+  return 'Unknown Game';
 }
 
 /**
@@ -105,7 +148,7 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
     const staffMap = await fetchStaffMap();
     logger.info('Content Check', `Processing ${allRecords.length} content check records with staff map`);
 
-    return allRecords.map((record) => {
+    return Promise.all(allRecords.map(async (record) => {
       let inspectorNames: string[] | undefined;
       if (record.fields['Inspector'] && Array.isArray(record.fields['Inspector'])) {
         inspectorNames = record.fields['Inspector'].map((id: string) => staffMap[id] || id);
@@ -114,11 +157,19 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
         }
       }
 
+      // Resolve game names from Board Game linked record IDs
+      let gameNames: string[] | undefined;
+      if (record.fields['Board Game'] && Array.isArray(record.fields['Board Game'])) {
+        gameNames = await Promise.all(
+          record.fields['Board Game'].map((gameId: string) => getGameName(gameId))
+        );
+      }
+
       return {
         id: record.id,
         fields: {
           'Record ID': record.fields['Record ID'],
-          'Board Game': record.fields['Board Game'],
+          'Board Game': gameNames || record.fields['Board Game'],
           'Check Date': record.fields['Check Date'],
           'Inspector': inspectorNames || record.fields['Inspector'],
           'Status': record.fields['Status'],
@@ -132,7 +183,7 @@ export async function getAllChecks(): Promise<ContentCheck[]> {
           'Photos': record.fields['Photos'],
         },
       };
-    });
+    }));
   } catch (error) {
     console.error('Error fetching content checks:', error);
     throw error;
