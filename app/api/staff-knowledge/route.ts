@@ -7,18 +7,118 @@ export async function GET() {
   try {
     const db = DatabaseService.initialize();
 
-    // Fetch all staff knowledge records from PostgreSQL
-    console.log('Fetching staff knowledge from PostgreSQL...');
-    const allKnowledge = await db.staffKnowledge.getAllKnowledge();
+    // Fetch all staff knowledge records with game names and staff names via JOIN
+    console.log('Fetching staff knowledge with names from PostgreSQL...');
+    const result = await db.pool.query(`
+      SELECT
+        sk.id,
+        sk.staff_member_id,
+        sk.game_id,
+        sk.confidence_level,
+        sk.can_teach,
+        sk.notes,
+        sk.created_at,
+        sk.updated_at,
+        g.name AS game_name,
+        sl.staff_name AS staff_name
+      FROM staff_knowledge sk
+      LEFT JOIN games g ON sk.game_id = g.id
+      LEFT JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+      ORDER BY sk.created_at DESC
+    `);
 
-    console.log(`✅ Fetched ${allKnowledge.length} staff knowledge records from PostgreSQL`);
+    // Map confidence level numbers to strings
+    const confidenceLevelMap: { [key: number]: string } = {
+      1: 'Beginner',
+      2: 'Intermediate',
+      3: 'Proficient',
+      4: 'Expert',
+    };
 
-    return NextResponse.json({ knowledge: allKnowledge });
+    const knowledge = result.rows.map((row) => ({
+      id: row.id,
+      staffMember: row.staff_name || 'Unknown Staff',
+      gameName: row.game_name || 'Unknown Game',
+      confidenceLevel: confidenceLevelMap[row.confidence_level] || 'Beginner',
+      canTeach: row.can_teach || false,
+      notes: row.notes || '',
+      taughtBy: null, // Not stored in current schema
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    console.log(`✅ Fetched ${knowledge.length} staff knowledge records with names from PostgreSQL`);
+
+    return NextResponse.json({ knowledge });
   } catch (error) {
     console.error('❌ Staff knowledge API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch staff knowledge';
     return NextResponse.json(
       { error: `Failed to fetch staff knowledge: ${errorMessage}` },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const db = DatabaseService.initialize();
+
+    const {
+      gameId,
+      staffRecordId,
+      confidenceLevel,
+      notes,
+    } = await request.json();
+
+    // Validate required fields
+    if (!gameId || !staffRecordId || !confidenceLevel) {
+      return NextResponse.json(
+        { error: 'Missing required fields: gameId, staffRecordId, confidenceLevel' },
+        { status: 400 }
+      );
+    }
+
+    // Map confidence level string to number
+    const confidenceLevelMap: { [key: string]: number } = {
+      'Beginner': 1,
+      'Intermediate': 2,
+      'Expert': 3,
+      'Instructor': 4,
+    };
+    const confidenceLevelNum = confidenceLevelMap[confidenceLevel] || 1;
+
+    // Create knowledge entry
+    console.log(`[staff-knowledge POST] Creating knowledge: game=${gameId}, staff=${staffRecordId}`);
+
+    const knowledge = await db.staffKnowledge.createKnowledge({
+      staffMemberId: staffRecordId,
+      gameId,
+      confidenceLevel: confidenceLevelNum,
+      canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Instructor',
+      notes: notes || null,
+    });
+
+    console.log(`✅ Knowledge entry created: ${knowledge.id}`);
+
+    return NextResponse.json(
+      {
+        success: true,
+        knowledgeId: knowledge.id,
+        knowledge,
+        message: 'Knowledge entry created successfully',
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('❌ Error creating knowledge entry:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create knowledge entry';
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: errorMessage,
+      },
       { status: 500 }
     );
   }

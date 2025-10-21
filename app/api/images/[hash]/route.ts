@@ -36,21 +36,31 @@ export async function GET(
       );
     }
 
-    // Ensure cache directory exists
-    if (!fs.existsSync(IMAGE_CACHE_DIR)) {
-      fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
+    // Ensure cache directory exists (with error handling)
+    let canWriteCache = true;
+    try {
+      if (!fs.existsSync(IMAGE_CACHE_DIR)) {
+        fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true, mode: 0o755 });
+      }
+    } catch (mkdirError) {
+      console.error('Cannot create image cache directory (will serve without caching):', mkdirError);
+      canWriteCache = false;
     }
 
-    // Look for cached image with any extension
-    // (md5 hash + .jpg/png/gif/webp)
-    const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    // Look for cached image with any extension (only if cache is accessible)
     let imagePath: string | null = null;
-
-    for (const ext of extensions) {
-      const potentialPath = path.join(IMAGE_CACHE_DIR, `${hash}${ext}`);
-      if (fs.existsSync(potentialPath)) {
-        imagePath = potentialPath;
-        break;
+    if (canWriteCache) {
+      const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+      for (const ext of extensions) {
+        try {
+          const potentialPath = path.join(IMAGE_CACHE_DIR, `${hash}${ext}`);
+          if (fs.existsSync(potentialPath)) {
+            imagePath = potentialPath;
+            break;
+          }
+        } catch {
+          // Ignore errors checking for cached files
+        }
       }
     }
 
@@ -103,10 +113,19 @@ export async function GET(
           extension = '.gif';
         }
 
-        // Save to cache
-        imagePath = path.join(IMAGE_CACHE_DIR, `${hash}${extension}`);
-        fs.writeFileSync(imagePath, buffer);
-        console.log(`Cached image to: ${imagePath}`);
+        // Try to save to cache (if permissions allow)
+        if (canWriteCache) {
+          try {
+            imagePath = path.join(IMAGE_CACHE_DIR, `${hash}${extension}`);
+            fs.writeFileSync(imagePath, buffer);
+            console.log(`✅ Cached image to: ${imagePath}`);
+          } catch (writeError) {
+            console.error('⚠️  Failed to write image to cache (will serve without caching):', writeError);
+            imagePath = null; // Don't use the path if write failed
+          }
+        } else {
+          console.log('⚠️  Serving image without caching (no write permissions)');
+        }
 
         // Serve the downloaded image
         const mimeTypeMap: Record<string, string> = {
