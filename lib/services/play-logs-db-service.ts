@@ -15,7 +15,14 @@ class PlayLogsDbService {
   private pool: Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
+    this.pool = new Pool({
+      connectionString,
+      // Connection pool configuration for Railway production environment
+      max: 10, // Maximum number of clients in the pool
+      min: 2, // Minimum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection can't be acquired
+    });
   }
 
   /**

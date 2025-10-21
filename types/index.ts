@@ -1,6 +1,13 @@
 // Board Game Types
 export interface BoardGame {
   id: string;
+  // Images from PostgreSQL (top-level property)
+  images?: Array<{
+    id?: string;
+    url: string;
+    fileName: string;
+    hash: string;
+  }>;
   fields: {
     'Game Name': string;
     Categories?: string[];

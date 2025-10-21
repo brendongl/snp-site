@@ -1,93 +1,76 @@
 import { NextResponse } from 'next/server';
-import { gamesService } from '@/lib/airtable/games-service';
-import { setCachedGames, getCacheMetadata, mergeGamesIntoCache } from '@/lib/cache/games-cache';
+import DatabaseService from '@/lib/services/db-service';
 import { cacheImage } from '@/lib/cache/image-cache';
 
+/**
+ * Refresh endpoint for syncing data
+ * Now uses PostgreSQL as primary source
+ * POST /api/games/refresh
+ *
+ * Query params:
+ * - ?full=true - Force recache all images
+ */
 export async function POST(request: Request) {
   try {
-    const oldCache = getCacheMetadata();
     const url = new URL(request.url);
     const forceFullRefresh = url.searchParams.get('full') === 'true';
 
-    // If no cache exists or force full refresh, fetch all games
-    if (!oldCache.lastUpdated || forceFullRefresh) {
-      console.log('Performing full refresh from Airtable...');
-      const games = await gamesService.getAllGames();
-      setCachedGames(games);
+    // Initialize database
+    const db = DatabaseService.initialize();
 
-      // Recache images on hard refresh (non-blocking)
-      console.log('Starting background image recaching for hard refresh');
+    // Get all games from PostgreSQL
+    console.log('Fetching games from PostgreSQL for refresh...');
+    const games = await db.games.getAllGames();
+
+    if (forceFullRefresh) {
+      console.log('Starting image cache refresh for all games...');
+
+      // Cache all images (non-blocking for performance)
       (async () => {
-        let newCount = 0;
-        let reuseCount = 0;
+        let cachedCount = 0;
+        let errorCount = 0;
+
         for (const game of games) {
-          const firstImage = game.fields.Images?.[0];
-          const imageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
-          if (imageUrl) {
-            const result = await cacheImage(imageUrl, game.id);
-            if (result) {
-              // Check if it was newly cached or reused
-              if (result.cachedAt === new Date().toISOString()) {
-                newCount++;
-              } else {
-                reuseCount++;
+          const images = await db.games.getGameImages(game.id);
+
+          for (const image of images) {
+            try {
+              const result = await cacheImage(image.url, game.id);
+              if (result) {
+                cachedCount++;
               }
+            } catch (error) {
+              console.error(`Failed to cache image ${image.url}:`, error);
+              errorCount++;
             }
           }
         }
-        console.log(`Image recaching complete: ${newCount} new, ${reuseCount} reused from content dedup`);
-      })().catch(err => console.error('Error in background image recaching:', err));
 
-      console.log(`Full cache refresh complete: ${games.length} games`);
+        console.log(`Image caching complete: ${cachedCount} cached, ${errorCount} errors`);
+      })().catch(err => console.error('Error in background image caching:', err));
 
       return NextResponse.json({
         success: true,
-        message: 'Full cache refresh completed (images recaching in background)',
+        message: 'Games loaded from PostgreSQL, image caching started in background',
         type: 'full',
-        count: games.length,
-        previousCount: oldCache.count,
-        previousUpdate: oldCache.lastUpdated,
-        currentUpdate: new Date().toISOString(),
+        gamesCount: games.length,
+        source: 'postgresql',
       });
     }
 
-    // Otherwise, perform incremental refresh
-    console.log(`Performing incremental refresh since: ${oldCache.lastUpdated}`);
-    const updatedGames = await gamesService.getUpdatedGames(oldCache.lastUpdated);
-
-    if (updatedGames.length === 0) {
-      console.log('No updates found');
-      return NextResponse.json({
-        success: true,
-        message: 'Cache is already up to date',
-        type: 'incremental',
-        updatedCount: 0,
-        totalCount: oldCache.count,
-        previousUpdate: oldCache.lastUpdated,
-        currentUpdate: new Date().toISOString(),
-      });
-    }
-
-    // Merge updated games into existing cache
-    mergeGamesIntoCache(updatedGames);
-    const newCache = getCacheMetadata();
-
-    console.log(`Incremental refresh complete: ${updatedGames.length} games updated`);
-
+    // Regular refresh - just return current game count
     return NextResponse.json({
       success: true,
-      message: `Incremental refresh completed: ${updatedGames.length} games updated`,
-      type: 'incremental',
-      updatedCount: updatedGames.length,
-      totalCount: newCache.count,
-      previousCount: oldCache.count,
-      previousUpdate: oldCache.lastUpdated,
-      currentUpdate: new Date().toISOString(),
+      message: 'Games data current from PostgreSQL',
+      type: 'check',
+      gamesCount: games.length,
+      source: 'postgresql',
     });
   } catch (error) {
-    console.error('Error refreshing cache:', error);
+    console.error('Error in refresh endpoint:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to refresh cache' },
+      { error: `Refresh failed: ${errorMessage}` },
       { status: 500 }
     );
   }

@@ -18,29 +18,11 @@ export async function GET(request: Request) {
     // Initialize database service
     const db = DatabaseService.initialize();
 
-    // Fetch all games from PostgreSQL (instant, no network latency)
-    console.log('Fetching games from PostgreSQL...');
-    const allGames = await db.games.getAllGames();
+    // Fetch all games with images from PostgreSQL using optimized single query
+    console.log('Fetching games with images from PostgreSQL...');
+    const gamesWithImages = await db.games.getAllGamesWithImages();
 
-    console.log(`✅ Fetched ${allGames.length} games from PostgreSQL`);
-
-    // Fetch images for each game and add to game data
-    console.log('Fetching game images...');
-    const gamesWithImages = await Promise.all(
-      allGames.map(async (game) => {
-        const images = await db.games.getGameImages(game.id);
-        return {
-          ...game,
-          images: images.map(img => ({
-            url: img.url,
-            fileName: img.fileName,
-            hash: img.hash,
-          })),
-        };
-      })
-    );
-
-    console.log(`✅ Added images to games`);
+    console.log(`✅ Fetched ${gamesWithImages.length} games with images from PostgreSQL`);
 
     // Get categories for filter options
     const allCategories = getAllCategories(gamesWithImages);

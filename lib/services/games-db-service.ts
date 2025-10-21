@@ -5,7 +5,14 @@ class GamesDbService {
   private pool: Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
+    this.pool = new Pool({
+      connectionString,
+      // Connection pool configuration for Railway production environment
+      max: 10, // Maximum number of clients in the pool
+      min: 2, // Minimum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection can't be acquired
+    });
   }
 
   /**
@@ -59,6 +66,75 @@ class GamesDbService {
       }));
     } catch (error) {
       console.error('Error fetching all games from PostgreSQL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all games with images in a single query (optimized)
+   */
+  async getAllGamesWithImages(): Promise<any[]> {
+    try {
+      // Single query with LEFT JOIN to get all games and their images
+      const result = await this.pool.query(`
+        SELECT
+          g.id AS game_id,
+          g.name,
+          g.description,
+          g.categories,
+          g.year_released,
+          g.complexity,
+          g.min_players,
+          g.max_players,
+          g.best_player_amount,
+          g.date_of_acquisition,
+          g.latest_check_date,
+          g.latest_check_status,
+          g.latest_check_notes,
+          g.total_checks,
+          g.sleeved,
+          g.box_wrapped,
+          g.game_expansions_link,
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'url', gi.url,
+                'fileName', gi.file_name,
+                'hash', gi.hash
+              ) ORDER BY gi.id
+            ) FILTER (WHERE gi.id IS NOT NULL),
+            '[]'::json
+          ) AS images
+        FROM games g
+        LEFT JOIN game_images gi ON g.id = gi.game_id
+        GROUP BY g.id
+        ORDER BY g.name ASC
+      `);
+
+      return result.rows.map((row) => ({
+        id: row.game_id,
+        fields: {
+          'Game Name': row.name,
+          'Description': row.description,
+          'Categories': row.categories || [],
+          'Year Released': row.year_released,
+          'Complexity': row.complexity,
+          'Min Players': row.min_players,
+          'Max. Players': row.max_players,
+          'Best Player Amount': row.best_player_amount,
+          'Date of Aquisition': row.date_of_acquisition,
+          'Latest Check Date': row.latest_check_date,
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
+          'Total Checks': row.total_checks,
+          'Sleeved': row.sleeved,
+          'Box Wrapped': row.box_wrapped,
+          'Game Expansions Link': row.game_expansions_link || [],
+        },
+        images: row.images || [],
+      }));
+    } catch (error) {
+      console.error('Error fetching all games with images from PostgreSQL:', error);
       throw error;
     }
   }
