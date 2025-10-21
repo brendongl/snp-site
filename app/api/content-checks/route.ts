@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
     const { searchParams } = new URL(request.url);
     const gameId = searchParams.get('gameId');
 

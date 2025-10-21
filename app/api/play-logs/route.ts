@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     // Initialize database service
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     // Fetch all play logs from PostgreSQL
     console.log('Fetching play logs from PostgreSQL...');
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     const { gameId, staffListId, sessionDate, notes, durationHours } = await request.json();
 
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');
@@ -136,7 +136,7 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');

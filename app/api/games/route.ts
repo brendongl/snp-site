@@ -16,7 +16,7 @@ function getAllCategories(games: any[]): string[] {
 export async function GET(request: Request) {
   try {
     // Initialize database service
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     // Fetch all games from PostgreSQL (instant, no network latency)
     console.log('Fetching games from PostgreSQL...');

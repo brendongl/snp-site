@@ -43,7 +43,7 @@ async function createSchema() {
     console.log('\n2️⃣  Creating game_images table...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS game_images (
-        id VARCHAR(50) PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         game_id VARCHAR(50) NOT NULL REFERENCES games(id) ON DELETE CASCADE,
         file_name VARCHAR(255),
         file_size INTEGER,
@@ -66,6 +66,7 @@ async function createSchema() {
         staff_list_id VARCHAR(50) NOT NULL,
         session_date TIMESTAMP,
         notes TEXT,
+        duration_hours DECIMAL(5,1),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

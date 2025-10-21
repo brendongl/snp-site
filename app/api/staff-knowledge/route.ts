@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     // Fetch all staff knowledge records from PostgreSQL
     console.log('Fetching staff knowledge from PostgreSQL...');
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');
@@ -67,7 +67,7 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const db = DatabaseService.getInstance();
+    const db = DatabaseService.initialize();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');
