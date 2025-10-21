@@ -114,10 +114,10 @@ async function migrateGames() {
           await client.query(
             `INSERT INTO games (
               id, name, description, categories, year_released, complexity,
-              min_players, max_players, best_player_amount, acquisition_date,
+              min_players, max_players, best_player_amount, date_of_acquisition,
               latest_check_date, latest_check_status, latest_check_notes, total_checks,
-              sleeved, box_wrapped, is_expansion, game_expansions_link, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW())
+              sleeved, box_wrapped, game_expansions_link, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
             ON CONFLICT (id) DO UPDATE SET
               name = $2,
               description = $3,
@@ -127,35 +127,33 @@ async function migrateGames() {
               min_players = $7,
               max_players = $8,
               best_player_amount = $9,
-              acquisition_date = $10,
+              date_of_acquisition = $10,
               latest_check_date = $11,
               latest_check_status = $12,
               latest_check_notes = $13,
               total_checks = $14,
               sleeved = $15,
               box_wrapped = $16,
-              is_expansion = $17,
-              game_expansions_link = $18,
+              game_expansions_link = $17,
               updated_at = NOW()`,
             [
               game.id,
               game.fields['Game Name'],
               game.fields['Description'] || null,
-              JSON.stringify(categoryArray),
+              categoryArray,  // Pass array directly, not stringified
               game.fields['Year Released'] || null,
               game.fields['Complexity'] || null,
-              game.fields['Min Players'] || null,
-              game.fields['Max. Players'] || null,
-              game.fields['Best Player Amount'] || null,
+              game.fields['Min Players'] ? parseInt(game.fields['Min Players']) : null,
+              game.fields['Max. Players'] ? parseInt(game.fields['Max. Players']) : null,
+              game.fields['Best Player Amount'] ? parseInt(game.fields['Best Player Amount']) : null,
               game.fields['Date of Aquisition'] || null,
               game.fields['Latest Check Date'] || null,
-              JSON.stringify(game.fields['Latest Check Status'] || []),
-              JSON.stringify(game.fields['Latest Check Notes'] || []),
+              (game.fields['Latest Check Status'] && game.fields['Latest Check Status'][0]) || null,
+              game.fields['Latest Check Notes'] || [],  // Pass array directly, not stringified
               game.fields['Total Checks'] || 0,
               game.fields['Sleeved'] || false,
               game.fields['Box Wrapped'] || false,
-              game.fields['Expansion'] || false,
-              JSON.stringify(expansionArray),
+              expansionArray,  // Pass array directly, not stringified
             ]
           );
 
