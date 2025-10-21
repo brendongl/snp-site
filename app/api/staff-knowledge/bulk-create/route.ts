@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,6 +7,17 @@ interface BulkCreateRequest {
   staffMemberId: string;
   gameIds: string[];
   confidenceLevel: string;
+}
+
+// Map confidence level string to number
+function mapConfidenceLevelToNumber(level: string): number {
+  const levelMap: { [key: string]: number } = {
+    'Beginner': 1,
+    'Intermediate': 2,
+    'Proficient': 3,
+    'Expert': 4,
+  };
+  return levelMap[level] || 1; // Default to Beginner if unknown
 }
 
 export async function POST(req: Request) {
@@ -20,13 +32,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
-    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
+    const db = DatabaseService.initialize();
 
-    if (!apiKey || !baseId || !knowledgeTableId) {
-      throw new Error('Missing Airtable configuration');
-    }
+    // Convert confidence level string to number
+    const confidenceLevelNum = mapConfidenceLevelToNumber(confidenceLevel);
 
     // Create records for each game
     const createdRecords = [];
@@ -34,45 +43,25 @@ export async function POST(req: Request) {
 
     for (const gameId of gameIds) {
       try {
-        const response = await fetch(
-          `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              records: [{
-                fields: {
-                  'Staff Member': [staffMemberId],
-                  'Game': [gameId],
-                  'Confidence Level': confidenceLevel,
-                },
-              }],
-            }),
-          }
-        );
+        console.log(`[bulk-create] Creating knowledge entry: staff=${staffMemberId}, game=${gameId}`);
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage = (errorData as any).error?.message || response.statusText;
-          failedGames.push({
-            gameId,
-            error: errorMessage,
-            status: response.status,
-          });
-          continue;
-        }
+        const knowledge = await db.staffKnowledge.createKnowledge({
+          staffMemberId,
+          gameId,
+          confidenceLevel: confidenceLevelNum,
+          canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Proficient',
+          notes: null,
+        });
 
-        const data = await response.json();
-        createdRecords.push(data.records?.[0] || data);
+        createdRecords.push(knowledge);
+        console.log(`✅ Knowledge entry created: ${knowledge.id}`);
       } catch (gameError) {
         const errorMsg = gameError instanceof Error ? gameError.message : String(gameError);
         failedGames.push({
           gameId,
           error: errorMsg,
         });
+        console.error(`❌ Failed to create knowledge entry for game ${gameId}:`, errorMsg);
       }
     }
 

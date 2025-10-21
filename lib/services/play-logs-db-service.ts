@@ -46,6 +46,47 @@ class PlayLogsDbService {
   }
 
   /**
+   * Get all play logs with game names and staff names (via JOINs)
+   */
+  async getAllLogsWithNames(): Promise<any[]> {
+    try {
+      const result = await this.pool.query(`
+        SELECT
+          pl.id,
+          pl.game_id,
+          pl.staff_list_id,
+          pl.session_date,
+          pl.notes,
+          pl.duration_hours,
+          pl.created_at,
+          pl.updated_at,
+          g.name AS game_name,
+          sl.staff_name AS staff_name
+        FROM play_logs pl
+        LEFT JOIN games g ON pl.game_id = g.id
+        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
+        ORDER BY pl.session_date DESC, pl.created_at DESC
+      `);
+
+      return result.rows.map((row) => ({
+        id: row.id,
+        gameId: row.game_id,
+        gameName: row.game_name || 'Unknown Game',
+        staffListId: row.staff_list_id,
+        staffName: row.staff_name || 'Unknown',
+        sessionDate: row.session_date,
+        notes: row.notes,
+        durationHours: row.duration_hours,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (error) {
+      console.error('Error fetching play logs with names from PostgreSQL:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get play logs for a specific game
    */
   async getLogsByGameId(gameId: string): Promise<PlayLog[]> {

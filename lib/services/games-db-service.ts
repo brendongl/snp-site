@@ -76,6 +76,7 @@ class GamesDbService {
   async getAllGamesWithImages(): Promise<any[]> {
     try {
       // Single query with LEFT JOIN to get all games and their images
+      // Filter out expansions from the main gallery (they appear in parent game details)
       const result = await this.pool.query(`
         SELECT
           g.id AS game_id,
@@ -107,6 +108,7 @@ class GamesDbService {
           ) AS images
         FROM games g
         LEFT JOIN game_images gi ON g.id = gi.game_id
+        WHERE g.is_expansion = false OR g.is_expansion IS NULL
         GROUP BY g.id
         ORDER BY g.name ASC
       `);
@@ -340,6 +342,94 @@ class GamesDbService {
       }));
     } catch (error) {
       console.error('Error fetching game images from PostgreSQL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new game
+   */
+  async createGame(gameData: {
+    id: string;
+    name: string;
+    description?: string;
+    categories?: string[];
+    mechanisms?: string[];
+    yearReleased?: number;
+    minPlayers?: string;
+    maxPlayers?: string;
+    bestPlayerAmount?: string;
+    complexity?: number;
+    costPrice?: number;
+    gameSize?: string;
+    deposit?: number;
+    isExpansion?: boolean;
+    baseGameId?: string;
+    bggId?: string;
+    dateOfAcquisition?: string;
+  }): Promise<{ id: string }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Insert game record
+      const result = await client.query(
+        `INSERT INTO games (
+          id, name, description, categories, mechanisms, year_released,
+          min_players, max_players, best_player_amount, complexity,
+          cost_price, game_size, deposit, is_expansion, base_game_id,
+          bgg_id, date_of_acquisition, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+        ) RETURNING id`,
+        [
+          gameData.id,
+          gameData.name,
+          gameData.description || null,
+          JSON.stringify(gameData.categories || []),
+          JSON.stringify(gameData.mechanisms || []),
+          gameData.yearReleased || null,
+          gameData.minPlayers || null,
+          gameData.maxPlayers || null,
+          gameData.bestPlayerAmount || null,
+          gameData.complexity || null,
+          gameData.costPrice || null,
+          gameData.gameSize || null,
+          gameData.deposit || null,
+          gameData.isExpansion || false,
+          gameData.baseGameId || null,
+          gameData.bggId || null,
+          gameData.dateOfAcquisition || new Date().toISOString().split('T')[0],
+        ]
+      );
+
+      await client.query('COMMIT');
+      return { id: result.rows[0].id };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error creating game in PostgreSQL:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Add an image to a game
+   */
+  async addGameImage(gameId: string, imageUrl: string, hash: string): Promise<void> {
+    try {
+      // Generate file name from URL
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1] || 'image.jpg';
+
+      await this.pool.query(
+        `INSERT INTO game_images (game_id, file_name, url, hash, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [gameId, fileName, imageUrl, hash]
+      );
+    } catch (error) {
+      console.error('Error adding game image to PostgreSQL:', error);
       throw error;
     }
   }

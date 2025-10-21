@@ -1,30 +1,15 @@
 import { NextResponse } from 'next/server';
 import { fetchBGGGame } from '@/lib/services/bgg-api';
-import Airtable from 'airtable';
 import { CreateGameInput } from '@/types';
 import { logger } from '@/lib/logger';
-
-const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
-const base = airtable.base(process.env.AIRTABLE_GAMES_BASE_ID || '');
-const tableId = process.env.AIRTABLE_GAMES_TABLE_ID || '';
+import DatabaseService from '@/lib/services/db-service';
+import crypto from 'crypto';
 
 /**
- * Download image from URL and upload to Airtable
+ * Generate MD5 hash for image URL
  */
-async function downloadAndUploadImage(imageUrl: string): Promise<any> {
-  try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText}`);
-    }
-
-    return {
-      url: imageUrl,
-    };
-  } catch (error) {
-    console.error('Error downloading image:', error);
-    return null;
-  }
+function generateImageHash(imageUrl: string): string {
+  return crypto.createHash('md5').update(imageUrl).digest('hex');
 }
 
 export async function POST(request: Request) {
@@ -50,45 +35,6 @@ export async function POST(request: Request) {
     logger.info('Game Creation', `Fetching game from BGG ID: ${bggId}`);
     const bggData = await fetchBGGGame(bggId);
     logger.debug('Game Creation', 'BGG data fetched', bggData);
-
-    // Prepare images - use selected images if provided, otherwise use defaults
-    const images = [];
-
-    if (selectedImages) {
-      // Use user-selected images
-      const boxImage = await downloadAndUploadImage(selectedImages.boxImage);
-      if (boxImage) images.push(boxImage);
-
-      if (selectedImages.gameplayImage) {
-        const gameplayImage = await downloadAndUploadImage(selectedImages.gameplayImage);
-        if (gameplayImage) images.push(gameplayImage);
-      }
-    } else {
-      // Fallback to default images
-      if (bggData.imageUrl) {
-        const boxImage = await downloadAndUploadImage(bggData.imageUrl);
-        if (boxImage) images.push(boxImage);
-      }
-
-      if (bggData.thumbnailUrl && bggData.thumbnailUrl !== bggData.imageUrl) {
-        const setupImage = await downloadAndUploadImage(bggData.thumbnailUrl);
-        if (setupImage) images.push(setupImage);
-      }
-    }
-
-    // Add custom image URLs if provided
-    if (customImageUrls && customImageUrls.length > 0) {
-      logger.info('Game Creation', 'Processing custom image URLs', { count: customImageUrls.length });
-      for (const customUrl of customImageUrls) {
-        if (customUrl.trim()) {
-          const customImage = await downloadAndUploadImage(customUrl.trim());
-          if (customImage) {
-            images.push(customImage);
-            logger.debug('Game Creation', 'Added custom image', { url: customUrl });
-          }
-        }
-      }
-    }
 
     // Clean HTML entities from text
     const cleanText = (text: string) => text
@@ -122,120 +68,98 @@ export async function POST(request: Request) {
       .replace(/&#039;/g, "'")
       .replace(/&nbsp;/g, ' ');
 
-    // Prepare Airtable record - remove undefined values as Airtable doesn't accept them
-    const fields: any = {
-      'Game Name': cleanedGameName,  // Use cleaned name to fix HTML entities
-      'bggID': bggId.toString(),  // This field needs to be string
-      'Description': cleanDescription,
-      'Year Released': bggData.yearPublished,  // Number field
-      'Min Players': bggData.minPlayers.toString(),  // String field in Airtable!
-      'Max. Players': bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),  // String field with special case!
-      'Date of Aquisition': new Date().toISOString().split('T')[0],
+    // Generate game ID
+    const gameId = `rec${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
+
+    // Initialize database service
+    const db = DatabaseService.initialize();
+
+    // Prepare game data for PostgreSQL
+    const gameData: any = {
+      id: gameId,
+      name: cleanedGameName,
+      description: cleanDescription,
+      categories: cleanedCategories,
+      mechanisms: cleanedMechanisms,
+      yearReleased: bggData.yearPublished,
+      minPlayers: bggData.minPlayers.toString(),
+      maxPlayers: bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),
+      bggId: bggId.toString(),
+      dateOfAcquisition: new Date().toISOString().split('T')[0],
     };
 
-    // Add Categories (BGG categories only)
-    if (cleanedCategories.length > 0) {
-      fields['Categories'] = cleanedCategories;
-    }
-
-    // Add Mechanisms (BGG mechanisms - already synced with Airtable)
-    if (cleanedMechanisms.length > 0) {
-      fields['Mechanisms'] = cleanedMechanisms;
-    }
-
-    // Only add complexity if it exists
-    if (bggData.complexity !== null && bggData.complexity !== undefined) {
-      fields['Complexity'] = bggData.complexity;
-    }
-
     // Add optional fields
+    if (bggData.complexity !== null && bggData.complexity !== undefined) {
+      gameData.complexity = bggData.complexity;
+    }
     if (bggData.bestPlayerCount) {
-      fields['Best Player Amount'] = bggData.bestPlayerCount.toString();
+      gameData.bestPlayerAmount = bggData.bestPlayerCount.toString();
     }
-
     if (costPrice !== undefined && costPrice !== null) {
-      fields['Cost Price'] = costPrice;
+      gameData.costPrice = costPrice;
     }
-
     if (gameSize) {
-      fields['Game Size (Rental)'] = gameSize;
+      gameData.gameSize = gameSize;
     }
-
     if (deposit !== undefined && deposit !== null) {
-      fields['Deposit'] = deposit;
+      gameData.deposit = deposit;
     }
 
     // Handle expansion configuration
     if (isExpansion) {
-      // Mark as expansion
-      fields['Expansion'] = true;
-
-      // Link to base game if provided
+      gameData.isExpansion = true;
       if (baseGameId) {
-        fields['Base Game'] = [baseGameId];
+        gameData.baseGameId = baseGameId;
       }
     }
 
-    // Add images if we have them
-    if (images.length > 0) {
-      fields['Images'] = images;
-    }
+    logger.info('Game Creation', 'Creating game in PostgreSQL', { gameName: cleanedGameName, gameData });
 
-    logger.info('Game Creation', 'Creating Airtable record', { gameName: bggData.name, fields });
+    // Create game record in PostgreSQL
+    const createdGame = await db.games.createGame(gameData);
 
-    // Try to create record - if it fails due to missing categories/mechanisms, retry without them
-    let record;
-    try {
-      record = await base(tableId).create([
-        { fields },
-      ]);
-    } catch (createError: any) {
-      const errorMessage = createError?.message || '';
+    // Handle images
+    const imageUrls: string[] = [];
 
-      // Check if error is about invalid select options (missing categories/mechanisms)
-      if (errorMessage.includes('Insufficient permissions to create new select option') ||
-          errorMessage.includes('cannot accept') ||
-          errorMessage.includes('invalid')) {
-
-        logger.warn('Game Creation', 'Initial creation failed due to missing field options, retrying without invalid categories/mechanisms',
-          { error: errorMessage, gameName: bggData.name });
-
-        // Remove categories and mechanisms that might be causing the issue
-        const fieldsWithoutSelects = { ...fields };
-        delete fieldsWithoutSelects['Categories'];
-        delete fieldsWithoutSelects['Mechanisms'];
-
-        logger.info('Game Creation', 'Retrying without Categories and Mechanisms',
-          { gameName: bggData.name, fieldsWithoutSelects });
-
-        try {
-          record = await base(tableId).create([
-            { fields: fieldsWithoutSelects },
-          ]);
-
-          logger.warn('Game Creation', 'Successfully created game without Categories/Mechanisms',
-            { gameName: bggData.name, categories: cleanedCategories, mechanisms: cleanedMechanisms });
-        } catch (retryError) {
-          // If it still fails, throw the original error
-          throw createError;
-        }
-      } else {
-        // If it's a different error, throw it
-        throw createError;
+    if (selectedImages) {
+      imageUrls.push(selectedImages.boxImage);
+      if (selectedImages.gameplayImage) {
+        imageUrls.push(selectedImages.gameplayImage);
+      }
+    } else {
+      if (bggData.imageUrl) imageUrls.push(bggData.imageUrl);
+      if (bggData.thumbnailUrl && bggData.thumbnailUrl !== bggData.imageUrl) {
+        imageUrls.push(bggData.thumbnailUrl);
       }
     }
 
-    logger.info('Game Creation', `Successfully created game record: ${cleanedGameName}`, { airtableId: record[0].id });
+    // Add custom images
+    if (customImageUrls && customImageUrls.length > 0) {
+      logger.info('Game Creation', 'Processing custom image URLs', { count: customImageUrls.length });
+      customImageUrls.forEach((url: string) => {
+        if (url.trim()) imageUrls.push(url.trim());
+      });
+    }
+
+    // Add images to PostgreSQL
+    for (const imageUrl of imageUrls) {
+      try {
+        const hash = generateImageHash(imageUrl);
+        await db.games.addGameImage(gameId, imageUrl, hash);
+        logger.debug('Game Creation', 'Added image to PostgreSQL', { imageUrl, hash });
+      } catch (imageError) {
+        logger.warn('Game Creation', 'Failed to add image', { imageUrl, error: imageError });
+      }
+    }
+
+    logger.info('Game Creation', `Successfully created game in PostgreSQL: ${cleanedGameName}`, { gameId });
 
     return NextResponse.json({
       success: true,
       message: `Successfully added ${cleanedGameName} to the collection`,
-      gameId: record[0].id,
+      gameId,
       gameName: cleanedGameName,
       bggData,
-      warning: cleanedCategories.length > 0 || cleanedMechanisms.length > 0
-        ? `⚠️ Game created but some categories/mechanisms couldn't be added. Try running the categories script in Airtable to add missing values.`
-        : undefined,
     });
 
   } catch (error) {

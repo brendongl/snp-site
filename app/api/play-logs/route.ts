@@ -8,27 +8,15 @@ export async function GET(request: Request) {
     // Initialize database service
     const db = DatabaseService.initialize();
 
-    // Fetch all play logs from PostgreSQL
-    console.log('Fetching play logs from PostgreSQL...');
-    const logs = await db.playLogs.getAllLogs();
+    // Fetch all play logs with game names and staff names from PostgreSQL
+    console.log('Fetching play logs with names from PostgreSQL...');
+    const logs = await db.playLogs.getAllLogsWithNames();
 
-    console.log(`✅ Fetched ${logs.length} play logs from PostgreSQL`);
-
-    // Transform to response format
-    const formattedLogs = logs.map(log => ({
-      id: log.id,
-      gameId: log.gameId,
-      staffListId: log.staffListId,
-      sessionDate: log.sessionDate,
-      notes: log.notes,
-      durationHours: log.durationHours,
-      createdAt: log.createdAt,
-      updatedAt: log.updatedAt,
-    }));
+    console.log(`✅ Fetched ${logs.length} play logs with names from PostgreSQL`);
 
     return NextResponse.json({
-      logs: formattedLogs,
-      count: formattedLogs.length,
+      logs,
+      count: logs.length,
     });
   } catch (error) {
     console.error('❌ Error fetching play logs:', error);
@@ -54,6 +42,30 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Missing required fields: gameId, staffListId' },
         { status: 400 }
+      );
+    }
+
+    // Check for duplicate play logs (1 per game per hour)
+    console.log(`[play-logs POST] Checking for recent play logs: game=${gameId}`);
+    const recentLogs = await db.playLogs.getLogsByGameId(gameId);
+
+    // Calculate time threshold (1 hour ago)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    // Check if any recent logs exist within the last hour
+    const duplicateLog = recentLogs.find(log => {
+      const logDate = new Date(log.createdAt);
+      return logDate > oneHourAgo;
+    });
+
+    if (duplicateLog) {
+      console.log(`⚠️ Duplicate play log detected within 1 hour: ${duplicateLog.id}`);
+      return NextResponse.json(
+        {
+          error: 'A play log for this game was already created within the last hour. Please wait before logging again.',
+          duplicateLogId: duplicateLog.id,
+        },
+        { status: 409 } // 409 Conflict
       );
     }
 
