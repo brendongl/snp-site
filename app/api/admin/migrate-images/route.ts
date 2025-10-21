@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     let offset: string | undefined = undefined;
 
     do {
-      const url = offset ? `${airtableUrl}?offset=${offset}` : airtableUrl;
+      const url: string = offset ? `${airtableUrl}?offset=${offset}` : airtableUrl;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${airtableApiKey}`,
