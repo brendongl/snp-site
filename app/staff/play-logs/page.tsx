@@ -271,7 +271,7 @@ export default function PlayLogsPage() {
                       <div className="col-span-2 font-medium">{formatDate(log.sessionDate)}</div>
                       <div className="col-span-3 font-medium text-foreground">{log.gameName || 'Unknown Game'}</div>
                       <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
-                      <div className={`${isAdmin ? 'col-span-3' : 'col-span-5'} text-muted-foreground truncate`} title={log.notes}>
+                      <div className={`${isAdmin ? 'col-span-3' : 'col-span-5'} text-muted-foreground truncate`} title={log.notes || undefined}>
                         {log.notes || '—'}
                       </div>
                       {isAdmin && (
