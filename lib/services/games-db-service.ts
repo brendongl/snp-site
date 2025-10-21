@@ -24,14 +24,13 @@ class GamesDbService {
           min_players,
           max_players,
           best_player_amount,
-          acquisition_date,
+          date_of_acquisition,
           latest_check_date,
           latest_check_status,
           latest_check_notes,
           total_checks,
           sleeved,
           box_wrapped,
-          is_expansion,
           game_expansions_link
         FROM games
         ORDER BY name ASC
@@ -42,21 +41,20 @@ class GamesDbService {
         fields: {
           'Game Name': row.name,
           'Description': row.description,
-          'Categories': JSON.parse(row.categories),
+          'Categories': row.categories || [],
           'Year Released': row.year_released,
           'Complexity': row.complexity,
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
-          'Date of Aquisition': row.acquisition_date,
+          'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
-          'Latest Check Status': JSON.parse(row.latest_check_status),
-          'Latest Check Notes': JSON.parse(row.latest_check_notes),
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
           'Total Checks': row.total_checks,
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
-          'Expansion': row.is_expansion,
-          'Game Expansions Link': JSON.parse(row.game_expansions_link),
+          'Game Expansions Link': row.game_expansions_link || [],
         },
       }));
     } catch (error) {
@@ -73,7 +71,7 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, acquisition_date,
+          min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
           sleeved, box_wrapped, is_expansion, game_expansions_link
         FROM games WHERE id = $1`,
@@ -90,21 +88,20 @@ class GamesDbService {
         fields: {
           'Game Name': row.name,
           'Description': row.description,
-          'Categories': JSON.parse(row.categories),
+          'Categories': row.categories || [],
           'Year Released': row.year_released,
           'Complexity': row.complexity,
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
-          'Date of Aquisition': row.acquisition_date,
+          'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
-          'Latest Check Status': JSON.parse(row.latest_check_status),
-          'Latest Check Notes': JSON.parse(row.latest_check_notes),
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
           'Total Checks': row.total_checks,
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
-          'Expansion': row.is_expansion,
-          'Game Expansions Link': JSON.parse(row.game_expansions_link),
+          'Game Expansions Link': row.game_expansions_link || [],
         },
       };
     } catch (error) {
@@ -121,7 +118,7 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, acquisition_date,
+          min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
           sleeved, box_wrapped, is_expansion, game_expansions_link
         FROM games
@@ -135,21 +132,20 @@ class GamesDbService {
         fields: {
           'Game Name': row.name,
           'Description': row.description,
-          'Categories': JSON.parse(row.categories),
+          'Categories': row.categories || [],
           'Year Released': row.year_released,
           'Complexity': row.complexity,
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
-          'Date of Aquisition': row.acquisition_date,
+          'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
-          'Latest Check Status': JSON.parse(row.latest_check_status),
-          'Latest Check Notes': JSON.parse(row.latest_check_notes),
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
           'Total Checks': row.total_checks,
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
-          'Expansion': row.is_expansion,
-          'Game Expansions Link': JSON.parse(row.game_expansions_link),
+          'Game Expansions Link': row.game_expansions_link || [],
         },
       }));
     } catch (error) {
@@ -166,7 +162,7 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, acquisition_date,
+          min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
           sleeved, box_wrapped, is_expansion, game_expansions_link
         FROM games
@@ -180,21 +176,20 @@ class GamesDbService {
         fields: {
           'Game Name': row.name,
           'Description': row.description,
-          'Categories': JSON.parse(row.categories),
+          'Categories': row.categories || [],
           'Year Released': row.year_released,
           'Complexity': row.complexity,
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
-          'Date of Aquisition': row.acquisition_date,
+          'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
-          'Latest Check Status': JSON.parse(row.latest_check_status),
-          'Latest Check Notes': JSON.parse(row.latest_check_notes),
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
           'Total Checks': row.total_checks,
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
-          'Expansion': row.is_expansion,
-          'Game Expansions Link': JSON.parse(row.game_expansions_link),
+          'Game Expansions Link': row.game_expansions_link || [],
         },
       }));
     } catch (error) {
@@ -211,7 +206,7 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, acquisition_date,
+          min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
           sleeved, box_wrapped, is_expansion, game_expansions_link
         FROM games
@@ -229,21 +224,20 @@ class GamesDbService {
         fields: {
           'Game Name': row.name,
           'Description': row.description,
-          'Categories': JSON.parse(row.categories),
+          'Categories': row.categories || [],
           'Year Released': row.year_released,
           'Complexity': row.complexity,
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
-          'Date of Aquisition': row.acquisition_date,
+          'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
-          'Latest Check Status': JSON.parse(row.latest_check_status),
-          'Latest Check Notes': JSON.parse(row.latest_check_notes),
+          'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
+          'Latest Check Notes': row.latest_check_notes || [],
           'Total Checks': row.total_checks,
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
-          'Expansion': row.is_expansion,
-          'Game Expansions Link': JSON.parse(row.game_expansions_link),
+          'Game Expansions Link': row.game_expansions_link || [],
         },
       };
     } catch (error) {
@@ -288,7 +282,7 @@ class GamesDbService {
       min_players?: string;
       max_players?: string;
       best_player_amount?: string;
-      acquisition_date?: string;
+      date_of_acquisition?: string;
       latest_check_date?: string;
       latest_check_status?: string[];
       latest_check_notes?: string[];
@@ -335,9 +329,9 @@ class GamesDbService {
         setClauses.push(`best_player_amount = $${paramCount++}`);
         values.push(updates.best_player_amount);
       }
-      if (updates.acquisition_date !== undefined) {
-        setClauses.push(`acquisition_date = $${paramCount++}`);
-        values.push(updates.acquisition_date);
+      if (updates.date_of_acquisition !== undefined) {
+        setClauses.push(`date_of_acquisition = $${paramCount++}`);
+        values.push(updates.date_of_acquisition);
       }
       if (updates.latest_check_date !== undefined) {
         setClauses.push(`latest_check_date = $${paramCount++}`);
