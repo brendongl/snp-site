@@ -699,6 +699,7 @@ function GamesPageContent() {
         game={selectedGame}
         open={!!selectedGame}
         onClose={() => setSelectedGame(null)}
+        onRefresh={fetchGames}
       />
 
       {/* Add Game Dialog (Staff Only) */}

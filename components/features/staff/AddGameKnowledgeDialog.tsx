@@ -132,13 +132,15 @@ export function AddGameKnowledgeDialog({
         }),
       });
 
+      // Read the response body as text first (to avoid "body already consumed" error)
+      const responseText = await response.text();
+
       let data;
       try {
-        data = await response.json();
+        data = JSON.parse(responseText);
       } catch (jsonError) {
-        const text = await response.text();
-        console.error('Response text:', text);
-        setError(`Server error: ${text.substring(0, 100)}`);
+        console.error('Failed to parse response as JSON:', responseText);
+        setError(`Server error: ${responseText.substring(0, 100)}`);
         return;
       }
 

@@ -37,6 +37,13 @@ export async function POST(req: Request) {
     // Convert confidence level string to number
     const confidenceLevelNum = mapConfidenceLevelToNumber(confidenceLevel);
 
+    // Get staff name first
+    const staffResult = await db.pool.query(
+      'SELECT staff_name FROM staff_list WHERE stafflist_id = $1 LIMIT 1',
+      [staffMemberId]
+    );
+    const staffName = staffResult.rows[0]?.staff_name || 'Unknown Staff';
+
     // Create records for each game
     const createdRecords = [];
     const failedGames = [];
@@ -53,12 +60,37 @@ export async function POST(req: Request) {
           notes: null,
         });
 
-        createdRecords.push(knowledge);
+        // Fetch game name to include in response
+        const gameResult = await db.pool.query(
+          'SELECT name FROM games WHERE id = $1 LIMIT 1',
+          [gameId]
+        );
+        const gameName = gameResult.rows[0]?.name || 'Unknown Game';
+
+        createdRecords.push({
+          ...knowledge,
+          gameName,
+          staffName,
+        });
         console.log(`✅ Knowledge entry created: ${knowledge.id}`);
       } catch (gameError) {
         const errorMsg = gameError instanceof Error ? gameError.message : String(gameError);
+
+        // Try to get game name for failed record too
+        let failedGameName = 'Unknown Game';
+        try {
+          const gameResult = await db.pool.query(
+            'SELECT name FROM games WHERE id = $1 LIMIT 1',
+            [gameId]
+          );
+          failedGameName = gameResult.rows[0]?.name || failedGameName;
+        } catch {
+          // Ignore if we can't fetch game name
+        }
+
         failedGames.push({
           gameId,
+          gameName: failedGameName,
           error: errorMsg,
         });
         console.error(`❌ Failed to create knowledge entry for game ${gameId}:`, errorMsg);

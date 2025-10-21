@@ -24,9 +24,10 @@ interface GameDetailModalProps {
   game: BoardGame | null;
   open: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
-export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
+export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailModalProps) {
   const isStaff = useStaffMode();
   const isAdmin = useAdminMode();
   const [showHistory, setShowHistory] = useState(false);
@@ -214,9 +215,16 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
                   {images.map((image, index) => {
                     // Support both PostgreSQL and Airtable image structures
                     const imageId = (image as any).id || (image as any).hash || `image-${index}`;
+                    const imageHash = (image as any).hash;
                     const imageUrl = (image as any).url ||
                       ('thumbnails' in image ? (image as any).thumbnails?.large?.url || (image as any).thumbnails?.full?.url : undefined);
-                    const proxiedUrl = imageUrl ? `/api/images/proxy?url=${encodeURIComponent(imageUrl)}` : '';
+
+                    // Use hash-based route for PostgreSQL images, fallback to proxy for Airtable
+                    const proxiedUrl = imageHash
+                      ? `/api/images/${imageHash}`
+                      : imageUrl
+                        ? `/api/images/proxy?url=${encodeURIComponent(imageUrl)}`
+                        : '';
 
                     return (
                       <div
@@ -392,10 +400,18 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
                       <div className="relative w-full h-32 mb-2 rounded overflow-hidden bg-muted">
                         <Image
                           src={(() => {
-                            const url = expansion.images?.[0]?.url ||
+                            const expansionImage = expansion.images?.[0];
+                            const hash = expansionImage?.hash;
+                            const url = expansionImage?.url ||
                               expansion.fields.Images?.[0]?.url ||
                               expansion.fields.Images?.[0]?.thumbnails?.large?.url || '';
-                            return url ? `/api/images/proxy?url=${encodeURIComponent(url)}` : '';
+
+                            // Use hash-based route for PostgreSQL images, fallback to proxy
+                            return hash
+                              ? `/api/images/${hash}`
+                              : url
+                                ? `/api/images/proxy?url=${encodeURIComponent(url)}`
+                                : '';
                           })()}
                           alt={expansion.fields['Game Name']}
                           fill
@@ -458,6 +474,7 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
             game={game}
             open={showEditGame}
             onClose={() => setShowEditGame(false)}
+            onSave={onRefresh}
           />
         )}
       </DialogContent>

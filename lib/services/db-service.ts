@@ -1,3 +1,4 @@
+import { Pool } from 'pg';
 import GamesDbService from './games-db-service';
 import ContentChecksDbService from './content-checks-db-service';
 import StaffKnowledgeDbService from './staff-knowledge-db-service';
@@ -11,6 +12,7 @@ class DatabaseService {
   private static instance: DatabaseService;
   private connectionString: string;
 
+  public pool: Pool;
   public games: GamesDbService;
   public contentChecks: ContentChecksDbService;
   public staffKnowledge: StaffKnowledgeDbService;
@@ -18,6 +20,13 @@ class DatabaseService {
 
   private constructor(connectionString: string) {
     this.connectionString = connectionString;
+    this.pool = new Pool({
+      connectionString,
+      max: 10,
+      min: 2,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
     this.games = new GamesDbService(connectionString);
     this.contentChecks = new ContentChecksDbService(connectionString);
     this.staffKnowledge = new StaffKnowledgeDbService(connectionString);
@@ -57,6 +66,7 @@ class DatabaseService {
       await this.contentChecks.close();
       await this.staffKnowledge.close();
       await this.playLogs.close();
+      await this.pool.end();
       console.log('✅ All database connections closed');
     } catch (error) {
       console.error('Error closing database connections:', error);

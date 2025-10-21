@@ -31,11 +31,14 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
   const firstImage = game.images?.[0] || game.fields.Images?.[0];
   const originalImageUrl = firstImage?.url ||
     (firstImage && 'thumbnails' in firstImage ? firstImage.thumbnails?.large?.url : undefined);
-  // Use cached image proxy if URL exists
-  // The /api/images/[hash] endpoint accepts a url query parameter for direct proxying
-  const imageUrl = originalImageUrl
-    ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
-    : undefined;
+
+  // Use hash-based route for PostgreSQL images, fallback to proxy for Airtable
+  const imageHash = firstImage && 'hash' in firstImage ? firstImage.hash : null;
+  const imageUrl = imageHash
+    ? `/api/images/${imageHash}`
+    : originalImageUrl
+      ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
+      : undefined;
 
   return (
     <div

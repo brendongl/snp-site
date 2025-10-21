@@ -10,11 +10,10 @@ interface PlayLogEntry {
   id: string;
   gameId: string;
   gameName: string;
-  playedBy: string;
-  playDate: string;
-  duration?: string;
-  playerCount?: number;
-  notes?: string;
+  staffName: string; // Changed from playedBy
+  sessionDate: string; // Changed from playDate
+  durationHours?: number | null;
+  notes?: string | null;
 }
 
 export default function PlayLogsPage() {
@@ -25,7 +24,7 @@ export default function PlayLogsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingData, setEditingData] = useState<{ notes: string; playDate: string } | null>(null);
+  const [editingData, setEditingData] = useState<{ notes: string; sessionDate: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,7 +67,7 @@ export default function PlayLogsPage() {
 
   // Sort by most recent first
   const sortedLogs = [...playLogs].sort((a, b) => {
-    return new Date(b.playDate || 0).getTime() - new Date(a.playDate || 0).getTime();
+    return new Date(b.sessionDate || 0).getTime() - new Date(a.sessionDate || 0).getTime();
   });
 
   const handleDeleteLog = async (logId: string) => {
@@ -99,7 +98,7 @@ export default function PlayLogsPage() {
     setEditingId(log.id);
     setEditingData({
       notes: log.notes || '',
-      playDate: log.playDate || new Date().toISOString(),
+      sessionDate: log.sessionDate || new Date().toISOString(),
     });
   };
 
@@ -122,7 +121,7 @@ export default function PlayLogsPage() {
       // Update local state
       setPlayLogs(playLogs.map(log =>
         log.id === editingId
-          ? { ...log, notes: editingData.notes, playDate: editingData.playDate }
+          ? { ...log, notes: editingData.notes, sessionDate: editingData.sessionDate }
           : log
       ));
 
@@ -222,16 +221,16 @@ export default function PlayLogsPage() {
                     }`}>
                       <input
                         type="datetime-local"
-                        value={editingData?.playDate?.split('T')[0] || ''}
+                        value={editingData?.sessionDate?.split('T')[0] || ''}
                         onChange={(e) => setEditingData(prev => prev ? {
                           ...prev,
-                          playDate: e.target.value
+                          sessionDate: e.target.value
                         } : null)}
                         className="col-span-2 px-2 py-1 border border-border rounded text-xs bg-background"
                         disabled={isSaving}
                       />
                       <div className="col-span-3 text-sm">{log.gameName}</div>
-                      <div className="col-span-2 text-sm">{log.playedBy}</div>
+                      <div className="col-span-2 text-sm">{log.staffName}</div>
                       <textarea
                         value={editingData?.notes || ''}
                         onChange={(e) => setEditingData(prev => prev ? {
@@ -269,9 +268,9 @@ export default function PlayLogsPage() {
                         idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                       }`}
                     >
-                      <div className="col-span-2 font-medium">{formatDate(log.playDate)}</div>
+                      <div className="col-span-2 font-medium">{formatDate(log.sessionDate)}</div>
                       <div className="col-span-3 font-medium text-foreground">{log.gameName || 'Unknown Game'}</div>
-                      <div className="col-span-2 text-muted-foreground">{log.playedBy || 'Unknown'}</div>
+                      <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
                       <div className={`${isAdmin ? 'col-span-3' : 'col-span-5'} text-muted-foreground truncate`} title={log.notes}>
                         {log.notes || '—'}
                       </div>
