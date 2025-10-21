@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
@@ -6,22 +6,18 @@ const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
 
 export const dynamic = 'force-dynamic';
 
-interface RouteParams {
-  params: {
-    hash: string;
-  };
-}
-
 /**
  * Serve cached image by hash
  * GET /api/images/[hash]
  *
  * Returns cached image file if it exists
- * Supports cache-busting with ?v= query parameter
  */
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ hash: string }> }
+) {
   try {
-    const { hash } = params;
+    const { hash } = await params;
 
     // Validate hash format (should be MD5 hex, 32 chars)
     if (!hash || !/^[a-f0-9]{32}$/.test(hash)) {
@@ -94,7 +90,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     return response;
   } catch (error) {
-    console.error(`Error serving cached image ${params.hash}:`, error);
+    console.error('Error serving cached image:', error);
 
     return NextResponse.json(
       { error: 'Failed to serve image' },
