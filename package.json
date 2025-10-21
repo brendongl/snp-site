@@ -1,6 +1,6 @@
 {
   "name": "temp-init",
-  "version": "1.3.27",
+  "version": "1.3.28",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0",
@@ -8,6 +8,8 @@
     "start": "next start",
     "migrate:content-checks": "tsx scripts/migrate-content-checks.ts",
     "migrate:images": "tsx scripts/migrate-images-to-volume.ts",
+    "update:image-urls": "tsx scripts/update-urls-from-csv.ts",
+    "download:images": "tsx scripts/download-images-from-db.ts",
     "notify:discord": "node scripts/notify-discord.js"
   },
   "dependencies": {
