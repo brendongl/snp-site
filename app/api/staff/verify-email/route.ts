@@ -28,13 +28,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // staffListRecord.id is from the StaffList table in SNP Games List base
-    // Play Logs "Logged By" field links to StaffList (same base), so we use staffListRecord.id
+    // staffListRecord contains both Staff ID and StaffList ID from PostgreSQL cache
+    // Play Logs "Logged By" field links to StaffList (same base), so we MUST use staffListId
     return NextResponse.json(
       {
         success: true,
-        staffId: staffListRecord.id, // StaffList record ID (for Play Logs "Logged By" linking)
-        staffListRecordId: staffListRecord.id, // Also StaffList for consistency
+        staffId: staffListRecord.id, // Sip N Play Staff table ID (for reference)
+        staffListRecordId: staffListRecord.staffListId, // SNP Games List StaffList ID (REQUIRED for Play Logs linking)
         staffName: staffListRecord.name,
         email,
         type: staffListRecord.type,

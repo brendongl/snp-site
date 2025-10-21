@@ -19,8 +19,9 @@ async function createTables() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS staff_list (
         staff_id VARCHAR(50) PRIMARY KEY,
+        stafflist_id VARCHAR(50) NOT NULL,
         staff_name VARCHAR(255) NOT NULL,
-        staff_email VARCHAR(255),
+        staff_email VARCHAR(255) NOT NULL,
         staff_type VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -39,6 +40,12 @@ async function createTables() {
       CREATE INDEX IF NOT EXISTS idx_staff_email ON staff_list(staff_email);
     `);
     console.log('   ✓ Email index created');
+
+    console.log('   Creating index on stafflist_id...');
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_stafflist_id ON staff_list(stafflist_id);
+    `);
+    console.log('   ✓ StaffList ID index created');
 
     console.log('   Adding table comment...');
     await client.query(`
