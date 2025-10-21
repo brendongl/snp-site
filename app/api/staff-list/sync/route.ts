@@ -35,12 +35,17 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     // Transform Airtable records to our format
+    // Note: StaffList table has 'Name' and 'Email' fields
     const staff = (data.records || []).map((record: any) => {
       const name = record.fields['Name'] || 'Unknown';
+      const email = record.fields['Email'] || '';
+      const type = record.fields['Type'] || 'Staff';
 
       return {
         id: record.id,
         name,
+        email,
+        type,
       };
     });
 
