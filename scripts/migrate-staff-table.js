@@ -35,19 +35,24 @@ async function migrateTable() {
     `);
     console.log('   ✓ Column added');
 
-    // Step 3: Make staff_email NOT NULL (if it isn't already)
-    console.log('\n3️⃣  Updating email column constraints...');
-    await client.query(`
-      ALTER TABLE staff_list
-      ALTER COLUMN staff_email SET NOT NULL;
-    `).catch((err) => {
-      // Column might already be NOT NULL, that's fine
-      if (!err.message.includes('already')) {
-        throw err;
-      }
-      console.log('   ℹ  staff_email already NOT NULL');
-    });
-    console.log('   ✓ Email column updated');
+    // Step 3: Check for NULL emails (will be populated by sync)
+    console.log('\n3️⃣  Checking email column...');
+    const nullEmailCheck = await client.query(`
+      SELECT COUNT(*) FROM staff_list WHERE staff_email IS NULL
+    `);
+    const nullCount = nullEmailCheck.rows[0].count;
+    if (nullCount > 0) {
+      console.log(`   ⚠️  Found ${nullCount} records with NULL emails`);
+      console.log('   ℹ  These will be populated when you run the sync endpoint');
+      console.log('   ℹ  After sync completes, we can add NOT NULL constraint');
+    } else {
+      // All emails are populated, make the column NOT NULL
+      await client.query(`
+        ALTER TABLE staff_list
+        ALTER COLUMN staff_email SET NOT NULL;
+      `);
+      console.log('   ✓ Email column is now NOT NULL');
+    }
 
     // Step 4: Create index on stafflist_id
     console.log('\n4️⃣  Creating index on stafflist_id...');
