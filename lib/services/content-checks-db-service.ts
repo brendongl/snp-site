@@ -286,6 +286,52 @@ class ContentChecksDbService {
     }
   }
 
+  /**
+   * Get all checks with game names (via JOIN)
+   */
+  async getAllChecksWithGameNames(): Promise<any[]> {
+    try {
+      const result = await this.pool.query(`
+        SELECT
+          cc.id,
+          cc.game_id,
+          g.name AS game_name,
+          cc.check_date,
+          cc.inspector_id,
+          cc.status,
+          cc.notes,
+          cc.box_condition,
+          cc.card_condition,
+          cc.missing_pieces,
+          cc.sleeved_at_check,
+          cc.box_wrapped_at_check,
+          cc.is_fake
+        FROM content_checks cc
+        LEFT JOIN games g ON cc.game_id = g.id
+        ORDER BY cc.check_date DESC
+      `);
+
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        gameId: row.game_id,
+        gameName: row.game_name || 'Unknown Game',
+        checkDate: row.check_date,
+        inspector: row.inspector_id || 'Unknown Staff',
+        status: row.status || 'Unknown',
+        notes: row.notes || '',
+        boxCondition: row.box_condition,
+        cardCondition: row.card_condition,
+        missingPieces: row.missing_pieces,
+        sleeved: row.sleeved_at_check,
+        boxWrapped: row.box_wrapped_at_check,
+        isFake: row.is_fake,
+      }));
+    } catch (error) {
+      console.error('Error fetching content checks with game names:', error);
+      throw error;
+    }
+  }
+
   private mapRowToCheck(row: any): ContentCheck {
     return {
       id: row.id,

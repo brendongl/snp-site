@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,17 +18,6 @@ export async function POST(
       );
     }
 
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
-    const tableId = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Airtable API key not configured' },
-        { status: 500 }
-      );
-    }
-
     console.log('Game edit request received:', {
       gameId,
       gameName,
@@ -38,60 +28,36 @@ export async function POST(
       complexity,
     });
 
-    // Build the fields to update (only include non-empty values)
-    const updateFields: Record<string, any> = {};
+    // Build the update object (only include non-empty values)
+    const updates: any = {};
 
-    if (gameName) updateFields['Game Name'] = gameName;
-    if (description) updateFields['Description'] = description;
-    if (yearReleased) updateFields['Year Released'] = yearReleased;
-    if (minPlayers) updateFields['Min Players'] = minPlayers;
-    if (maxPlayers) updateFields['Max. Players'] = maxPlayers;
-    if (complexity !== undefined) updateFields['Complexity'] = complexity;
+    if (gameName) updates.name = gameName;
+    if (description) updates.description = description;
+    if (yearReleased !== undefined) updates.yearReleased = yearReleased;
+    if (minPlayers) updates.minPlayers = String(minPlayers);  // Store as string
+    if (maxPlayers) updates.maxPlayers = String(maxPlayers);  // Store as string
+    if (complexity !== undefined) updates.complexity = complexity;
 
-    if (Object.keys(updateFields).length === 0) {
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: 'No fields to update' },
         { status: 400 }
       );
     }
 
-    // Update record in Airtable
-    const updateResponse = await fetch(
-      `https://api.airtable.com/v0/${baseId}/${tableId}/${gameId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fields: updateFields,
-        }),
-      }
-    );
+    // Update record in PostgreSQL
+    const db = DatabaseService.initialize();
+    await db.games.updateGame(gameId, updates);
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.json().catch(() => ({}));
-      const errorMessage = (errorData as any).error?.message || updateResponse.statusText;
-      console.error('Airtable update error:', errorMessage);
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Failed to update game: ${errorMessage}`,
-        },
-        { status: updateResponse.status }
-      );
-    }
-
-    const updatedData = await updateResponse.json();
+    // Fetch the updated game to return
+    const updatedGame = await db.games.getGameById(gameId);
 
     return NextResponse.json({
       success: true,
-      message: 'Game updated successfully',
+      message: 'Game updated successfully in PostgreSQL',
       gameId,
-      updatedFields: updateFields,
-      record: updatedData,
+      updatedFields: updates,
+      game: updatedGame,
     });
   } catch (error) {
     console.error('Error editing game:', error);

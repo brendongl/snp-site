@@ -119,13 +119,17 @@ class PlayLogsDbService {
    */
   async createLog(log: Omit<PlayLog, 'id' | 'createdAt' | 'updatedAt'>): Promise<PlayLog> {
     try {
+      // Generate a unique ID for the play log
+      const id = `plg_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
       const result = await this.pool.query(
         `INSERT INTO play_logs (
-          game_id, staff_list_id, session_date, notes, duration_hours, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          id, game_id, staff_list_id, session_date, notes, duration_hours, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
         RETURNING id, game_id, staff_list_id, session_date, notes, duration_hours,
           created_at, updated_at`,
         [
+          id,
           log.gameId,
           log.staffListId,
           log.sessionDate,
