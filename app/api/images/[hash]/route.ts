@@ -1,83 +1,103 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCachedImagePath, cacheImage, hashUrl } from '@/lib/cache/image-cache';
+import { NextResponse } from 'next/server';
 import fs from 'fs';
+import path from 'path';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ hash: string }> }
-) {
+const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
+
+export const dynamic = 'force-dynamic';
+
+interface RouteParams {
+  params: {
+    hash: string;
+  };
+}
+
+/**
+ * Serve cached image by hash
+ * GET /api/images/[hash]
+ *
+ * Returns cached image file if it exists
+ * Supports cache-busting with ?v= query parameter
+ */
+export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { hash } = await params;
+    const { hash } = params;
 
-    // Check if this is actually a URL (for direct proxying)
-    const url = request.nextUrl.searchParams.get('url');
-
-    let imagePath: string | null = null;
-    let urlHash = hash;
-
-    if (url) {
-      // Direct URL proxy mode - cache on the fly
-      urlHash = hashUrl(url);
-      imagePath = getCachedImagePath(urlHash);
-
-      if (!imagePath) {
-        // Not cached yet, download and cache it now
-        const cached = await cacheImage(url);
-        if (cached) {
-          imagePath = getCachedImagePath(urlHash);
-        } else {
-          // Failed to cache, proxy the original
-          const response = await fetch(url);
-          const buffer = await response.arrayBuffer();
-          const contentType = response.headers.get('content-type') || 'image/jpeg';
-
-          return new NextResponse(buffer, {
-            headers: {
-              'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=3600',
-            },
-          });
-        }
-      }
-    } else {
-      // Hash-based lookup
-      imagePath = getCachedImagePath(hash);
+    // Validate hash format (should be MD5 hex, 32 chars)
+    if (!hash || !/^[a-f0-9]{32}$/.test(hash)) {
+      return NextResponse.json(
+        { error: 'Invalid image hash format' },
+        { status: 400 }
+      );
     }
 
-    if (!imagePath || !fs.existsSync(imagePath)) {
+    // Security: Prevent directory traversal
+    if (hash.includes('..') || hash.includes('/')) {
       return NextResponse.json(
-        { error: 'Image not found' },
+        { error: 'Invalid path' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure cache directory exists
+    if (!fs.existsSync(IMAGE_CACHE_DIR)) {
+      fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
+    }
+
+    // Look for cached image with any extension
+    // (md5 hash + .jpg/png/gif/webp)
+    const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    let imagePath: string | null = null;
+
+    for (const ext of extensions) {
+      const potentialPath = path.join(IMAGE_CACHE_DIR, `${hash}${ext}`);
+      if (fs.existsSync(potentialPath)) {
+        imagePath = potentialPath;
+        break;
+      }
+    }
+
+    if (!imagePath) {
+      // Image not in cache - this is okay, frontend can use original URL
+      return NextResponse.json(
+        { error: 'Image not found in cache' },
         { status: 404 }
       );
     }
 
-    // Read image file
+    // Read and serve image
     const imageBuffer = fs.readFileSync(imagePath);
+    const ext = path.extname(imagePath).toLowerCase();
 
-    // Determine content type from file extension
-    const ext = imagePath.split('.').pop()?.toLowerCase();
-    const contentTypeMap: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      gif: 'image/gif',
-      webp: 'image/webp',
-      svg: 'image/svg+xml',
+    // Determine MIME type
+    const mimeTypeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
     };
 
-    const contentType = contentTypeMap[ext || 'jpg'] || 'image/jpeg';
+    const mimeType = mimeTypeMap[ext] || 'application/octet-stream';
 
-    // Return image with appropriate headers
-    return new NextResponse(imageBuffer, {
+    // Set cache headers - 1 year for immutable hashed content
+    const response = new NextResponse(imageBuffer, {
+      status: 200,
       headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable', // Cache for 1 year
+        'Content-Type': mimeType,
+        'Content-Length': imageBuffer.length.toString(),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'ETag': `"${hash}"`,
       },
     });
+
+    return response;
   } catch (error) {
-    console.error('Error serving cached image:', error);
+    console.error(`Error serving cached image ${params.hash}:`, error);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to serve image' },
       { status: 500 }
     );
   }
