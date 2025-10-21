@@ -90,7 +90,8 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
 
   // Scroll to 2nd image by default when modal opens
   useEffect(() => {
-    if (open && game && scrollContainerRef.current && game.fields.Images && game.fields.Images.length > 1) {
+    const gameImages = game?.images || game?.fields?.Images;
+    if (open && game && scrollContainerRef.current && gameImages && gameImages.length > 1) {
       // Small delay to ensure DOM is ready
       setTimeout(() => {
         if (scrollContainerRef.current) {
@@ -106,7 +107,8 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
 
   if (!game) return null;
 
-  const images = game.fields.Images || [];
+  // Support both PostgreSQL (game.images) and Airtable (game.fields.Images) structures
+  const images = game.images || game.fields.Images || [];
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -209,38 +211,46 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
                   className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide min-w-0"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                  {images.map((image, index) => (
-                    <div
-                      key={image.id}
-                      className="flex-shrink-0 w-full snap-center min-w-0 max-w-full"
-                      style={{
-                        scrollSnapAlign: index === 1 ? 'start' : 'center'
-                      }}
-                    >
-                      <div className="relative w-full rounded-lg overflow-hidden bg-muted max-h-[400px] md:max-h-[500px] max-w-full flex items-center justify-center">
-                        {/* Skeleton placeholder */}
-                        {!imageLoaded[image.id] && (
-                          <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
-                            <div className="text-muted-foreground/50">Loading...</div>
-                          </div>
-                        )}
-                        {/* Actual image */}
-                        <Image
-                          src={image.url}
-                          alt={`${game.fields['Game Name']} - Image ${index + 1}`}
-                          width={800}
-                          height={800}
-                          className="w-auto h-auto max-h-[400px] md:max-h-[500px] max-w-full object-contain"
-                          style={{ display: imageLoaded[image.id] ? 'block' : 'none' }}
-                          onLoad={() => setImageLoaded(prev => ({ ...prev, [image.id]: true }))}
-                          priority={index < 2}
-                          loading={index < 2 ? undefined : 'lazy'}
+                  {images.map((image, index) => {
+                    // Support both PostgreSQL and Airtable image structures
+                    const imageId = (image as any).id || (image as any).hash || `image-${index}`;
+                    const imageUrl = (image as any).url ||
+                      ('thumbnails' in image ? (image as any).thumbnails?.large?.url || (image as any).thumbnails?.full?.url : undefined);
+                    const proxiedUrl = imageUrl ? `/api/images/proxy?url=${encodeURIComponent(imageUrl)}` : '';
+
+                    return (
+                      <div
+                        key={imageId}
+                        className="flex-shrink-0 w-full snap-center min-w-0 max-w-full"
+                        style={{
+                          scrollSnapAlign: index === 1 ? 'start' : 'center'
+                        }}
+                      >
+                        <div className="relative w-full rounded-lg overflow-hidden bg-muted max-h-[400px] md:max-h-[500px] max-w-full flex items-center justify-center">
+                          {/* Skeleton placeholder */}
+                          {!imageLoaded[imageId] && (
+                            <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
+                              <div className="text-muted-foreground/50">Loading...</div>
+                            </div>
+                          )}
+                          {/* Actual image */}
+                          <Image
+                            src={proxiedUrl}
+                            alt={`${game.fields['Game Name']} - Image ${index + 1}`}
+                            width={800}
+                            height={800}
+                            className="w-auto h-auto max-h-[400px] md:max-h-[500px] max-w-full object-contain"
+                            style={{ display: imageLoaded[imageId] ? 'block' : 'none' }}
+                            onLoad={() => setImageLoaded(prev => ({ ...prev, [imageId]: true }))}
+                            priority={index < 2}
+                            loading={index < 2 ? undefined : 'lazy'}
                           unoptimized
                           sizes="(max-width: 768px) calc(100vw - 2rem), 50vw"
                         />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Scroll buttons - Positioned inside the carousel container */}
@@ -378,10 +388,15 @@ export function GameDetailModal({ game, open, onClose }: GameDetailModalProps) {
                     className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
                     onClick={() => handleExpansionClick(expansion)}
                   >
-                    {expansion.fields.Images && expansion.fields.Images[0] && (
+                    {((expansion.images && expansion.images[0]) || (expansion.fields.Images && expansion.fields.Images[0])) && (
                       <div className="relative w-full h-32 mb-2 rounded overflow-hidden bg-muted">
                         <Image
-                          src={expansion.fields.Images[0].url}
+                          src={(() => {
+                            const url = expansion.images?.[0]?.url ||
+                              expansion.fields.Images?.[0]?.url ||
+                              expansion.fields.Images?.[0]?.thumbnails?.large?.url || '';
+                            return url ? `/api/images/proxy?url=${encodeURIComponent(url)}` : '';
+                          })()}
                           alt={expansion.fields['Game Name']}
                           fill
                           className="object-contain"

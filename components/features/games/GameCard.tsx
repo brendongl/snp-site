@@ -27,8 +27,10 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
     addToast(`✓ Successfully logged ${gameName}`, 'success', 3000);
   };
 
-  const firstImage = game.fields.Images?.[0];
-  const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
+  // Check both PostgreSQL structure (game.images) and Airtable structure (game.fields.Images)
+  const firstImage = game.images?.[0] || game.fields.Images?.[0];
+  const originalImageUrl = firstImage?.url ||
+    (firstImage && 'thumbnails' in firstImage ? firstImage.thumbnails?.large?.url : undefined);
   // Use cached image proxy if URL exists
   // The /api/images/[hash] endpoint accepts a url query parameter for direct proxying
   const imageUrl = originalImageUrl
