@@ -247,9 +247,10 @@ interface StaffMember {
   - Stores the game that was played
   - When creating a record: Pass array of game IDs: `[gameId]`
 
-- **Logged By** (`fldWXUcDBFcIiVzbL`): `multipleRecordLinks` → Staff table (Sip N Play base)
+- **Logged By** (`fldWXUcDBFcIiVzbL`): `multipleRecordLinks` → StaffList table (SNP Games List base)
   - Stores which staff member logged the play session
-  - When creating a record: Pass array of staff record IDs: `[staffRecordId]`
+  - **IMPORTANT**: Uses StaffList record IDs from SNP Games List base, NOT Staff IDs from Sip N Play base
+  - When creating a record: Pass array of StaffList record IDs: `[staffListRecordId]`
 
 #### Date/Time Field
 - **Session Date** (`fldpVByTZBkdjD6fJ`): `dateTime` (format: local/l, time: 12hour/h:mma)
@@ -288,7 +289,8 @@ interface StaffMember {
 - Play Logs table is in the **SNP Games List base** (`apppFvSDh2JBc0qAu`), NOT Sip N Play base
 - Linked record fields require arrays even if only one ID: `["recXXX"]`, not `"recXXX"`
 - Game IDs come from BG List table (`tblIuIJN5q3W6oXNr`)
-- Staff record IDs come from Sip N Play Staff table (`tblLthDOTzCPbSdAA` in `appjD3LJhXYjp0tXm`)
+- Staff record IDs for "Logged By" come from **StaffList** table (`tblGIyQNmhcsK4Qlg` in same SNP Games List base)
+- **DO NOT** use Staff table IDs from Sip N Play base - they will cause "Record ID does not exist" errors
 
 ## SNP Games List Base - StaffList Table
 

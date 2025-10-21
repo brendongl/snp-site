@@ -46,11 +46,20 @@ export function PlayLogDialog({
       setIsLoading(true);
 
       // Get staff info from localStorage
-      const staffRecordId = localStorage.getItem('staff_record_id');
+      const staffId = localStorage.getItem('staff_id'); // Sip N Play Staff record ID
+      const staffRecordId = localStorage.getItem('staff_record_id'); // StaffList record ID (from SNP Games List base)
       const staffName = localStorage.getItem('staff_name');
 
-      if (!staffRecordId || !staffName) {
+      if (!staffName) {
         setError('Staff information not found. Please log in again.');
+        return;
+      }
+
+      // Use staffId (Sip N Play Staff) if available, otherwise fallback to staffRecordId (StaffList)
+      const recordIdToUse = staffId || staffRecordId;
+
+      if (!recordIdToUse) {
+        setError('Staff record ID not found. Please log in again.');
         return;
       }
 
@@ -60,7 +69,7 @@ export function PlayLogDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameId,
-          staffRecordId,
+          staffRecordId: recordIdToUse,
           staffName,
           sessionDate: new Date(sessionDate).toISOString(),
           notes: notes.trim() || '',

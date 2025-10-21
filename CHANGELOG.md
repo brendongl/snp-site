@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.3.7] - 2025-10-21
+
+### Fixed
+- **Play Logs API - "Record ID does not exist" Error**: Verified correct staff record ID usage
+  - Play Logs "Logged By" field links to **StaffList** table (SNP Games List base), NOT Staff table (Sip N Play base)
+  - verified with Airtable MCP: linkedTableId is `tblGIyQNmhcsK4Qlg` (StaffList)
+  - Example: Brendon's StaffList ID is `recLADJrJHuFprhOd`, NOT `recUGCHfx1JDATjxr` (Staff table)
+  - Schema documentation corrected to prevent future confusion
+
+- **Content Check API - Payload Format Fix**: Fixed Airtable batch request structure
+  - Wrapped recordData in `{ records: [recordData] }` wrapper for Airtable batch API
+  - Was sending flat object instead of required records array format
+  - Now correctly creates content check records without API errors
+
+### Documentation
+- Updated `docs/AIRTABLE_SCHEMA.md` with 100% accurate Play Logs linking information
+  - Clarified Staff vs StaffList table usage
+  - Added critical warning about record ID mismatch
+  - Verified all changes using Airtable MCP direct table inspection
+
 ## [1.3.6] - 2025-10-21
 
 ### Fixed

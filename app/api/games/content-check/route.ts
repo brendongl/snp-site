@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    logger.debug('Content Check', 'Airtable request payload', { recordData });
+    const payload = { records: [recordData] };
+    logger.debug('Content Check', 'Airtable request payload', { payload });
 
     const response = await fetch(airtableUrl, {
       method: 'POST',
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(recordData),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
