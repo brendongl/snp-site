@@ -119,18 +119,22 @@ class StaffKnowledgeDbService {
    */
   async createKnowledge(knowledge: Omit<StaffKnowledge, 'id' | 'createdAt' | 'updatedAt'>): Promise<StaffKnowledge> {
     try {
+      // Generate unique ID for the knowledge record
+      const id = `skn_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
       const result = await this.pool.query(
         `INSERT INTO staff_knowledge (
-          staff_member_id, game_id, confidence_level, can_teach, notes, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          id, staff_member_id, game_id, confidence_level, can_teach, notes, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
         ON CONFLICT (staff_member_id, game_id) DO UPDATE SET
-          confidence_level = $3,
-          can_teach = $4,
-          notes = $5,
+          confidence_level = $4,
+          can_teach = $5,
+          notes = $6,
           updated_at = NOW()
         RETURNING id, staff_member_id, game_id, confidence_level, can_teach, notes,
           created_at, updated_at`,
         [
+          id,
           knowledge.staffMemberId,
           knowledge.gameId,
           knowledge.confidenceLevel,

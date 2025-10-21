@@ -32,8 +32,6 @@ function GamesPageContent() {
   const [games, setGames] = useState<BoardGame[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [hardRefreshing, setHardRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<BoardGame | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('dateAcquired');
@@ -82,54 +80,6 @@ function GamesPageContent() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Refresh cache from Airtable
-  const handleRefresh = async (isHardRefresh = false) => {
-    try {
-      if (isHardRefresh) {
-        setHardRefreshing(true);
-      } else {
-        setRefreshing(true);
-      }
-
-      const url = isHardRefresh
-        ? '/api/games/refresh?full=true'
-        : '/api/games/refresh';
-
-      // Increase timeout for refresh - can take longer
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), isHardRefresh ? 60000 : 30000);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to refresh cache');
-      }
-
-      // Fetch updated games
-      await fetchGames();
-      setError(null);
-    } catch (err) {
-      if (err instanceof Error) {
-        if (err.name === 'AbortError') {
-          setError('Refresh took too long. Please try again.');
-        } else {
-          setError(err.message);
-        }
-      } else {
-        setError('Failed to refresh');
-      }
-    } finally {
-      setRefreshing(false);
-      setHardRefreshing(false);
     }
   };
 
@@ -481,38 +431,6 @@ function GamesPageContent() {
               <span className="sm:hidden">Add</span>
             </Button>
           )}
-          {isStaff && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleRefresh(false)}
-              disabled={refreshing || hardRefreshing}
-            >
-              {refreshing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">Refresh Data</span>
-              <span className="sm:hidden">Refresh</span>
-            </Button>
-          )}
-          {isStaff && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleRefresh(true)}
-              disabled={hardRefreshing || refreshing}
-            >
-              {hardRefreshing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">Hard Refresh</span>
-              <span className="sm:hidden">Hard</span>
-            </Button>
-          )}
           {isStaff && <StaffMenu />}
             </div>
           </div>
@@ -788,7 +706,7 @@ function GamesPageContent() {
         <AddGameDialog
           open={showAddGameDialog}
           onClose={() => setShowAddGameDialog(false)}
-          onSuccess={() => handleRefresh(false)}
+          onSuccess={() => fetchGames()}
         />
       )}
 
