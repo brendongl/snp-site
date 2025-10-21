@@ -1,109 +1,24 @@
 import { NextResponse } from 'next/server';
+import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
-interface StaffKnowledgeEntry {
-  id: string;
-  staffMember: string;
-  gameName: string;
-  confidenceLevel: string;
-  taughtBy: string | null;
-  notes: string;
-  canTeach: boolean;
-}
-
 export async function GET() {
   try {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
-    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
-    const staffTableId = process.env.AIRTABLE_STAFF_TABLE_ID;
-    const gamesTableId = process.env.AIRTABLE_GAMES_TABLE_ID;
+    const db = DatabaseService.getInstance();
 
-    if (!apiKey || !baseId || !knowledgeTableId) {
-      throw new Error('Missing Airtable configuration');
-    }
+    // Fetch all staff knowledge records from PostgreSQL
+    console.log('Fetching staff knowledge from PostgreSQL...');
+    const allKnowledge = await db.staffKnowledge.getAllKnowledge();
 
-    // Fetch all staff knowledge records
-    let allRecords: any[] = [];
-    let offset: string | undefined;
+    console.log(`✅ Fetched ${allKnowledge.length} staff knowledge records from PostgreSQL`);
 
-    do {
-      const url = new URL(`https://api.airtable.com/v0/${baseId}/${knowledgeTableId}`);
-      url.searchParams.set('pageSize', '100');
-      if (offset) url.searchParams.set('offset', offset);
-
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Airtable API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      allRecords = allRecords.concat(data.records || []);
-      offset = data.offset;
-    } while (offset);
-
-    // Transform records with lookups
-    const transformed: StaffKnowledgeEntry[] = await Promise.all(
-      allRecords.map(async (record) => {
-        const staffMemberIds = record.fields['Staff Member'] || [];
-        const gameIds = record.fields['Game'] || [];
-        const confidenceLevel = record.fields['Confidence Level'] || 'Unknown';
-        const canTeach = record.fields['Can Teach'] === 1;
-        const notes = record.fields['Notes'] || '';
-
-        let staffMemberName = 'Unknown Staff';
-        if (staffMemberIds.length > 0) {
-          try {
-            const staffResponse = await fetch(
-              `https://api.airtable.com/v0/${baseId}/${staffTableId}/${staffMemberIds[0]}`,
-              { headers: { Authorization: `Bearer ${apiKey}` } }
-            );
-            if (staffResponse.ok) {
-              const staffData = await staffResponse.json();
-              staffMemberName = staffData.fields['Name'] || 'Unknown Staff';
-            }
-          } catch (err) {
-            console.error('Error fetching staff member:', err);
-          }
-        }
-
-        let gameName = 'Unknown Game';
-        if (gameIds.length > 0) {
-          try {
-            const gameResponse = await fetch(
-              `https://api.airtable.com/v0/${baseId}/${gamesTableId}/${gameIds[0]}`,
-              { headers: { Authorization: `Bearer ${apiKey}` } }
-            );
-            if (gameResponse.ok) {
-              const gameData = await gameResponse.json();
-              gameName = gameData.fields['Game Name'] || 'Unknown Game';
-            }
-          } catch (err) {
-            console.error('Error fetching game:', err);
-          }
-        }
-
-        return {
-          id: record.id,
-          staffMember: staffMemberName,
-          gameName: gameName,
-          confidenceLevel: confidenceLevel,
-          taughtBy: null,
-          notes: notes,
-          canTeach: canTeach,
-        };
-      })
-    );
-
-    return NextResponse.json({ knowledge: transformed });
+    return NextResponse.json({ knowledge: allKnowledge });
   } catch (error) {
-    console.error('Staff knowledge API error:', error);
+    console.error('❌ Staff knowledge API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch staff knowledge';
     return NextResponse.json(
-      { error: 'Failed to fetch staff knowledge' },
+      { error: `Failed to fetch staff knowledge: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -111,13 +26,7 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   try {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
-    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
-
-    if (!apiKey || !baseId || !knowledgeTableId) {
-      throw new Error('Missing Airtable configuration');
-    }
+    const db = DatabaseService.getInstance();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');
@@ -129,21 +38,11 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Delete record from Airtable
-    const deleteResponse = await fetch(
-      `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}/${recordId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      }
-    );
+    // Delete record from PostgreSQL
+    console.log(`[staff-knowledge DELETE] Deleting knowledge entry: ${recordId}`);
+    await db.staffKnowledge.deleteKnowledge(recordId);
 
-    if (!deleteResponse.ok) {
-      const errorData = await deleteResponse.json().catch(() => ({}));
-      throw new Error(`Airtable API error: ${(errorData as any).error?.message || deleteResponse.statusText}`);
-    }
+    console.log(`✅ Knowledge entry deleted successfully: ${recordId}`);
 
     return NextResponse.json(
       {
@@ -153,7 +52,7 @@ export async function DELETE(request: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting knowledge entry:', error);
+    console.error('❌ Error deleting knowledge entry:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to delete knowledge entry';
 
     return NextResponse.json(
@@ -168,17 +67,11 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_GAMES_BASE_ID;
-    const knowledgeTableId = process.env.AIRTABLE_STAFF_KNOWLEDGE_TABLE_ID;
-
-    if (!apiKey || !baseId || !knowledgeTableId) {
-      throw new Error('Missing Airtable configuration');
-    }
+    const db = DatabaseService.getInstance();
 
     const url = new URL(request.url);
     const recordId = url.searchParams.get('id');
-    const { confidenceLevel, notes } = await request.json();
+    const { confidenceLevel, canTeach, notes } = await request.json();
 
     if (!recordId) {
       return NextResponse.json(
@@ -187,38 +80,28 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Update record in Airtable
-    const updateResponse = await fetch(
-      `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}/${recordId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fields: {
-            ...(confidenceLevel && { 'Confidence Level': confidenceLevel }),
-            ...(notes !== undefined && { 'Notes': notes }),
-          },
-        }),
-      }
-    );
+    // Update record in PostgreSQL
+    console.log(`[staff-knowledge PATCH] Updating knowledge entry: ${recordId}`);
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.json().catch(() => ({}));
-      throw new Error(`Airtable API error: ${(errorData as any).error?.message || updateResponse.statusText}`);
-    }
+    const updates: any = {};
+    if (confidenceLevel !== undefined) updates.confidenceLevel = confidenceLevel;
+    if (canTeach !== undefined) updates.canTeach = canTeach;
+    if (notes !== undefined) updates.notes = notes;
+
+    const updatedKnowledge = await db.staffKnowledge.updateKnowledge(recordId, updates);
+
+    console.log(`✅ Knowledge entry updated successfully: ${recordId}`);
 
     return NextResponse.json(
       {
         success: true,
+        knowledge: updatedKnowledge,
         message: 'Knowledge entry updated successfully',
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating knowledge entry:', error);
+    console.error('❌ Error updating knowledge entry:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to update knowledge entry';
 
     return NextResponse.json(
