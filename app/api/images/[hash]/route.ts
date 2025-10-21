@@ -8,13 +8,138 @@ const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
 export const dynamic = 'force-dynamic';
 
 /**
+ * Refresh expired image URL from Airtable
+ * Called when we get a 410 Gone error (URL expired)
+ */
+async function refreshImageUrl(gameId: string, hash: string): Promise<string | null> {
+  try {
+    console.log(`🔄 Refreshing expired URL for hash ${hash}, game ${gameId}`);
+
+    // Get Airtable API credentials
+    const apiKey = process.env.AIRTABLE_API_KEY;
+    const baseId = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
+    const tableId = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
+
+    if (!apiKey) {
+      console.error('❌ AIRTABLE_API_KEY not set');
+      return null;
+    }
+
+    // Fetch fresh game record from Airtable
+    const airtableUrl = `https://api.airtable.com/v0/${baseId}/${tableId}/${gameId}`;
+    const response = await fetch(airtableUrl, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`❌ Failed to fetch game from Airtable: ${response.status}`);
+      return null;
+    }
+
+    const gameData = await response.json();
+    const images = gameData.fields?.Images;
+
+    if (!images || images.length === 0) {
+      console.error(`❌ No images found in Airtable for game ${gameId}`);
+      return null;
+    }
+
+    // Find the image with matching hash
+    for (const image of images) {
+      const imageUrl = image.url;
+      if (!imageUrl) continue;
+
+      // Calculate MD5 hash of this URL to match against our hash
+      const crypto = require('crypto');
+      const urlHash = crypto.createHash('md5').update(imageUrl).digest('hex');
+
+      if (urlHash === hash) {
+        // Found the matching image! Update database with fresh URL
+        const db = DatabaseService.initialize();
+        await db.pool.query(
+          'UPDATE game_images SET url = $1, updated_at = NOW() WHERE hash = $2',
+          [imageUrl, hash]
+        );
+
+        console.log(`✅ Refreshed URL for hash ${hash}`);
+        return imageUrl;
+      }
+    }
+
+    console.error(`❌ Could not find matching image for hash ${hash} in Airtable response`);
+    return null;
+  } catch (error) {
+    console.error('❌ Error refreshing image URL:', error);
+    return null;
+  }
+}
+
+/**
+ * Download image from URL with optional URL refresh on 410 error
+ */
+async function downloadImage(
+  imageUrl: string,
+  gameId: string,
+  hash: string,
+  allowRefresh: boolean = true
+): Promise<{ buffer: Buffer; extension: string; fileName?: string } | null> {
+  try {
+    console.log(`📥 Downloading image from: ${imageUrl.substring(0, 100)}...`);
+    const imageResponse = await fetch(imageUrl);
+
+    // Handle 410 Gone (expired URL)
+    if (imageResponse.status === 410 && allowRefresh) {
+      console.log(`⚠️  URL expired (410), attempting refresh...`);
+      const freshUrl = await refreshImageUrl(gameId, hash);
+
+      if (freshUrl) {
+        // Retry download with fresh URL (don't allow refresh again to avoid infinite loop)
+        return downloadImage(freshUrl, gameId, hash, false);
+      } else {
+        console.error('❌ Failed to refresh URL');
+        return null;
+      }
+    }
+
+    if (!imageResponse.ok) {
+      console.error(`❌ Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`);
+      return null;
+    }
+
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Determine extension from content-type
+    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+    let extension = '.jpg';
+    if (contentType.includes('png')) {
+      extension = '.png';
+    } else if (contentType.includes('webp')) {
+      extension = '.webp';
+    } else if (contentType.includes('gif')) {
+      extension = '.gif';
+    } else if (contentType.includes('svg')) {
+      extension = '.svg';
+    }
+
+    return { buffer, extension };
+  } catch (error) {
+    console.error('❌ Error downloading image:', error);
+    return null;
+  }
+}
+
+/**
  * Serve cached image by hash
  * GET /api/images/[hash]
  *
- * Returns cached image file if it exists
+ * Returns cached image file if it exists, otherwise downloads from Airtable
+ * Automatically refreshes expired URLs (410 errors)
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ hash: string }> }
 ) {
   try {
@@ -43,7 +168,7 @@ export async function GET(
         fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true, mode: 0o755 });
       }
     } catch (mkdirError) {
-      console.error('Cannot create image cache directory (will serve without caching):', mkdirError);
+      console.error('⚠️  Cannot create image cache directory (will serve without caching):', mkdirError);
       canWriteCache = false;
     }
 
@@ -56,6 +181,7 @@ export async function GET(
           const potentialPath = path.join(IMAGE_CACHE_DIR, `${hash}${ext}`);
           if (fs.existsSync(potentialPath)) {
             imagePath = potentialPath;
+            console.log(`✅ Serving cached image: ${hash}${ext}`);
             break;
           }
         } catch {
@@ -66,13 +192,13 @@ export async function GET(
 
     if (!imagePath) {
       // Image not in cache - fetch from database and download
-      console.log(`Image ${hash} not in cache, fetching from database...`);
+      console.log(`📂 Image ${hash} not in cache, fetching from database...`);
 
       try {
-        // Query database for image URL
+        // Query database for image URL and game context
         const db = DatabaseService.initialize();
         const result = await db.pool.query(
-          'SELECT url, file_name FROM game_images WHERE hash = $1 LIMIT 1',
+          'SELECT url, game_id, file_name, updated_at FROM game_images WHERE hash = $1 LIMIT 1',
           [hash]
         );
 
@@ -83,42 +209,33 @@ export async function GET(
           );
         }
 
-        const { url: imageUrl, file_name: fileName } = result.rows[0];
+        const { url: imageUrl, game_id: gameId, updated_at: updatedAt } = result.rows[0];
 
-        // Download image from Airtable
-        console.log(`Downloading image from: ${imageUrl}`);
-        const imageResponse = await fetch(imageUrl);
+        // Check if URL might be stale (older than 1 hour)
+        const urlAge = Date.now() - new Date(updatedAt).getTime();
+        const oneHour = 60 * 60 * 1000;
+        if (urlAge > oneHour) {
+          console.log(`⚠️  URL is ${Math.round(urlAge / 1000 / 60)} minutes old, might be expired`);
+        }
 
-        if (!imageResponse.ok) {
-          console.error(`Failed to download image: ${imageResponse.status}`);
+        // Download image (with automatic URL refresh on 410)
+        const downloadResult = await downloadImage(imageUrl, gameId, hash);
+
+        if (!downloadResult) {
           return NextResponse.json(
             { error: 'Failed to download image from source' },
             { status: 502 }
           );
         }
 
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Determine extension from fileName or content-type
-        const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-        let extension = '.jpg';
-        if (fileName) {
-          extension = path.extname(fileName);
-        } else if (contentType.includes('png')) {
-          extension = '.png';
-        } else if (contentType.includes('webp')) {
-          extension = '.webp';
-        } else if (contentType.includes('gif')) {
-          extension = '.gif';
-        }
+        const { buffer, extension } = downloadResult;
 
         // Try to save to cache (if permissions allow)
         if (canWriteCache) {
           try {
             imagePath = path.join(IMAGE_CACHE_DIR, `${hash}${extension}`);
             fs.writeFileSync(imagePath, buffer);
-            console.log(`✅ Cached image to: ${imagePath}`);
+            console.log(`✅ Cached image to: ${hash}${extension}`);
           } catch (writeError) {
             console.error('⚠️  Failed to write image to cache (will serve without caching):', writeError);
             imagePath = null; // Don't use the path if write failed
@@ -139,7 +256,7 @@ export async function GET(
 
         const mimeType = mimeTypeMap[extension] || 'application/octet-stream';
 
-        return new NextResponse(buffer, {
+        return new NextResponse(buffer as any, {
           status: 200,
           headers: {
             'Content-Type': mimeType,
@@ -149,7 +266,7 @@ export async function GET(
           },
         });
       } catch (downloadError) {
-        console.error('Error downloading and caching image:', downloadError);
+        console.error('❌ Error downloading and caching image:', downloadError);
         return NextResponse.json(
           { error: 'Failed to fetch and cache image' },
           { status: 500 }
@@ -157,7 +274,7 @@ export async function GET(
       }
     }
 
-    // Read and serve image
+    // Read and serve cached image
     const imageBuffer = fs.readFileSync(imagePath);
     const ext = path.extname(imagePath).toLowerCase();
 
@@ -174,7 +291,7 @@ export async function GET(
     const mimeType = mimeTypeMap[ext] || 'application/octet-stream';
 
     // Set cache headers - 1 year for immutable hashed content
-    const response = new NextResponse(imageBuffer, {
+    const response = new NextResponse(imageBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': mimeType,
@@ -186,7 +303,7 @@ export async function GET(
 
     return response;
   } catch (error) {
-    console.error('Error serving cached image:', error);
+    console.error('❌ Error serving cached image:', error);
 
     return NextResponse.json(
       { error: 'Failed to serve image' },
