@@ -585,6 +585,35 @@ class GamesDbService {
   }
 
   /**
+   * Delete a game and all associated data (images, content checks, etc.)
+   * Cascading deletes should be handled by database foreign key constraints
+   */
+  async deleteGame(gameId: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Delete associated images first (or rely on cascade)
+      await client.query('DELETE FROM game_images WHERE game_id = $1', [gameId]);
+
+      // Delete the game record (this should cascade to other related records)
+      const result = await client.query('DELETE FROM games WHERE id = $1 RETURNING id', [gameId]);
+
+      if (result.rowCount === 0) {
+        throw new Error('Game not found');
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error deleting game:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Get total count of images in database
    */
   async getImageCount(): Promise<number> {

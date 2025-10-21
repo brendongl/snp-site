@@ -11,7 +11,8 @@
       "Bash(git commit -m \"Add temporary debug endpoint to inspect staff_list table contents\n\nThis endpoint queries PostgreSQL directly and shows all staff records\nincluding staffId and staffListId columns to debug sync issues.\n\nEndpoint: GET /api/debug/staff-list\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

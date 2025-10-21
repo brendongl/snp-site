@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity } = await request.json();
+    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories } = await request.json();
     const { id: gameId } = await params;
 
     if (!gameId) {
@@ -26,6 +26,8 @@ export async function POST(
       minPlayers,
       maxPlayers,
       complexity,
+      dateAcquired,
+      categories,
     });
 
     // Build the update object (only include non-empty values)
@@ -33,10 +35,12 @@ export async function POST(
 
     if (gameName) updates.name = gameName;
     if (description) updates.description = description;
-    if (yearReleased !== undefined) updates.yearReleased = yearReleased;
-    if (minPlayers) updates.minPlayers = String(minPlayers);  // Store as string
-    if (maxPlayers) updates.maxPlayers = String(maxPlayers);  // Store as string
+    if (yearReleased !== undefined) updates.year_released = yearReleased;
+    if (minPlayers) updates.min_players = String(minPlayers);  // Store as string
+    if (maxPlayers) updates.max_players = String(maxPlayers);  // Store as string
     if (complexity !== undefined) updates.complexity = complexity;
+    if (dateAcquired) updates.date_of_acquisition = dateAcquired;
+    if (categories) updates.categories = categories; // Array of strings
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

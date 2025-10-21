@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,8 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
     minPlayers: game?.fields['Min Players'] || '',
     maxPlayers: game?.fields['Max. Players'] || '',
     complexity: game?.fields['Complexity'] || 0,
+    dateAcquired: game?.fields['Date of Aquisition'] || '',
+    categories: game?.fields.Categories?.join(', ') || '',
   });
 
   // Get current images from the game
@@ -73,8 +75,9 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
         throw new Error(data.error || 'Failed to upload images');
       }
 
-      // Refresh the game data
+      // Refresh the game data and close dialog
       onSave?.();
+      onClose(); // Close dialog to show refreshed data when reopened
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload images');
     } finally {
@@ -102,8 +105,9 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
         throw new Error(data.error || 'Failed to delete image');
       }
 
-      // Refresh the game data
+      // Refresh the game data and close dialog
       onSave?.();
+      onClose(); // Close dialog to show refreshed data when reopened
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete image');
     }
@@ -124,6 +128,8 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
           minPlayers: formData.minPlayers,
           maxPlayers: formData.maxPlayers,
           complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
+          dateAcquired: formData.dateAcquired,
+          categories: formData.categories.split(',').map(c => c.trim()).filter(c => c.length > 0),
         }),
       });
 
@@ -136,6 +142,47 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save game');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const gameName = game.fields['Game Name'];
+    const confirmText = `DELETE ${gameName}`;
+
+    const userInput = prompt(
+      `⚠️ WARNING: This will permanently delete "${gameName}" and all associated data.\n\n` +
+      `Type exactly: ${confirmText}\n\nto confirm deletion:`
+    );
+
+    if (userInput !== confirmText) {
+      if (userInput !== null) {
+        alert('Deletion cancelled - text did not match');
+      }
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/games/${game.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete game');
+      }
+
+      // Refresh parent and close
+      onSave?.();
+      onClose();
+
+      alert(`Successfully deleted "${gameName}"`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete game');
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +223,36 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
               value={formData.description}
               onChange={handleInputChange}
               rows={4}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Categories */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Categories</label>
+            <input
+              type="text"
+              name="categories"
+              value={formData.categories}
+              onChange={handleInputChange}
+              placeholder="e.g., Strategy, Family, Card Game (comma-separated)"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Separate multiple categories with commas
+            </p>
+          </div>
+
+          {/* Date Acquired */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Date Acquired</label>
+            <input
+              type="date"
+              name="dateAcquired"
+              value={formData.dateAcquired}
+              onChange={handleInputChange}
               className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
               disabled={isLoading}
             />
@@ -312,28 +389,40 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex justify-between items-center">
           <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isLoading || uploadingImage}
             className="gap-2"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
+            <Trash2 className="w-4 h-4" />
+            Delete Game
           </Button>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

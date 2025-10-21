@@ -59,7 +59,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
   // Auto-select current staff member from localStorage
   useEffect(() => {
-    if (inspectors.length > 0 && !inspector) {
+    if (open && inspectors.length > 0) {
       const staffEmail = localStorage.getItem('staff_email');
       const staffName = localStorage.getItem('staff_name');
 
@@ -68,12 +68,12 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         const matchingInspector = inspectors.find(
           (insp) => insp.name.toLowerCase() === staffName.toLowerCase()
         );
-        if (matchingInspector) {
+        if (matchingInspector && inspector !== matchingInspector.id) {
           setInspector(matchingInspector.id);
         }
       }
     }
-  }, [inspectors, inspector]);
+  }, [open, inspectors]);
 
   const loadInspectors = async () => {
     setLoadingInspectors(true);
@@ -91,9 +91,15 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   };
 
   const handleSubmit = async () => {
-    // Validation
-    if (!inspector || !status || !boxCondition || !cardCondition) {
-      alert('Please fill in all required fields');
+    // Validation with detailed error messaging
+    const missingFields: string[] = [];
+    if (!inspector) missingFields.push('Inspector');
+    if (!status) missingFields.push('Status');
+    if (!boxCondition) missingFields.push('Box Condition');
+    if (!cardCondition) missingFields.push('Card Condition');
+
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields:\n${missingFields.join(', ')}`);
       return;
     }
 
@@ -160,6 +166,12 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
         <div className="space-y-4 py-4">
           {/* Inspector - Auto-selected from localStorage, hidden from UI */}
+          {inspector && (
+            <div className="px-3 py-2 bg-muted rounded-lg text-sm">
+              <span className="font-medium">Inspector:</span>{' '}
+              {inspectors.find((insp) => insp.id === inspector)?.name || 'Selected'}
+            </div>
+          )}
 
           {/* Status */}
           <div className="space-y-2">
