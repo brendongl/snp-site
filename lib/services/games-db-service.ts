@@ -449,6 +449,19 @@ class GamesDbService {
   }
 
   /**
+   * Get total count of images in database
+   */
+  async getImageCount(): Promise<number> {
+    try {
+      const result = await this.pool.query('SELECT COUNT(*) FROM game_images');
+      return parseInt(result.rows[0].count);
+    } catch (error) {
+      console.error('Error getting image count:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Close the connection pool
    */
   async close(): Promise<void> {

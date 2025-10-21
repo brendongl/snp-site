@@ -1,98 +1,85 @@
 import { NextResponse } from 'next/server';
-import { getCacheMetadata } from '@/lib/cache/games-cache';
-import { getCacheStats } from '@/lib/cache/image-cache';
+import DatabaseService from '@/lib/services/db-service';
 
 export async function GET() {
-  // Test DNS resolution
-  let dnsTest = { success: false, error: null as string | null };
-  try {
-    const dns = await import('dns').then(m => m.promises);
-    await dns.resolve('api.airtable.com');
-    dnsTest.success = true;
-  } catch (error) {
-    dnsTest.error = error instanceof Error ? error.message : 'DNS resolution failed';
-  }
-
   const envCheck = {
     timestamp: new Date().toISOString(),
     environment: {
+      DATABASE_URL: !!process.env.DATABASE_URL,
       AIRTABLE_API_KEY: !!process.env.AIRTABLE_API_KEY,
-      AIRTABLE_GAMES_BASE_ID: !!process.env.AIRTABLE_GAMES_BASE_ID,
-      AIRTABLE_GAMES_TABLE_ID: !!process.env.AIRTABLE_GAMES_TABLE_ID,
-      AIRTABLE_GAMES_VIEW_ID: !!process.env.AIRTABLE_GAMES_VIEW_ID,
       NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NOT SET',
       NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
     },
-    envDetails: {
-      API_KEY_LENGTH: process.env.AIRTABLE_API_KEY?.length || 0,
-      BASE_ID: process.env.AIRTABLE_GAMES_BASE_ID || 'NOT SET',
-      TABLE_ID: process.env.AIRTABLE_GAMES_TABLE_ID || 'NOT SET',
-      VIEW_ID: process.env.AIRTABLE_GAMES_VIEW_ID || 'NOT SET',
-    },
     nodeEnv: process.env.NODE_ENV,
-    dnsTest,
   };
 
-  // Try to connect to Airtable
-  let airtableTest = {
+  // Try to connect to PostgreSQL
+  let postgresTest = {
     success: false,
     error: null as string | null,
     details: null as any,
   };
 
+  let dbStats = {
+    games: 0,
+    images: 0,
+    contentChecks: 0,
+    staffKnowledge: 0,
+    playLogs: 0,
+  };
+
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const db = DatabaseService.initialize();
 
-    const response = await fetch(
-      `https://api.airtable.com/v0/${process.env.AIRTABLE_GAMES_BASE_ID}/${process.env.AIRTABLE_GAMES_TABLE_ID}?maxRecords=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}`,
-        },
-        signal: controller.signal,
-      }
-    );
+    // Test database health
+    const healthCheck = await db.healthCheck();
+    postgresTest.success = healthCheck.status === 'ok';
 
-    clearTimeout(timeout);
+    if (!postgresTest.success) {
+      postgresTest.error = healthCheck.message;
+    }
 
-    if (response.ok) {
-      airtableTest.success = true;
-    } else {
-      airtableTest.error = `HTTP ${response.status}: ${response.statusText}`;
+    // Get database statistics
+    const games = await db.games.getAllGames();
+
+    dbStats.games = games.length;
+    dbStats.images = await db.games.getImageCount();
+
+    // Try to get counts from other tables
+    try {
+      const checks = await db.contentChecks.getAllChecks();
+      dbStats.contentChecks = checks.length;
+    } catch (e) {
+      // Silently fail if table is empty or has issues
+    }
+
+    try {
+      const knowledge = await db.staffKnowledge.getAllKnowledge();
+      dbStats.staffKnowledge = knowledge.length;
+    } catch (e) {
+      // Silently fail
+    }
+
+    try {
+      const logs = await db.playLogs.getAllLogs();
+      dbStats.playLogs = logs.length;
+    } catch (e) {
+      // Silently fail
     }
   } catch (error) {
-    airtableTest.error = error instanceof Error ? error.message : 'Unknown error';
-    airtableTest.details = {
+    postgresTest.error = error instanceof Error ? error.message : 'Unknown error';
+    postgresTest.details = {
       name: error instanceof Error ? error.name : 'Unknown',
-      cause: error instanceof Error ? (error as any).cause : null,
-      code: (error as any).code,
-      errno: (error as any).errno,
-      syscall: (error as any).syscall,
+      message: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 
-  // Get cache statistics
-  const gamesCache = getCacheMetadata();
-  const imageCache = getCacheStats();
-
   return NextResponse.json({
-    status: airtableTest.success ? 'healthy' : 'unhealthy',
+    status: postgresTest.success ? 'healthy' : 'unhealthy',
     envCheck,
-    airtableTest,
-    cache: {
-      games: {
-        count: gamesCache.count,
-        lastUpdated: gamesCache.lastUpdated,
-      },
-      images: {
-        count: imageCache.totalImages,
-        sizeMB: imageCache.totalSizeMB,
-        oldestCache: imageCache.oldestCache,
-        newestCache: imageCache.newestCache,
-      },
-    },
+    database: postgresTest,
+    stats: dbStats,
   }, {
-    status: airtableTest.success ? 200 : 500
+    status: postgresTest.success ? 200 : 500
   });
 }
