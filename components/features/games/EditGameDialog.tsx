@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { BoardGame } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, Trash2, X } from 'lucide-react';
 
 interface EditGameDialogProps {
   game: BoardGame | null;
@@ -22,6 +22,8 @@ interface EditGameDialogProps {
 export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     gameName: game?.fields['Game Name'] || '',
@@ -32,6 +34,9 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
     complexity: game?.fields['Complexity'] || 0,
   });
 
+  // Get current images from the game
+  const currentImages = game?.images || [];
+
   if (!game) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -40,6 +45,68 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('gameId', game.id);
+
+      // Add all selected files
+      Array.from(files).forEach((file) => {
+        formData.append('images', file);
+      });
+
+      const response = await fetch(`/api/games/${game.id}/images`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload images');
+      }
+
+      // Refresh the game data
+      onSave?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload images');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteImage = async (imageHash: string) => {
+    if (!confirm('Are you sure you want to delete this image?')) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/games/${game.id}/images/${imageHash}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete image');
+      }
+
+      // Refresh the game data
+      onSave?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete image');
+    }
   };
 
   const handleSave = async () => {
@@ -176,8 +243,72 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Note: Image editing coming soon. Edit images directly in Airtable for now.
+          {/* Image Management */}
+          <div className="border-t pt-4 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium">Game Images</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage || isLoading}
+                className="gap-2"
+              >
+                {uploadingImage ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Upload Images
+                  </>
+                )}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+
+            {/* Current Images */}
+            {currentImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {currentImages.map((image, index) => (
+                  <div key={image.hash} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                      <img
+                        src={`/api/images/${image.hash}`}
+                        alt={`Game image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(image.hash)}
+                      className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      disabled={isLoading || uploadingImage}
+                      title="Delete image"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                      #{index + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No images yet. Click "Upload Images" to add photos.
+              </div>
+            )}
           </div>
         </div>
 

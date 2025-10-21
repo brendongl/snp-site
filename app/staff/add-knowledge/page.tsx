@@ -58,10 +58,19 @@ export default function AddKnowledgePage() {
         const gamesList = (data.games || []).map((game: any) => {
           let imageUrl = '/placeholder-game.png';
 
-          if (game.fields?.Images && game.fields.Images.length > 0) {
-            imageUrl = game.fields.Images[0].thumbnails?.large?.url ||
-                      game.fields.Images[0].url ||
-                      '/placeholder-game.png';
+          // Check both PostgreSQL structure (game.images) and Airtable structure (game.fields.Images)
+          const firstImage = game.images?.[0] || game.fields?.Images?.[0];
+          if (firstImage) {
+            // Use hash-based route for PostgreSQL images, fallback to proxy for Airtable
+            const imageHash = firstImage.hash;
+            if (imageHash) {
+              imageUrl = `/api/images/${imageHash}`;
+            } else {
+              const originalUrl = firstImage.url || firstImage.thumbnails?.large?.url;
+              if (originalUrl) {
+                imageUrl = `/api/images/proxy?url=${encodeURIComponent(originalUrl)}`;
+              }
+            }
           }
 
           return {

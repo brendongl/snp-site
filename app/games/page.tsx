@@ -664,6 +664,7 @@ function GamesPageContent() {
               game={game}
               onClick={() => handleGameCardClick(game)}
               isStaff={isStaff}
+              picturesOnlyMode={picturesOnlyMode}
             />
           ))}
         </div>

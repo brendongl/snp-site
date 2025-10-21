@@ -49,13 +49,31 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   const [sleevedAtCheck, setSleevedAtCheck] = useState(false);
   const [boxWrappedAtCheck, setBoxWrappedAtCheck] = useState(false);
 
-  // Load inspectors when dialog opens
+  // Load inspectors and auto-select current staff member when dialog opens
   useEffect(() => {
     if (open && inspectors.length === 0) {
       loadInspectors();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Auto-select current staff member from localStorage
+  useEffect(() => {
+    if (inspectors.length > 0 && !inspector) {
+      const staffEmail = localStorage.getItem('staff_email');
+      const staffName = localStorage.getItem('staff_name');
+
+      if (staffName) {
+        // Find matching inspector by name
+        const matchingInspector = inspectors.find(
+          (insp) => insp.name.toLowerCase() === staffName.toLowerCase()
+        );
+        if (matchingInspector) {
+          setInspector(matchingInspector.id);
+        }
+      }
+    }
+  }, [inspectors, inspector]);
 
   const loadInspectors = async () => {
     setLoadingInspectors(true);
@@ -74,7 +92,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
   const handleSubmit = async () => {
     // Validation
-    if (!inspector || !status || !boxCondition || !cardCondition || !missingPieces) {
+    if (!inspector || !status || !boxCondition || !cardCondition) {
       alert('Please fill in all required fields');
       return;
     }
@@ -141,24 +159,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Inspector */}
-          <div className="space-y-2">
-            <Label htmlFor="inspector">
-              Inspector <span className="text-red-500">*</span>
-            </Label>
-            <Select value={inspector} onValueChange={setInspector} disabled={loadingInspectors}>
-              <SelectTrigger id="inspector">
-                <SelectValue placeholder={loadingInspectors ? 'Loading...' : 'Select inspector'} />
-              </SelectTrigger>
-              <SelectContent>
-                {inspectors.map((insp) => (
-                  <SelectItem key={insp.id} value={insp.id}>
-                    {insp.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Inspector - Auto-selected from localStorage, hidden from UI */}
 
           {/* Status */}
           <div className="space-y-2">
@@ -219,7 +220,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
           {/* Missing Pieces */}
           <div className="space-y-2">
             <Label htmlFor="missingPieces">
-              Missing Pieces <span className="text-red-500">*</span>
+              Missing Pieces (optional)
             </Label>
             <Textarea
               id="missingPieces"
@@ -232,7 +233,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea
               id="notes"
               value={notes}

@@ -11,9 +11,10 @@ interface GameCardProps {
   game: BoardGame;
   onClick: () => void;
   isStaff?: boolean;
+  picturesOnlyMode?: boolean;
 }
 
-export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
+export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = false }: GameCardProps) {
   const { addToast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showPlayLogDialog, setShowPlayLogDialog] = useState(false);
@@ -45,7 +46,7 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
       className="group cursor-pointer rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-lg"
       onClick={onClick}
     >
-      <div className="aspect-square relative overflow-hidden rounded-t-lg bg-muted">
+      <div className={`aspect-square relative overflow-hidden bg-muted ${picturesOnlyMode ? 'rounded-lg' : 'rounded-t-lg'}`}>
         {imageUrl ? (
           <>
             {/* Blurred background layer - only show after image loads to fill gaps from aspect ratio differences */}
@@ -106,76 +107,79 @@ export function GameCard({ game, onClick, isStaff = false }: GameCardProps) {
         )}
       </div>
 
-      <div className="p-3">
-        <h3 className="font-semibold text-sm line-clamp-2 mb-2">
-          {game.fields['Game Name']}
-        </h3>
+      {/* Game details - hidden in gallery mode */}
+      {!picturesOnlyMode && (
+        <div className="p-3">
+          <h3 className="font-semibold text-sm line-clamp-2 mb-2">
+            {game.fields['Game Name']}
+          </h3>
 
-        {/* Categories */}
-        {game.fields.Categories && game.fields.Categories.length > 0 && (
-          <div className="mb-2 text-xs text-muted-foreground">
-            {game.fields.Categories.join(', ')}
-          </div>
-        )}
-
-        {/* Compact horizontal info row */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {game.fields['Max. Players'] && (
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              <span>{game.fields['Min Players'] || 1}-{game.fields['Max. Players']}</span>
+          {/* Categories */}
+          {game.fields.Categories && game.fields.Categories.length > 0 && (
+            <div className="mb-2 text-xs text-muted-foreground">
+              {game.fields.Categories.join(', ')}
             </div>
           )}
 
-          {game.fields['Complexity'] && (
-            <div className="flex items-center gap-1">
-              <Brain className="h-3 w-3" />
-              <div className="flex">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className={i < game.fields['Complexity']! ? 'text-primary' : 'text-muted'}>
-                    ●
-                  </span>
-                ))}
+          {/* Compact horizontal info row */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {game.fields['Max. Players'] && (
+              <div className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                <span>{game.fields['Min Players'] || 1}-{game.fields['Max. Players']}</span>
               </div>
+            )}
+
+            {game.fields['Complexity'] && (
+              <div className="flex items-center gap-1">
+                <Brain className="h-3 w-3" />
+                <div className="flex">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className={i < game.fields['Complexity']! ? 'text-primary' : 'text-muted'}>
+                      ●
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Staff-only check info */}
+          {isStaff && (
+            <div className="mt-3 pt-3 border-t text-xs space-y-1">
+              {game.fields['Latest Check Status'] && game.fields['Latest Check Status'].length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {game.fields['Latest Check Status'][0] === 'Complete' && (
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  )}
+                  {game.fields['Latest Check Status'][0] === 'Issues Found' && (
+                    <AlertCircle className="h-3 w-3 text-yellow-600" />
+                  )}
+                  {game.fields['Latest Check Status'][0] === 'Missing' && (
+                    <XCircle className="h-3 w-3 text-red-600" />
+                  )}
+                  <span className="text-muted-foreground">
+                    {game.fields['Latest Check Status'][0]}
+                  </span>
+                </div>
+              )}
+              {game.fields['Latest Check Date'] && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" />
+                  <span className="text-muted-foreground">
+                    {new Date(game.fields['Latest Check Date']).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {game.fields['Total Checks'] !== undefined && (
+                <div className="text-muted-foreground">
+                  Checks: {game.fields['Total Checks']}
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {/* Staff-only check info */}
-        {isStaff && (
-          <div className="mt-3 pt-3 border-t text-xs space-y-1">
-            {game.fields['Latest Check Status'] && game.fields['Latest Check Status'].length > 0 && (
-              <div className="flex items-center gap-1.5">
-                {game.fields['Latest Check Status'][0] === 'Complete' && (
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
-                )}
-                {game.fields['Latest Check Status'][0] === 'Issues Found' && (
-                  <AlertCircle className="h-3 w-3 text-yellow-600" />
-                )}
-                {game.fields['Latest Check Status'][0] === 'Missing' && (
-                  <XCircle className="h-3 w-3 text-red-600" />
-                )}
-                <span className="text-muted-foreground">
-                  {game.fields['Latest Check Status'][0]}
-                </span>
-              </div>
-            )}
-            {game.fields['Latest Check Date'] && (
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                <span className="text-muted-foreground">
-                  {new Date(game.fields['Latest Check Date']).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-            {game.fields['Total Checks'] !== undefined && (
-              <div className="text-muted-foreground">
-                Checks: {game.fields['Total Checks']}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Play Log Dialog */}
       <PlayLogDialog

@@ -138,7 +138,7 @@ export function ContentCheckHistory({
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="w-4 h-4" />
                         <span>
-                          {format(new Date(check.fields['Check Date']), 'MMM dd, yyyy')}
+                          {format(new Date(check.fields['Check Date']), 'MMM dd')}
                         </span>
                       </div>
                     )}
