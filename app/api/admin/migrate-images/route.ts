@@ -53,7 +53,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    logs.push('🚀 Starting image migration...');
+    logs.push('🚀 Starting image migration with fresh Airtable URLs...');
+
+    // Get Airtable credentials
+    const airtableApiKey = process.env.AIRTABLE_API_KEY;
+    const baseId = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
+    const tableId = process.env.AIRTABLE_GAMES_TABLE_ID || 'tblIuIJN5q3W6oXNr';
+
+    if (!airtableApiKey) {
+      return NextResponse.json(
+        { error: 'AIRTABLE_API_KEY not configured' },
+        { status: 500 }
+      );
+    }
 
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
@@ -72,15 +84,58 @@ export async function GET(request: NextRequest) {
       logs.push(`📁 Created directory: ${IMAGE_CACHE_DIR}`);
     }
 
-    // Query all images from database
-    const result = await pool.query<ImageRecord>(`
-      SELECT hash, url, file_name, game_id
-      FROM game_images
-      ORDER BY game_id, hash
-    `);
+    // Fetch all games from Airtable with fresh URLs
+    logs.push('📡 Fetching fresh game data from Airtable...');
 
-    const images = result.rows;
-    logs.push(`📊 Found ${images.length} images to process`);
+    const airtableUrl = `https://api.airtable.com/v0/${baseId}/${tableId}`;
+    let allRecords: any[] = [];
+    let offset: string | undefined = undefined;
+
+    do {
+      const url = offset ? `${airtableUrl}?offset=${offset}` : airtableUrl;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${airtableApiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Airtable API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      allRecords = allRecords.concat(data.records);
+      offset = data.offset;
+
+      logs.push(`  Fetched ${allRecords.length} games so far...`);
+    } while (offset);
+
+    logs.push(`✅ Fetched ${allRecords.length} games from Airtable`);
+
+    // Extract all images with fresh URLs
+    const images: Array<{ hash: string; url: string; fileName: string | null; gameId: string }> = [];
+
+    for (const record of allRecords) {
+      const gameId = record.id;
+      const imageArray = record.fields?.Images;
+
+      if (Array.isArray(imageArray) && imageArray.length > 0) {
+        for (const img of imageArray) {
+          if (img.url) {
+            const crypto = require('crypto');
+            const hash = crypto.createHash('md5').update(img.url).digest('hex');
+            images.push({
+              hash,
+              url: img.url,
+              fileName: img.filename || null,
+              gameId,
+            });
+          }
+        }
+      }
+    }
+
+    logs.push(`📊 Found ${images.length} images to download`);
 
     let successCount = 0;
     let skipCount = 0;
@@ -120,11 +175,20 @@ export async function GET(request: NextRequest) {
 
         // Determine file extension
         const contentType = response.headers.get('content-type') || 'image/jpeg';
-        const extension = getExtensionFromContentType(contentType, img.file_name);
+        const extension = getExtensionFromContentType(contentType, img.fileName);
 
         // Save to disk
         const filePath = path.join(IMAGE_CACHE_DIR, `${img.hash}${extension}`);
         fs.writeFileSync(filePath, buffer);
+
+        // Update database with fresh URL
+        await pool.query(
+          `INSERT INTO game_images (game_id, hash, url, file_name, created_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (hash)
+           DO UPDATE SET url = $3, file_name = $4`,
+          [img.gameId, img.hash, img.url, img.fileName]
+        );
 
         successCount++;
         if (successCount <= 10) {
