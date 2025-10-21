@@ -24,12 +24,30 @@ export async function GET(request: Request) {
 
     console.log(`✅ Fetched ${allGames.length} games from PostgreSQL`);
 
+    // Fetch images for each game and add to game data
+    console.log('Fetching game images...');
+    const gamesWithImages = await Promise.all(
+      allGames.map(async (game) => {
+        const images = await db.games.getGameImages(game.id);
+        return {
+          ...game,
+          images: images.map(img => ({
+            url: img.url,
+            fileName: img.fileName,
+            hash: img.hash,
+          })),
+        };
+      })
+    );
+
+    console.log(`✅ Added images to games`);
+
     // Get categories for filter options
-    const allCategories = getAllCategories(allGames);
+    const allCategories = getAllCategories(gamesWithImages);
 
     return NextResponse.json({
-      games: allGames,
-      totalCount: allGames.length,
+      games: gamesWithImages,
+      totalCount: gamesWithImages.length,
       categories: allCategories,
     });
   } catch (error) {
