@@ -59,7 +59,7 @@ async function refreshImageUrl(gameId: string, hash: string): Promise<string | n
         // Found the matching image! Update database with fresh URL
         const db = DatabaseService.initialize();
         await db.pool.query(
-          'UPDATE game_images SET url = $1, updated_at = NOW() WHERE hash = $2',
+          'UPDATE game_images SET url = $1 WHERE hash = $2',
           [imageUrl, hash]
         );
 
@@ -198,7 +198,7 @@ export async function GET(
         // Query database for image URL and game context
         const db = DatabaseService.initialize();
         const result = await db.pool.query(
-          'SELECT url, game_id, file_name, updated_at FROM game_images WHERE hash = $1 LIMIT 1',
+          'SELECT url, game_id, file_name, created_at FROM game_images WHERE hash = $1 LIMIT 1',
           [hash]
         );
 
@@ -209,13 +209,14 @@ export async function GET(
           );
         }
 
-        const { url: imageUrl, game_id: gameId, updated_at: updatedAt } = result.rows[0];
+        const { url: imageUrl, game_id: gameId, created_at: createdAt } = result.rows[0];
 
         // Check if URL might be stale (older than 1 hour)
-        const urlAge = Date.now() - new Date(updatedAt).getTime();
+        // Note: Using created_at as proxy for URL freshness
+        const urlAge = Date.now() - new Date(createdAt).getTime();
         const oneHour = 60 * 60 * 1000;
         if (urlAge > oneHour) {
-          console.log(`⚠️  URL is ${Math.round(urlAge / 1000 / 60)} minutes old, might be expired`);
+          console.log(`⚠️  URL is ${Math.round(urlAge / 1000 / 60)} minutes old (since creation), might be expired`);
         }
 
         // Download image (with automatic URL refresh on 410)
