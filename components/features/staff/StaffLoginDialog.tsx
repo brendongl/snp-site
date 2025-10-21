@@ -47,9 +47,11 @@ export function StaffLoginDialog({ isOpen, onClose, onLoginSuccess }: StaffLogin
       // Success - store in localStorage
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', verifyData.staffName);
-      localStorage.setItem('staff_id', verifyData.staffId); // Sip N Play Staff table record ID
-      localStorage.setItem('staff_record_id', verifyData.staffListRecordId); // SNP Games List StaffList record ID (for Play Logs linking)
-      localStorage.setItem('staff_type', verifyData.type || 'Staff'); // Admin or Staff
+      // Note: Both staffId and staffListRecordId are now the same (StaffList ID)
+      // Using staff_record_id is strongly preferred for Play Logs linking
+      localStorage.setItem('staff_id', verifyData.staffId);
+      localStorage.setItem('staff_record_id', verifyData.staffListRecordId);
+      localStorage.setItem('staff_type', verifyData.type || 'Staff');
 
       // Close dialog and trigger success (which reloads the page)
       setEmail('');

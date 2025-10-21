@@ -43,11 +43,13 @@ export async function POST(req: Request) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              fields: {
-                'Staff Member': [staffMemberId],
-                'Game': [gameId],
-                'Confidence Level': confidenceLevel,
-              },
+              records: [{
+                fields: {
+                  'Staff Member': [staffMemberId],
+                  'Game': [gameId],
+                  'Confidence Level': confidenceLevel,
+                },
+              }],
             }),
           }
         );
