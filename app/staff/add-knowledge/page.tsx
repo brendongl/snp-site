@@ -160,13 +160,13 @@ export default function AddKnowledgePage() {
   const getLevelExplanation = (level: string) => {
     switch (level) {
       case 'Beginner':
-        return "You have chosen Beginner level - all the games you select now will mark your knowledge as Beginner level. What does that mean? That means you have played the game at least once or watched people play it, but you would not be able to teach the game, or help very much if someone asked you about some specific mechanisms.";
+        return "You have played this game once or watched others play.\n\nYou CANNOT teach this game to customers.";
       case 'Intermediate':
-        return "You have chosen Intermediate level - all the games you select now will mark your knowledge as Intermediate. What does that mean? It means you have played the game a few times OR you could teach the game while checking the manual for some details that you can't remember.";
+        return "You have played this game several times.\n\nYou can teach the game, but you need to check the manual sometimes.";
       case 'Expert':
-        return "You have chosen Expert level - all the games you select now will mark your knowledge as Expert. What does that mean? That means the system will mark you as a staff member who is able and willing to TEACH the game to customers and other staff. You should be able to teach the game without the manual, and only referring to the manual for minor and unusual details.";
+        return "You CAN TEACH this game to customers without the manual.\n\nYou only need the manual for rare or unusual rules.";
       case 'Instructor':
-        return "You have chosen Instructor level - all the games you select now will mark your knowledge as Instructor. What does that mean? That means the system will mark you as a staff member who is able and willing to TEACH the game to customers and other staff. You should be able to teach the game without the manual, and remember all niche and unusual rules and situations in the game. We can burn the manual and just use your knowledge because you know the game details like the back of your hands :)";
+        return "You are a MASTER of this game.\n\nYou can teach ALL rules, including rare situations. No manual needed!";
       default:
         return "";
     }

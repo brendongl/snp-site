@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ContentCheck } from '@/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image } from 'lucide-react';
+import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image, Trash2 } from 'lucide-react';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
 interface ContentCheckHistoryProps {
@@ -19,9 +21,11 @@ export function ContentCheckHistory({
   gameId,
   gameName,
 }: ContentCheckHistoryProps) {
+  const isAdmin = useAdminMode();
   const [checks, setChecks] = useState<ContentCheck[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && gameId) {
@@ -46,6 +50,31 @@ export function ContentCheckHistory({
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (checkId: string) => {
+    if (!confirm('Are you sure you want to delete this content check record? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingId(checkId);
+    try {
+      const response = await fetch(`/api/content-checks/${checkId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete content check');
+      }
+
+      // Remove the deleted check from the list
+      setChecks(checks.filter(check => check.id !== checkId));
+    } catch (err) {
+      console.error('Error deleting content check:', err);
+      alert('Failed to delete content check. Please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -125,11 +154,25 @@ export function ContentCheckHistory({
                       {getStatusIcon(check.fields.Status)}
                       <h3 className="font-semibold text-lg">{check.fields.Status}</h3>
                     </div>
-                    {index === 0 && (
-                      <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        Latest
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {index === 0 && (
+                        <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          Latest
+                        </span>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(check.id)}
+                          disabled={deletingId === check.id}
+                          className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                          title="Delete this check"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Metadata */}
