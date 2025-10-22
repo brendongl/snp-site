@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3, Info } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData, AnalyticsInsights } from '@/types';
 import {
@@ -101,8 +101,8 @@ export default function ChangelogPage() {
         if (response.ok) {
           const data = await response.json();
           const members = data.staff.map((s: any) => ({
-            id: s.stafflist_id,
-            name: s.staff_name,
+            id: s.id,
+            name: s.name,
           }));
           setStaffMembers(members);
         }
@@ -396,30 +396,45 @@ export default function ChangelogPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Activity Over Time - Staff Activity */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Staff Activity Over Time</h3>
-                <div className="flex gap-2">
-                  {staffMembers.slice(0, 2).map((member) => (
-                    <button
-                      key={member.id}
-                      onClick={() => {
-                        setCompareStaff(prev =>
-                          prev.includes(member.id)
-                            ? prev.filter(id => id !== member.id)
-                            : prev.length < 2
-                            ? [...prev, member.id]
-                            : prev
-                        );
-                      }}
-                      className={`px-2 py-1 text-xs rounded ${
-                        compareStaff.includes(member.id)
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {member.name}
-                    </button>
-                  ))}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Staff Activity Over Time</h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={compareStaff[0] || ''}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setCompareStaff(prev => [e.target.value, prev[1]].filter(Boolean));
+                      } else {
+                        setCompareStaff(prev => [prev[1]].filter(Boolean));
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Select first staff member...</option>
+                    {staffMembers.map((member) => (
+                      <option key={member.id} value={member.id} disabled={compareStaff[1] === member.id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={compareStaff[1] || ''}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setCompareStaff(prev => [prev[0], e.target.value].filter(Boolean));
+                      } else {
+                        setCompareStaff(prev => [prev[0]].filter(Boolean));
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Select second staff member (optional)...</option>
+                    {staffMembers.map((member) => (
+                      <option key={member.id} value={member.id} disabled={compareStaff[0] === member.id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="h-72">
@@ -470,7 +485,7 @@ export default function ChangelogPage() {
                   />
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-500">
-                    Select staff members above to compare activity
+                    Select at least one staff member to view activity
                   </div>
                 )}
               </div>
@@ -533,9 +548,21 @@ export default function ChangelogPage() {
             {/* Weighted Top Contributors */}
             {chartData.weightedContributions && chartData.weightedContributions.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Top Contributors (Weighted: Checks×3, Photos×2, Logs×1)
-                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Top Contributors</h3>
+                  <div className="group relative">
+                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                    <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                      <p className="font-semibold mb-1">Weighted Scoring:</p>
+                      <ul className="space-y-1">
+                        <li>• Content Checks: ×3 points</li>
+                        <li>• Photo Uploads: ×2 points</li>
+                        <li>• Play Logs: ×1 point</li>
+                      </ul>
+                      <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                    </div>
+                  </div>
+                </div>
                 <div className="h-72">
                   <Bar
                     data={{

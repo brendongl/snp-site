@@ -196,7 +196,6 @@ export async function GET(request: NextRequest) {
         COUNT(*) FILTER (WHERE category = 'play_log' AND event_type = 'created')
       ) > 0
       ORDER BY total_score DESC
-      LIMIT 10
     `;
 
     const weightedContributionsResult = await pool.query(weightedContributionsQuery, [
