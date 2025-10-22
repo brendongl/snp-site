@@ -12,9 +12,10 @@ interface GameCardProps {
   onClick: () => void;
   isStaff?: boolean;
   picturesOnlyMode?: boolean;
+  staffKnowledgeLevel?: string;
 }
 
-export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = false }: GameCardProps) {
+export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = false, staffKnowledgeLevel }: GameCardProps) {
   const { addToast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showPlayLogDialog, setShowPlayLogDialog] = useState(false);
@@ -97,6 +98,31 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
                 >
                   <span className="text-xl">📊</span>
                 </button>
+              </div>
+            )}
+
+            {/* Staff Knowledge Badge - bottom left overlay */}
+            {isStaff && staffKnowledgeLevel && (
+              <div className="absolute bottom-2 left-2 z-20">
+                {(staffKnowledgeLevel === 'Expert' || staffKnowledgeLevel === 'Instructor') ? (
+                  <div
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 shadow-lg"
+                    title={`Knowledge: ${staffKnowledgeLevel}`}
+                  >
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500 shadow-lg"
+                    title={`Knowledge: ${staffKnowledgeLevel}`}
+                  >
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
               </div>
             )}
           </>

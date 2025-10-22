@@ -43,6 +43,7 @@ function GamesPageContent() {
   const [staffSortOption, setStaffSortOption] = useState<SortOption | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
+  const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
 
   const [filters, setFilters] = useState<FilterType>({
     search: '',
@@ -86,6 +87,48 @@ function GamesPageContent() {
   useEffect(() => {
     fetchGames();
   }, []);
+
+  // Fetch staff knowledge for current user (staff mode only)
+  useEffect(() => {
+    if (!isStaff) {
+      setStaffKnowledge(new Map());
+      return;
+    }
+
+    const fetchStaffKnowledge = async () => {
+      try {
+        const staffName = localStorage.getItem('staff_name');
+        if (!staffName) return;
+
+        const response = await fetch('/api/staff-knowledge');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const knowledge = data.knowledge || [];
+
+        // Create a map of gameId -> confidence level for current staff member
+        const knowledgeMap = new Map<string, string>();
+        knowledge
+          .filter((k: any) => k.staffMember === staffName)
+          .forEach((k: any) => {
+            // Get game ID from the knowledge record
+            // Need to find the game by name since knowledge stores game names
+            const matchingGame = games.find(g => g.fields['Game Name'] === k.gameName);
+            if (matchingGame) {
+              knowledgeMap.set(matchingGame.id, k.confidenceLevel);
+            }
+          });
+
+        setStaffKnowledge(knowledgeMap);
+      } catch (err) {
+        console.error('Error fetching staff knowledge:', err);
+      }
+    };
+
+    if (games.length > 0) {
+      fetchStaffKnowledge();
+    }
+  }, [isStaff, games]);
 
   // Toggle header collapse and save preference
   const toggleHeaderCollapse = () => {
@@ -665,6 +708,7 @@ function GamesPageContent() {
               onClick={() => handleGameCardClick(game)}
               isStaff={isStaff}
               picturesOnlyMode={picturesOnlyMode}
+              staffKnowledgeLevel={staffKnowledge.get(game.id)}
             />
           ))}
         </div>
