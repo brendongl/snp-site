@@ -33,7 +33,8 @@ export default function AddKnowledgePage() {
   // Check authentication
   useEffect(() => {
     const name = localStorage.getItem('staff_name');
-    const id = localStorage.getItem('staff_id');
+    // Use staff_record_id (StaffList table ID) instead of staff_id for database operations
+    const id = localStorage.getItem('staff_record_id');
     if (!name || !id) {
       router.push('/auth/signin');
       return;
