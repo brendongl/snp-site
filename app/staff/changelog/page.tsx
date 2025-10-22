@@ -166,6 +166,7 @@ export default function ChangelogPage() {
         if (filters.eventType) params.append('eventType', filters.eventType);
         if (filters.category) params.append('category', filters.category);
 
+        console.log('[Changelog Page] Fetching with params:', params.toString());
         const response = await fetch(`/api/changelog?${params.toString()}`);
 
         if (!response.ok) {
@@ -173,6 +174,12 @@ export default function ChangelogPage() {
         }
 
         const data = await response.json();
+        console.log('[Changelog Page] Received data:', {
+          dataCount: data.data?.length || 0,
+          totalItems: data.pagination?.totalItems || 0,
+          stats: data.stats,
+          sampleEntry: data.data?.[0]
+        });
         setLogs(data.data || []);
         setStats(data.stats || null);
         setTotalPages(data.pagination?.totalPages || 1);

@@ -40,6 +40,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
+    console.log('[API /changelog] Request params:', { startDate, endDate, staffId, eventType, category, page, limit });
+
+    // Check total records in changelog table for debugging
+    const totalRecordsCheck = await pool.query('SELECT COUNT(*) as total FROM changelog');
+    console.log(`[API /changelog] Total records in changelog table: ${totalRecordsCheck.rows[0].total}`);
+
     const offset = (page - 1) * limit;
 
     // Build WHERE clause dynamically
@@ -88,6 +94,9 @@ export async function GET(request: NextRequest) {
       WHERE ${whereClause}
     `;
 
+    console.log('[API /changelog] Executing query:', dataQuery);
+    console.log('[API /changelog] Query params:', params);
+
     const [dataResult, countResult] = await Promise.all([
       pool.query(dataQuery, params),
       pool.query(countQuery, params.slice(0, -2)),
@@ -95,6 +104,11 @@ export async function GET(request: NextRequest) {
 
     const totalItems = parseInt(countResult.rows[0].total);
     const totalPages = Math.ceil(totalItems / limit);
+
+    console.log(`[API /changelog] Found ${totalItems} total items, returning ${dataResult.rows.length} items`);
+    if (dataResult.rows.length > 0) {
+      console.log('[API /changelog] Sample entry:', dataResult.rows[0]);
+    }
 
     // Get summary stats
     const statsQuery = `
