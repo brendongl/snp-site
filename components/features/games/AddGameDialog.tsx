@@ -52,6 +52,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
   const [costPrice, setCostPrice] = useState('');
   const [gameSize, setGameSize] = useState('');
   const [deposit, setDeposit] = useState('');
+  const [dateOfAcquisition, setDateOfAcquisition] = useState(new Date().toISOString().split('T')[0]);
   const [isExpansion, setIsExpansion] = useState(false);
   const [baseGameId, setBaseGameId] = useState('');
 
@@ -189,6 +190,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
       const input: CreateGameInput = {
         bggId: id,
         isExpansion,
+        dateOfAcquisition,
       };
 
       if (costPrice) input.costPrice = parseFloat(costPrice);
@@ -264,6 +266,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
     setCostPrice('');
     setGameSize('');
     setDeposit('');
+    setDateOfAcquisition(new Date().toISOString().split('T')[0]);
     setIsExpansion(false);
     setBaseGameId('');
     setPreviewData(null);
@@ -602,6 +605,22 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
               placeholder="0.00"
               disabled={loading || success}
             />
+          </div>
+
+          {/* Date of Acquisition */}
+          <div className="space-y-2">
+            <Label htmlFor="dateOfAcquisition">Date of Acquisition</Label>
+            <Input
+              id="dateOfAcquisition"
+              type="date"
+              value={dateOfAcquisition}
+              onChange={(e) => setDateOfAcquisition(e.target.value)}
+              disabled={loading || success}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              When was this game acquired by the cafe?
+            </p>
           </div>
 
           {/* Error Message */}

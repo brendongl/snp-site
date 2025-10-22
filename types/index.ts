@@ -189,6 +189,7 @@ export interface CreateGameInput {
   costPrice?: number;
   gameSize?: string;
   deposit?: number;
+  dateOfAcquisition: string;
   isExpansion: boolean;
   baseGameId?: string;
   selectedImages?: {

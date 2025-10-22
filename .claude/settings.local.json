@@ -12,7 +12,12 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node:*)",
       "Bash(npm install:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node -e:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git reset:*)",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)",
+      "Bash(node scripts/add-mechanisms-column.js:*)"
     ],
     "deny": [],
     "ask": []

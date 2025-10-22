@@ -17,10 +17,10 @@ export async function POST(request: Request) {
 
   try {
     const body: CreateGameInput = await request.json();
-    const { bggId, costPrice, gameSize, deposit, isExpansion, baseGameId, selectedImages, customImageUrls } = body;
+    const { bggId, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId, selectedImages, customImageUrls } = body;
     bggIdForError = bggId;
 
-    logger.info('Game Creation', 'Starting game creation', { bggId, costPrice, gameSize, deposit, isExpansion, baseGameId, selectedImages, customImageUrls });
+    logger.info('Game Creation', 'Starting game creation', { bggId, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId, selectedImages, customImageUrls });
 
     // Validate input
     if (!bggId || typeof bggId !== 'number' || bggId <= 0) {
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       minPlayers: bggData.minPlayers.toString(),
       maxPlayers: bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),
       bggId: bggId.toString(),
-      dateOfAcquisition: new Date().toISOString().split('T')[0],
+      dateOfAcquisition: dateOfAcquisition || new Date().toISOString().split('T')[0],
     };
 
     // Add optional fields
