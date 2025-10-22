@@ -94,6 +94,12 @@ export default function KnowledgePage() {
     fetchKnowledge();
   }, [staffName]);
 
+  // Normalize name for comparison (must be before useMemo that uses it)
+  const normalizeName = (name: string | null | undefined): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
+  };
+
   // Get unique staff members for dropdown (excluding current user)
   const uniqueStaff = useMemo(() => {
     const staffSet = new Set(allKnowledge.map(k => k.staffMember));
@@ -102,12 +108,6 @@ export default function KnowledgePage() {
       .sort();
     return staffArray;
   }, [allKnowledge, staffName]);
-
-  // Normalize name for comparison
-  const normalizeName = (name: string | null | undefined): string => {
-    if (!name) return '';
-    return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
-  };
 
   // Determine view mode (calculate here for external use, don't include in useMemo deps)
   const isListView = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
