@@ -326,6 +326,11 @@
       color: #991b1b;
     }
 
+    .badge-photo-added {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
     /* Category Icons */
     .category-icon {
       display: inline-flex;
@@ -465,6 +470,7 @@
             <option>Created</option>
             <option>Updated</option>
             <option>Deleted</option>
+            <option>Photo Added</option>
           </select>
         </div>
 
@@ -566,7 +572,7 @@
           </tr>
           <tr>
             <td class="timestamp">Jan 22, 2025<br>1:30 PM</td>
-            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="badge badge-photo-added">Photo Added</span></td>
             <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
             <td>Updated images for <strong>Wingspan</strong> (added 3 photos)</td>
             <td>Mike Chen</td>
@@ -692,7 +698,7 @@
           </tr>
           <tr>
             <td class="timestamp">Jan 19, 2025<br>12:45 PM</td>
-            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="badge badge-photo-added">Photo Added</span></td>
             <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
             <td>Updated images for <strong>Spirit Island</strong> (replaced 2 photos)</td>
             <td>Mike Chen</td>
@@ -750,6 +756,13 @@
             data: [2, 1, 3, 2, 4, 3, 2, 3],
             backgroundColor: '#fee2e2',
             borderColor: '#dc2626',
+            borderWidth: 1
+          },
+          {
+            label: 'Photo Added',
+            data: [3, 5, 4, 6, 7, 5, 6, 8],
+            backgroundColor: '#dbeafe',
+            borderColor: '#2563eb',
             borderWidth: 1
           }
         ]

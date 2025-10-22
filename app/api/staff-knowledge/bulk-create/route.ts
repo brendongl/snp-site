@@ -63,6 +63,7 @@ export async function POST(req: Request) {
           gameId,
           confidenceLevel: confidenceLevelNum,
           canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Instructor',
+          taughtBy: null,
           notes: null,
         });
 

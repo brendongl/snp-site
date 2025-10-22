@@ -7,7 +7,9 @@
       "Bash(git push:*)",
       "Bash(git merge:*)",
       "Bash(npm run build:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(PGPASSWORD=\"mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST\" psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node:*)"
     ],
     "deny": [],
     "ask": []

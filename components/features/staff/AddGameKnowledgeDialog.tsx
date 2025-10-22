@@ -31,7 +31,7 @@ export function AddGameKnowledgeDialog({
   onSuccess,
 }: AddGameKnowledgeDialogProps) {
   const [confidenceLevel, setConfidenceLevel] = useState<string>('');
-  const [taughtBy, setTaughtBy] = useState('');
+  const [taughtBy, setTaughtBy] = useState('Myself'); // Default to "Myself"
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +57,16 @@ export function AddGameKnowledgeDialog({
         const data = await response.json();
         console.log('Staff data received:', data);
 
-        // Extract staff members with their record IDs
-        const staff = (data.staff || []).map((member: any) => ({
-          id: member.id,
-          name: member.name,
-        })) as StaffMember[];
+        // Get current staff member's name to filter out
+        const currentStaffName = localStorage.getItem('staff_name');
+
+        // Extract staff members with their record IDs, filtering out current user
+        const staff = (data.staff || [])
+          .filter((member: any) => member.name !== currentStaffName)
+          .map((member: any) => ({
+            id: member.id,
+            name: member.name,
+          })) as StaffMember[];
 
         console.log('Processed staff:', staff);
         setStaffMembers(staff.sort((a, b) => a.name.localeCompare(b.name)));
@@ -153,7 +158,7 @@ export function AddGameKnowledgeDialog({
 
       // Reset form and close
       setConfidenceLevel('');
-      setTaughtBy('');
+      setTaughtBy('Myself');
       setNotes('');
       onClose();
 
@@ -216,7 +221,7 @@ export function AddGameKnowledgeDialog({
                 disabled={isLoading || loadingStaff}
                 className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select staff member...</option>
+                <option value="Myself">Myself</option>
                 {staffMembers.map((staff) => (
                   <option key={staff.id} value={staff.name}>
                     {staff.name}

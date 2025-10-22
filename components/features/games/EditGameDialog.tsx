@@ -25,6 +25,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   const [error, setError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     gameName: game?.fields['Game Name'] || '',
@@ -34,7 +35,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     maxPlayers: game?.fields['Max. Players'] || '',
     complexity: game?.fields['Complexity'] || 0,
     dateAcquired: game?.fields['Date of Aquisition'] || '',
-    categories: game?.fields.Categories?.join(', ') || '',
+    categories: game?.fields.Categories || [],
   });
 
   // Image staging state - track pending uploads and deletions
@@ -44,12 +45,43 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   // Get current images from the game
   const currentImages = game?.images || [];
 
+  // Reset form data when game changes
+  useEffect(() => {
+    if (game) {
+      setFormData({
+        gameName: game.fields['Game Name'] || '',
+        description: game.fields['Description'] || '',
+        yearReleased: game.fields['Year Released'] || '',
+        minPlayers: game.fields['Min Players'] || '',
+        maxPlayers: game.fields['Max. Players'] || '',
+        complexity: game.fields['Complexity'] || 0,
+        dateAcquired: game.fields['Date of Aquisition'] || '',
+        categories: game.fields.Categories || [],
+      });
+    }
+  }, [game]);
+
   // Reset pending changes when dialog opens/closes
   useEffect(() => {
     if (open) {
       setPendingUploads([]);
       setPendingDeletions(new Set());
       setError(null);
+
+      // Fetch all games to get unique categories
+      fetch('/api/games')
+        .then(res => res.json())
+        .then(data => {
+          const games = data.games || [];
+          const categoriesSet = new Set<string>();
+          games.forEach((g: BoardGame) => {
+            if (g.fields.Categories) {
+              g.fields.Categories.forEach((cat: string) => categoriesSet.add(cat));
+            }
+          });
+          setAvailableCategories(Array.from(categoriesSet).sort());
+        })
+        .catch(err => console.error('Failed to fetch categories:', err));
     }
   }, [open]);
 
@@ -61,6 +93,20 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleCategoryToggle = (category: string) => {
+    setFormData(prev => {
+      const currentCategories = Array.isArray(prev.categories) ? prev.categories : [];
+      const isSelected = currentCategories.includes(category);
+
+      return {
+        ...prev,
+        categories: isSelected
+          ? currentCategories.filter(c => c !== category)
+          : [...currentCategories, category],
+      };
+    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,7 +192,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             maxPlayers: formData.maxPlayers,
             complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
             dateAcquired: formData.dateAcquired,
-            categories: formData.categories.split(',').map(c => c.trim()).filter(c => c.length > 0),
+            categories: formData.categories,
           }),
         });
 
@@ -254,17 +300,38 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           {/* Categories */}
           <div>
             <label className="block text-sm font-medium mb-2">Categories</label>
-            <input
-              type="text"
-              name="categories"
-              value={formData.categories}
-              onChange={handleInputChange}
-              placeholder="e.g., Strategy, Family, Card Game (comma-separated)"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-              disabled={isLoading}
-            />
+            <div className="border border-border rounded-lg p-3 bg-background max-h-48 overflow-y-auto">
+              {availableCategories.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Loading categories...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {availableCategories.map((category) => {
+                    const currentCategories = Array.isArray(formData.categories) ? formData.categories : [];
+                    const isSelected = currentCategories.includes(category);
+
+                    return (
+                      <label
+                        key={category}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleCategoryToggle(category)}
+                          disabled={isLoading}
+                          className="w-4 h-4 rounded cursor-pointer"
+                        />
+                        <span className="text-sm">{category}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Separate multiple categories with commas
+              {Array.isArray(formData.categories) && formData.categories.length > 0
+                ? `${formData.categories.length} ${formData.categories.length === 1 ? 'category' : 'categories'} selected`
+                : 'No categories selected'}
             </p>
           </div>
 

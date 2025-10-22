@@ -16,6 +16,7 @@ export async function GET() {
         sk.game_id,
         sk.confidence_level,
         sk.can_teach,
+        sk.taught_by,
         sk.notes,
         sk.created_at,
         sk.updated_at,
@@ -42,7 +43,7 @@ export async function GET() {
       confidenceLevel: confidenceLevelMap[row.confidence_level] || 'Beginner',
       canTeach: row.can_teach || false,
       notes: row.notes || '',
-      taughtBy: null, // Not stored in current schema
+      taughtBy: row.taught_by || null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       gameId,
       staffRecordId,
       confidenceLevel,
+      taughtBy,
       notes,
     } = await request.json();
 
@@ -96,6 +98,7 @@ export async function POST(request: Request) {
       gameId,
       confidenceLevel: confidenceLevelNum,
       canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Instructor',
+      taughtBy: taughtBy || null,
       notes: notes || null,
     });
 

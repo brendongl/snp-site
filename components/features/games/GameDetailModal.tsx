@@ -327,7 +327,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                   <div>
                     <p className="text-xs text-muted-foreground">Complexity</p>
                     <p className="font-medium">
-                      {game.fields['Complexity']}/5
+                      {Math.round(game.fields['Complexity']!)}/5
                     </p>
                   </div>
                 </div>

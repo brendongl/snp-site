@@ -6,6 +6,7 @@ export interface StaffKnowledge {
   gameId: string;
   confidenceLevel: number;
   canTeach: boolean;
+  taughtBy: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -32,7 +33,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(`
         SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         ORDER BY staff_member_id, game_id
@@ -52,7 +53,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         WHERE staff_member_id = $1
@@ -74,7 +75,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         WHERE game_id = $1
@@ -96,7 +97,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         WHERE staff_member_id = $1 AND game_id = $2`,
@@ -124,14 +125,15 @@ class StaffKnowledgeDbService {
 
       const result = await this.pool.query(
         `INSERT INTO staff_knowledge (
-          id, staff_member_id, game_id, confidence_level, can_teach, notes, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         ON CONFLICT (staff_member_id, game_id) DO UPDATE SET
           confidence_level = $4,
           can_teach = $5,
-          notes = $6,
+          taught_by = $6,
+          notes = $7,
           updated_at = NOW()
-        RETURNING id, staff_member_id, game_id, confidence_level, can_teach, notes,
+        RETURNING id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at`,
         [
           id,
@@ -139,6 +141,7 @@ class StaffKnowledgeDbService {
           knowledge.gameId,
           knowledge.confidenceLevel,
           knowledge.canTeach,
+          knowledge.taughtBy,
           knowledge.notes,
         ]
       );
@@ -198,7 +201,7 @@ class StaffKnowledgeDbService {
 
       const result = await this.pool.query(
         `UPDATE staff_knowledge SET ${setClauses.join(', ')} WHERE id = $${paramCount}
-        RETURNING id, staff_member_id, game_id, confidence_level, can_teach, notes,
+        RETURNING id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at`,
         values
       );
@@ -229,7 +232,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         WHERE game_id = $1 AND can_teach = true
@@ -251,7 +254,7 @@ class StaffKnowledgeDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, staff_member_id, game_id, confidence_level, can_teach, notes,
+          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
           created_at, updated_at
         FROM staff_knowledge
         WHERE staff_member_id = $1 AND can_teach = true
@@ -273,6 +276,7 @@ class StaffKnowledgeDbService {
       gameId: row.game_id,
       confidenceLevel: row.confidence_level,
       canTeach: row.can_teach,
+      taughtBy: row.taught_by,
       notes: row.notes,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

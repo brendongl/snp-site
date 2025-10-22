@@ -163,11 +163,22 @@ export default function PlayLogsPage() {
 
   const formatDate = (date?: string) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
+    const dateObj = new Date(date);
+
+    // Format date without year
+    const datePart = dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     });
+
+    // Format time in 12-hour format with am/pm
+    const timePart = dateObj.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).toLowerCase();
+
+    return `${datePart} ${timePart}`;
   };
 
   return (

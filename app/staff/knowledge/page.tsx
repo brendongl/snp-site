@@ -310,14 +310,14 @@ export default function KnowledgePage() {
         {!isLoading && !error && filteredAndSortedKnowledge.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
-            <div className={`grid ${isAdmin ? 'grid-cols-12' : 'grid-cols-11'} bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0`}>
+            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
               <div className="col-span-2">Game</div>
               <div className="col-span-2">Staff Member</div>
               <div className="col-span-2">Confidence Level</div>
               <div className="col-span-2">Was Taught By</div>
               <div className="col-span-1">Can Teach</div>
-              <div className={isAdmin ? 'col-span-1' : 'col-span-2'}>Notes</div>
-              {isAdmin && <div className="col-span-1">Actions</div>}
+              <div className="col-span-1">Notes</div>
+              <div className="col-span-1">Actions</div>
             </div>
 
             {/* Table Rows */}
@@ -385,7 +385,7 @@ export default function KnowledgePage() {
                   ) : (
                     // Normal View
                     <div
-                      className={`grid ${isAdmin ? 'grid-cols-12' : 'grid-cols-11'} px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
+                      className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
                         idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                       }`}
                     >
@@ -410,29 +410,33 @@ export default function KnowledgePage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </div>
-                      <div className={`${isAdmin ? 'col-span-1' : 'col-span-2'} text-muted-foreground truncate`} title={entry.notes}>
+                      <div className="col-span-1 text-muted-foreground truncate" title={entry.notes}>
                         {entry.notes || '—'}
                       </div>
-                      {isAdmin && (
-                        <div className="col-span-1 flex gap-1">
-                          <button
-                            onClick={() => handleEditEntry(entry)}
-                            disabled={isDeleting || isSaving}
-                            className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
-                            title="Edit entry"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEntry(entry.id)}
-                            disabled={isDeleting || isSaving}
-                            className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                            title="Delete entry"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="col-span-1 flex gap-1">
+                        {(isAdmin || entry.staffMember === staffName) ? (
+                          <>
+                            <button
+                              onClick={() => handleEditEntry(entry)}
+                              disabled={isDeleting || isSaving}
+                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+                              title="Edit entry"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              disabled={isDeleting || isSaving}
+                              className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                              title="Delete entry"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
