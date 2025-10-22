@@ -18,14 +18,14 @@ function SignInContent() {
   useEffect(() => {
     const staffName = localStorage.getItem('staff_name');
     if (staffName) {
-      const redirectTo = searchParams.get('callbackUrl') || '/games?staff=true';
+      const redirectTo = searchParams.get('callbackUrl') || '/games';
       router.push(redirectTo);
     }
   }, [router, searchParams]);
 
   // Get redirect URL from searchParams - deferring to effect
   const getRedirectUrl = () => {
-    return searchParams.get('callbackUrl') || '/games?staff=true';
+    return searchParams.get('callbackUrl') || '/games';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

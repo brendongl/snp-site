@@ -205,7 +205,7 @@ export default function KnowledgePage() {
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
           <div className="flex items-center gap-3 mb-4">
-            <Link href="/games?staff=true" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
+            <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
               <ArrowLeft className="w-4 h-4" />
               Back to Games
             </Link>

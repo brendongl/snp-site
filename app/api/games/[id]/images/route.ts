@@ -32,22 +32,29 @@ export async function POST(
 
   try {
     const { id: gameId } = await params;
+    console.log(`[Image Upload] Starting upload for game: ${gameId}`);
+
     const formData = await request.formData();
     const images = formData.getAll('images') as File[];
 
     if (images.length === 0) {
+      console.log('[Image Upload] No images provided in formData');
       return NextResponse.json({ error: 'No images provided' }, { status: 400 });
     }
 
+    console.log(`[Image Upload] Received ${images.length} images`);
     const uploadedHashes: string[] = [];
 
     for (const image of images) {
+      console.log(`[Image Upload] Processing image: ${image.name}, size: ${image.size} bytes`);
+
       // Read file buffer
       const arrayBuffer = await image.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
       // Generate hash
       const hash = crypto.createHash('md5').update(buffer).digest('hex');
+      console.log(`[Image Upload] Generated hash: ${hash}`);
 
       // Determine file extension
       const extension = path.extname(image.name) || '.jpg';
@@ -55,33 +62,49 @@ export async function POST(
       const filePath = path.join(IMAGE_CACHE_DIR, `${hash}${extension}`);
 
       // Save to disk
-      fs.writeFileSync(filePath, buffer);
+      try {
+        fs.writeFileSync(filePath, buffer);
+        console.log(`[Image Upload] Saved to disk: ${filePath}`);
+      } catch (fsError) {
+        console.error(`[Image Upload] Filesystem error:`, fsError);
+        throw new Error(`Failed to save image to disk: ${fsError instanceof Error ? fsError.message : 'Unknown error'}`);
+      }
 
       // Insert into database
-      await pool.query(
-        `
-        INSERT INTO game_images (game_id, hash, file_name, url)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (game_id, hash) DO NOTHING
-        `,
-        [gameId, hash, fileName, `/api/images/${hash}`]
-      );
+      try {
+        await pool.query(
+          `
+          INSERT INTO game_images (game_id, hash, file_name, url)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (game_id, hash) DO NOTHING
+          `,
+          [gameId, hash, fileName, `/api/images/${hash}`]
+        );
+        console.log(`[Image Upload] Database record created for hash: ${hash}`);
+      } catch (dbError) {
+        console.error(`[Image Upload] Database error:`, dbError);
+        throw new Error(`Failed to save image to database: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
+      }
 
       uploadedHashes.push(hash);
     }
 
     await pool.end();
 
+    console.log(`[Image Upload] Successfully uploaded ${uploadedHashes.length} images`);
     return NextResponse.json({
       success: true,
       uploadedCount: uploadedHashes.length,
       hashes: uploadedHashes,
     });
   } catch (error) {
-    console.error('Error uploading images:', error);
+    console.error('[Image Upload] Upload failed:', error);
     await pool.end();
     return NextResponse.json(
-      { error: 'Failed to upload images' },
+      {
+        error: 'Failed to upload images',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

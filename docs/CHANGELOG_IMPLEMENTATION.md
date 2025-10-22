@@ -1092,4 +1092,81 @@ WHERE created_at IS NOT NULL;
 
 ---
 
+## Future Features / Backlog
+
+### 1. Play History in Game Detail Modal
+**Priority:** Medium
+**Complexity:** High
+**Description:** Add "Play History" button/section in Game Detail Modal showing all play log sessions for that specific game.
+
+**Requirements:**
+- New API endpoint: `GET /api/games/[id]/play-history`
+- Query play_logs table filtered by game_id
+- Join with staff_list to get staff names
+- Display in modal as timeline or list
+- Include session date, staff member, duration, and notes
+- Sort by most recent first
+- Show total play count and average duration stats
+
+**Files to Create/Modify:**
+- `app/api/games/[id]/play-history/route.ts` (new)
+- `components/features/games/GameDetailModal.tsx` (modify)
+- `components/features/games/PlayHistorySection.tsx` (new component)
+- `types/index.ts` (add PlayHistoryEntry interface)
+
+**Implementation Notes:**
+- Add tab/section in GameDetailModal
+- Use collapsible/expandable UI for long lists
+- Include filters for date range and staff member
+- Consider pagination for games with 50+ sessions
+
+**Estimated Time:** 3-4 hours
+
+---
+
+### 2. "My Knowledge" Filter in Games Gallery
+**Priority:** Medium
+**Complexity:** Medium
+**Description:** Add filter option in main games gallery to show only games the current staff member has knowledge entries for.
+
+**Requirements:**
+- Add "My Knowledge Only" checkbox to GameFilters component
+- Fetch staff knowledge entries for current user
+- Filter games list to only show games with matching knowledge records
+- Visual indicator (badge/icon) on game cards showing user's confidence level
+- Quick filter button for easy toggle
+
+**Files to Create/Modify:**
+- `app/games/page.tsx` (modify - add filter state)
+- `components/features/games/GameFilters.tsx` (modify - add checkbox)
+- `types/index.ts` (modify - extend GameFilters interface)
+
+**Implementation Notes:**
+- Could show confidence level badge on filtered games
+- Consider combining with existing knowledge tick overlay
+- Add to URL query params for shareable links
+- Persist preference in localStorage
+
+**Type Changes Needed:**
+```typescript
+// types/index.ts
+export interface GameFilters {
+  // ... existing filters
+  myKnowledgeOnly?: boolean;
+}
+
+// Extend BoardGame to optionally include staff knowledge
+export interface BoardGame {
+  // ... existing fields
+  staffKnowledge?: {
+    confidenceLevel: number;
+    canTeach: boolean;
+  };
+}
+```
+
+**Estimated Time:** 2-3 hours
+
+---
+
 **Mockup Reference:** See `mockups/changelog-mockup.html` for complete visual design

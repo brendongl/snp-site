@@ -1,35 +1,23 @@
 /**
  * Staff Mode Hook
  *
- * Detects if user is in staff mode by checking:
- * 1. localStorage (staff email stored during login)
- * 2. URL parameter ?staff=true (legacy support)
+ * Detects if user is authenticated as staff by checking localStorage.
+ * Staff must be logged in through /auth/signin - no URL parameter access.
  */
 
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export function useStaffMode(): boolean {
-  const searchParams = useSearchParams();
-  const [isStaffFromStorage, setIsStaffFromStorage] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
 
   // Check localStorage on mount
   useEffect(() => {
     const staffEmail = localStorage.getItem('staff_email');
     const staffName = localStorage.getItem('staff_name');
-    setIsStaffFromStorage(!!(staffEmail && staffName));
+    setIsStaff(!!(staffEmail && staffName));
   }, []);
-
-  const isStaff = useMemo(() => {
-    // Check localStorage first (new auth system)
-    if (isStaffFromStorage) {
-      return true;
-    }
-    // Fall back to URL parameter (legacy)
-    return searchParams?.get('staff') === 'true';
-  }, [searchParams, isStaffFromStorage]);
 
   return isStaff;
 }
