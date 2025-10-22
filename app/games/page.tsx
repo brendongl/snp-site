@@ -442,30 +442,43 @@ function GamesPageContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Sticky Header - Always visible, minimal on mobile */}
+      {/* Sticky Header - Compact single row */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container mx-auto px-4 py-3 max-w-full">
-          {/* Main header row - always visible */}
-          <div className="flex items-center justify-between gap-3">
-            {/* Title and version - always visible */}
-            <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">Board Game Collection</h1>
-              <div
-                className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
-                title={`Build date: ${BUILD_DATE}`}
-              >
-                v{VERSION}
+        <div className="container mx-auto px-3 py-2 max-w-full">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left side - Title and version (hidden when collapsed) */}
+            {!isHeaderCollapsed && (
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">Board Game Collection</h1>
+                <div
+                  className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
+                  title={`Build date: ${BUILD_DATE}`}
+                >
+                  v{VERSION}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Action buttons - always visible */}
+            {/* Collapsed view - Just version */}
+            {isHeaderCollapsed && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
+                  title={`Build date: ${BUILD_DATE}`}
+                >
+                  v{VERSION}
+                </div>
+              </div>
+            )}
+
+            {/* Right side - Action buttons */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {!isStaff && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowStaffLogin(true)}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap h-8 text-xs"
                 >
                   <span className="hidden sm:inline">🔐 Staff Login</span>
                   <span className="sm:hidden">🔐</span>
@@ -476,19 +489,19 @@ function GamesPageContent() {
                   variant="default"
                   size="sm"
                   onClick={() => setShowAddGameDialog(true)}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap h-8 text-xs"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">Add Boardgame</span>
+                  <Plus className="h-3 w-3" />
+                  <span className="hidden sm:inline ml-1.5">Add Game</span>
                 </Button>
               )}
               {isStaff && <StaffMenu />}
             </div>
           </div>
 
-          {/* Secondary info - hidden on small screens when filters are collapsed */}
+          {/* Game count - only when expanded */}
           {!isHeaderCollapsed && (
-            <div className="mt-2 text-sm text-muted-foreground">
+            <div className="mt-1.5 text-xs text-muted-foreground">
               Showing {games.length} games
             </div>
           )}
@@ -496,7 +509,9 @@ function GamesPageContent() {
       </div>
 
       {/* Search and Filters - Collapsible */}
-      <div className="sticky top-[3.75rem] sm:top-[4rem] md:top-[4.5rem] z-30 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
+      <div className={`sticky z-30 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300 ${
+        isHeaderCollapsed ? 'top-[2.5rem]' : 'top-[3.75rem] sm:top-[4rem] md:top-[4.5rem]'
+      }`}>
         {isHeaderCollapsed ? (
           // Collapsed view - slim bar with active filters
           <div className="flex items-center justify-between gap-2 py-2 flex-wrap">

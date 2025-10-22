@@ -47,16 +47,16 @@ export function StaffMenu() {
       {/* Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="h-8 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
         aria-label="Staff menu"
         title="Staff menu"
       >
-        <Menu className="w-6 h-6" />
+        <Menu className="w-5 h-5" />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu - Fixed positioning to stay in viewport */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 z-50">
+        <div className="fixed right-2 sm:right-4 mt-2 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 z-[100]" style={{ top: '3rem' }}>
           {/* Logged in as header */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <p className="text-xs text-muted-foreground mb-1">Logged in as</p>
