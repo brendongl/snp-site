@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { Pool } from 'pg';
+import { logContentCheckCreated } from '@/lib/services/changelog-service';
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
 const BASE_ID = process.env.AIRTABLE_GAMES_BASE_ID || 'apppFvSDh2JBc0qAu';
 const CONTENT_CHECK_TABLE_ID = 'tblHWhNrHc9r3u42Q';
 
@@ -87,6 +90,31 @@ export async function POST(request: NextRequest) {
     logger.info('Content Check', 'Content check created successfully', {
       recordId: data.id,
     });
+
+    // Log to changelog
+    if (DATABASE_URL) {
+      const pool = new Pool({ connectionString: DATABASE_URL });
+      try {
+        const gameResult = await pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
+        const staffResult = await pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [inspector]);
+
+        const gameName = gameResult.rows.length > 0 ? gameResult.rows[0].name : 'Unknown Game';
+        const staffName = staffResult.rows.length > 0 ? staffResult.rows[0].staff_name : 'Unknown Staff';
+
+        await logContentCheckCreated(
+          data.records?.[0]?.id || data.id,
+          gameName,
+          staffName,
+          inspector,
+          status,
+          notes
+        );
+      } catch (changelogError) {
+        logger.error('Content Check', 'Failed to log to changelog', changelogError instanceof Error ? changelogError : new Error(String(changelogError)));
+      } finally {
+        await pool.end();
+      }
+    }
 
     return NextResponse.json({
       success: true,

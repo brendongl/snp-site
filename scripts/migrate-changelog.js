@@ -82,11 +82,11 @@ async function migrate() {
           g.name as entity_name,
           'Play session logged for ' || g.name as description,
           sl.staff_name as staff_member,
-          pl.staff_id,
+          pl.staff_list_id,
           pl.created_at
         FROM play_logs pl
         LEFT JOIN games g ON pl.game_id = g.id
-        LEFT JOIN staff_list sl ON pl.staff_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.stafflist_id
         WHERE pl.created_at IS NOT NULL
         ORDER BY pl.created_at ASC
       `);
@@ -135,17 +135,17 @@ async function migrate() {
           g.name as entity_name,
           'Content check: ' || g.name || ' - ' || cc.status as description,
           sl.staff_name as staff_member,
-          cc.staff_id,
+          cc.staff_list_id,
           jsonb_build_object(
             'status', cc.status,
             'notes', cc.notes
           ) as metadata,
-          cc.date
+          COALESCE(cc.check_date, cc.created_at) as created_at
         FROM content_checks cc
         LEFT JOIN games g ON cc.game_id = g.id
-        LEFT JOIN staff_list sl ON cc.staff_id = sl.stafflist_id
-        WHERE cc.date IS NOT NULL
-        ORDER BY cc.date ASC
+        LEFT JOIN staff_list sl ON cc.staff_list_id = sl.stafflist_id
+        WHERE (cc.check_date IS NOT NULL OR cc.created_at IS NOT NULL)
+        ORDER BY COALESCE(cc.check_date, cc.created_at) ASC
       `);
       console.log(`   ✓ Backfilled ${checksResult.rowCount} content check entries\n`);
 

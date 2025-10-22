@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
+import { logPlayLogCreated, logPlayLogDeleted } from '@/lib/services/changelog-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,28 @@ export async function POST(request: Request) {
 
     console.log(`✅ Play log created successfully: ${playLog.id}`);
 
+    // Get game and staff details for changelog
+    try {
+      const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [staffListId]);
+
+      if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
+        const gameName = gameResult.rows[0].name;
+        const staffName = staffResult.rows[0].staff_name;
+
+        await logPlayLogCreated(
+          playLog.id,
+          gameName,
+          staffName,
+          staffListId,
+          durationHours
+        );
+      }
+    } catch (changelogError) {
+      console.error('Failed to log play log creation to changelog:', changelogError);
+      // Don't fail the request if changelog logging fails
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -119,11 +142,40 @@ export async function DELETE(request: Request) {
       );
     }
 
+    // Get play log details before deleting for changelog
+    let gameName = 'Unknown Game';
+    let staffName = 'Unknown Staff';
+    let staffId = '';
+    try {
+      const logDetails = await db.pool.query(`
+        SELECT g.name as game_name, sl.staff_name, pl.staff_id
+        FROM play_logs pl
+        LEFT JOIN games g ON pl.game_id = g.id
+        LEFT JOIN staff_list sl ON pl.staff_id = sl.stafflist_id
+        WHERE pl.id = $1
+      `, [recordId]);
+
+      if (logDetails.rows.length > 0) {
+        gameName = logDetails.rows[0].game_name || gameName;
+        staffName = logDetails.rows[0].staff_name || staffName;
+        staffId = logDetails.rows[0].staff_id || staffId;
+      }
+    } catch (error) {
+      console.error('Failed to get play log details for changelog:', error);
+    }
+
     // Delete record from PostgreSQL
     console.log(`[play-logs DELETE] Deleting play log: ${recordId}`);
     await db.playLogs.deleteLog(recordId);
 
     console.log(`✅ Play log deleted successfully: ${recordId}`);
+
+    // Log to changelog
+    try {
+      await logPlayLogDeleted(recordId, gameName, staffName, staffId);
+    } catch (changelogError) {
+      console.error('Failed to log play log deletion to changelog:', changelogError);
+    }
 
     return NextResponse.json(
       {

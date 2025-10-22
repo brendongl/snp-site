@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
+import { logGameUpdate } from '@/lib/services/changelog-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories } = await request.json();
+    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories, staffId, staffName } = await request.json();
     const { id: gameId } = await params;
 
     if (!gameId) {
@@ -55,6 +56,19 @@ export async function POST(
 
     // Fetch the updated game to return
     const updatedGame = await db.games.getGameById(gameId);
+
+    // Log to changelog
+    try {
+      await logGameUpdate(
+        gameId,
+        gameName || updatedGame?.fields?.['Game Name'] || 'Unknown Game',
+        staffName || 'System',
+        staffId || 'system',
+        updates
+      );
+    } catch (changelogError) {
+      console.error('Failed to log game update to changelog:', changelogError);
+    }
 
     return NextResponse.json({
       success: true,

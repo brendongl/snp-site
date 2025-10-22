@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
+import { logKnowledgeCreated, logKnowledgeDeleted } from '@/lib/services/changelog-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,6 +105,28 @@ export async function POST(request: Request) {
 
     console.log(`✅ Knowledge entry created: ${knowledge.id}`);
 
+    // Get game and staff details for changelog
+    try {
+      const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [staffRecordId]);
+
+      if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
+        const gameName = gameResult.rows[0].name;
+        const staffName = staffResult.rows[0].staff_name;
+
+        await logKnowledgeCreated(
+          knowledge.id,
+          gameName,
+          staffName,
+          staffRecordId,
+          confidenceLevel,
+          knowledge.canTeach
+        );
+      }
+    } catch (changelogError) {
+      console.error('Failed to log knowledge creation to changelog:', changelogError);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -141,11 +164,40 @@ export async function DELETE(request: Request) {
       );
     }
 
+    // Get knowledge details before deleting for changelog
+    let gameName = 'Unknown Game';
+    let staffName = 'Unknown Staff';
+    let staffId = '';
+    try {
+      const knowledgeDetails = await db.pool.query(`
+        SELECT g.name as game_name, sl.staff_name, sk.staff_member_id
+        FROM staff_knowledge sk
+        LEFT JOIN games g ON sk.game_id = g.id
+        LEFT JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+        WHERE sk.id = $1
+      `, [recordId]);
+
+      if (knowledgeDetails.rows.length > 0) {
+        gameName = knowledgeDetails.rows[0].game_name || gameName;
+        staffName = knowledgeDetails.rows[0].staff_name || staffName;
+        staffId = knowledgeDetails.rows[0].staff_member_id || staffId;
+      }
+    } catch (error) {
+      console.error('Failed to get knowledge details for changelog:', error);
+    }
+
     // Delete record from PostgreSQL
     console.log(`[staff-knowledge DELETE] Deleting knowledge entry: ${recordId}`);
     await db.staffKnowledge.deleteKnowledge(recordId);
 
     console.log(`✅ Knowledge entry deleted successfully: ${recordId}`);
+
+    // Log to changelog
+    try {
+      await logKnowledgeDeleted(recordId, gameName, staffName, staffId);
+    } catch (changelogError) {
+      console.error('Failed to log knowledge deletion to changelog:', changelogError);
+    }
 
     return NextResponse.json(
       {

@@ -197,3 +197,54 @@ export interface CreateGameInput {
   };
   customImageUrls?: string[]; // Additional custom image URLs
 }
+
+// Changelog Types
+export interface ChangelogEntry {
+  id: string;
+  event_type: 'created' | 'updated' | 'deleted' | 'photo_added';
+  category: 'board_game' | 'play_log' | 'staff_knowledge' | 'content_check';
+  entity_id: string;
+  entity_name: string;
+  description: string;
+  staff_member: string;
+  staff_id: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
+export interface ChangelogFilters {
+  startDate: string;
+  endDate: string;
+  staffId: string | null;
+  eventType: string | null;
+  category: string | null;
+  myChangesOnly: boolean;
+}
+
+export interface ChangelogStats {
+  totalChanges: number;
+  gameUpdates: number;
+  playLogsAdded: number;
+  knowledgeUpdates: number;
+  contentChecks: number;
+}
+
+export interface ChangelogChartData {
+  changesByDay: Array<{
+    date: string;
+    created: number;
+    updated: number;
+    deleted: number;
+    photo_added: number;
+  }>;
+  changesByCategory: {
+    board_game: number;
+    play_log: number;
+    staff_knowledge: number;
+    content_check: number;
+  };
+  changesByStaff: Array<{
+    staffName: string;
+    totalChanges: number;
+  }>;
+}

@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logPhotoAdded } from '@/lib/services/changelog-service';
 
 const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
 
@@ -36,6 +37,8 @@ export async function POST(
 
     const formData = await request.formData();
     const images = formData.getAll('images') as File[];
+    const staffId = formData.get('staffId') as string | null;
+    const staffName = formData.get('staffName') as string | null;
 
     if (images.length === 0) {
       console.log('[Image Upload] No images provided in formData');
@@ -87,6 +90,22 @@ export async function POST(
       }
 
       uploadedHashes.push(hash);
+    }
+
+    // Log to changelog
+    try {
+      const gameResult = await pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
+      const gameName = gameResult.rows.length > 0 ? gameResult.rows[0].name : 'Unknown Game';
+
+      await logPhotoAdded(
+        gameId,
+        gameName,
+        staffName || 'System',
+        staffId || 'system',
+        uploadedHashes.length
+      );
+    } catch (changelogError) {
+      console.error('Failed to log photo addition to changelog:', changelogError);
     }
 
     await pool.end();
