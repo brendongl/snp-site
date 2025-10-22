@@ -238,8 +238,21 @@ export async function PATCH(request: Request) {
     // Update record in PostgreSQL
     console.log(`[staff-knowledge PATCH] Updating knowledge entry: ${recordId}`);
 
+    // Map confidence level string to number (same as POST endpoint)
+    const confidenceLevelMap: { [key: string]: number } = {
+      'Beginner': 1,
+      'Intermediate': 2,
+      'Expert': 3,
+      'Instructor': 4,
+    };
+
     const updates: any = {};
-    if (confidenceLevel !== undefined) updates.confidenceLevel = confidenceLevel;
+    if (confidenceLevel !== undefined) {
+      // Convert string to integer if it's a string
+      updates.confidenceLevel = typeof confidenceLevel === 'string'
+        ? confidenceLevelMap[confidenceLevel] || 1
+        : confidenceLevel;
+    }
     if (canTeach !== undefined) updates.canTeach = canTeach;
     if (notes !== undefined) updates.notes = notes;
 
