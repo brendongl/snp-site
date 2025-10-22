@@ -247,4 +247,65 @@ export interface ChangelogChartData {
     staffName: string;
     totalChanges: number;
   }>;
+  changesByStaffOverTime?: Array<{
+    date: string;
+    staffId: string;
+    staffName: string;
+    totalActions: number;
+  }>;
+  staffKnowledgeCounts?: Array<{
+    staffName: string;
+    knowledgeCount: number;
+  }>;
+  weightedContributions?: Array<{
+    staffName: string;
+    contentChecks: number;
+    photos: number;
+    playLogs: number;
+    totalScore: number;
+  }>;
+}
+
+// Analytics Insights Types
+export interface AnalyticsInsights {
+  gamesNeedingAttention: {
+    count: number;
+    percentage: string;
+    games: Array<{
+      id: string;
+      name: string;
+      lastCheckDate: string | null;
+      daysSinceCheck: number;
+    }>;
+  };
+  underutilizedGames: {
+    count: number;
+    percentage: string;
+    games: Array<{
+      id: string;
+      name: string;
+      dateAcquired: string | null;
+    }>;
+  };
+  knowledgeCoverage: {
+    gamesWithKnowledge: number;
+    totalGames: number;
+    percentage: string;
+  };
+  teachingCapacity: Array<{
+    staffName: string;
+    canTeachCount: number;
+    ranking: number;
+  }>;
+  staffSpecialization: Array<{
+    staffName: string;
+    topCategories: Array<{
+      category: string;
+      count: number;
+    }>;
+  }>;
+  acquisitionTrends: Array<{
+    period: string;
+    count: number;
+  }>;
 }
