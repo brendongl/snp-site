@@ -76,13 +76,20 @@ export default function KnowledgePage() {
   // Get unique staff members for dropdown
   const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
 
+  // Normalize name for comparison (case-insensitive, trim whitespace, normalize hyphens)
+  const normalizeName = (name: string | null | undefined): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[-–—]/g, '-');
+  };
+
   // Filter and sort knowledge
   const filteredAndSortedKnowledge = (() => {
     let filtered = allKnowledge;
 
     // Filter to current user if toggle is on
     if (showMyKnowledgeOnly && staffName) {
-      filtered = filtered.filter(k => k.staffMember === staffName);
+      const normalizedStaffName = normalizeName(staffName);
+      filtered = filtered.filter(k => normalizeName(k.staffMember) === normalizedStaffName);
     }
 
     // Filter by selected staff member
