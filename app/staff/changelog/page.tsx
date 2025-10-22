@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, User, Activity, Filter, Download, TrendingUp, Users, Package, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData, AnalyticsInsights } from '@/types';
 import {
@@ -55,7 +55,7 @@ export default function ChangelogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
-  const [compareStaff, setCompareStaff] = useState<string[]>([]); // For staff comparison in Activity Over Time
+  const [compareStaff, setCompareStaff] = useState<string[]>([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +64,7 @@ export default function ChangelogPage() {
 
   // Filter state
   const [filters, setFilters] = useState<ChangelogFilters>({
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days ago
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
     staffId: null,
     eventType: null,
@@ -83,7 +83,6 @@ export default function ChangelogPage() {
       return;
     }
 
-    // Admin-only access
     if (staffType !== 'Admin') {
       alert('Access denied: Admin access required for changelog');
       router.push('/games');
@@ -94,7 +93,7 @@ export default function ChangelogPage() {
     setStaffId(id);
   }, [router, isAdmin]);
 
-  // Fetch staff members for filter dropdown
+  // Fetch staff members
   useEffect(() => {
     const fetchStaffMembers = async () => {
       try {
@@ -143,7 +142,6 @@ export default function ChangelogPage() {
         setIsLoading(true);
         setError(null);
 
-        // Build query params
         const params = new URLSearchParams({
           startDate: filters.startDate,
           endDate: filters.endDate,
@@ -182,7 +180,7 @@ export default function ChangelogPage() {
     fetchChangelog();
   }, [staffName, isAdmin, staffId, filters, currentPage]);
 
-  // Fetch chart data separately
+  // Fetch chart data
   useEffect(() => {
     if (!staffName || !isAdmin) return;
 
@@ -191,7 +189,7 @@ export default function ChangelogPage() {
         const params = new URLSearchParams({
           startDate: filters.startDate,
           endDate: filters.endDate,
-          includePreviousPeriod: 'true', // Always fetch previous period for comparison
+          includePreviousPeriod: 'true',
         });
 
         if (filters.myChangesOnly && staffId) {
@@ -203,7 +201,6 @@ export default function ChangelogPage() {
         if (filters.eventType) params.append('eventType', filters.eventType);
         if (filters.category) params.append('category', filters.category);
 
-        // Add compareStaff parameter if staff are selected
         if (compareStaff.length > 0) {
           params.append('compareStaff', compareStaff.join(','));
         }
@@ -222,7 +219,7 @@ export default function ChangelogPage() {
     fetchChartData();
   }, [staffName, isAdmin, staffId, filters, compareStaff]);
 
-  // Get event type badge color
+  // Helper functions
   const getEventTypeBadge = (eventType: string) => {
     const colors = {
       created: 'bg-green-100 text-green-800 border-green-300',
@@ -233,7 +230,6 @@ export default function ChangelogPage() {
     return colors[eventType as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
-  // Get category badge color
   const getCategoryBadge = (category: string) => {
     const colors = {
       board_game: 'bg-indigo-100 text-indigo-800',
@@ -244,7 +240,6 @@ export default function ChangelogPage() {
     return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -256,17 +251,26 @@ export default function ChangelogPage() {
     });
   };
 
-  // Handle filter changes
   const handleFilterChange = (key: keyof ChangelogFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
   };
 
-  // Calculate percentage change for stats
   const calculateChange = (current: number, previous: number): { value: number; isIncrease: boolean } => {
     if (previous === 0) return { value: current > 0 ? 100 : 0, isIncrease: current > 0 };
     const change = ((current - previous) / previous) * 100;
     return { value: Math.abs(change), isIncrease: change >= 0 };
+  };
+
+  const renderStatChange = (current: number, previous: number | null) => {
+    if (previous === null) return null;
+    const { value, isIncrease } = calculateChange(current, previous);
+    return (
+      <div className={`flex items-center gap-1 text-xs ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+        {isIncrease ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+        <span>{value.toFixed(1)}%</span>
+      </div>
+    );
   };
 
   if (!staffName || !isAdmin) {
@@ -309,6 +313,7 @@ export default function ChangelogPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Changes</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.totalChanges}</p>
+                  {previousStats && renderStatChange(stats.totalChanges, previousStats.totalChanges)}
                 </div>
                 <TrendingUp className="w-8 h-8 text-indigo-600" />
               </div>
@@ -318,6 +323,7 @@ export default function ChangelogPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Game Updates</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.gameUpdates}</p>
+                  {previousStats && renderStatChange(stats.gameUpdates, previousStats.gameUpdates)}
                 </div>
                 <Package className="w-8 h-8 text-indigo-600" />
               </div>
@@ -327,6 +333,7 @@ export default function ChangelogPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Play Logs</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.playLogsAdded}</p>
+                  {previousStats && renderStatChange(stats.playLogsAdded, previousStats.playLogsAdded)}
                 </div>
                 <Activity className="w-8 h-8 text-amber-600" />
               </div>
@@ -336,6 +343,7 @@ export default function ChangelogPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Knowledge</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.knowledgeUpdates}</p>
+                  {previousStats && renderStatChange(stats.knowledgeUpdates, previousStats.knowledgeUpdates)}
                 </div>
                 <Users className="w-8 h-8 text-cyan-600" />
               </div>
@@ -345,6 +353,7 @@ export default function ChangelogPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Content Checks</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.contentChecks}</p>
+                  {previousStats && renderStatChange(stats.contentChecks, previousStats.contentChecks)}
                 </div>
                 <CheckCircle className="w-8 h-8 text-emerald-600" />
               </div>
@@ -352,145 +361,189 @@ export default function ChangelogPage() {
           </div>
         )}
 
-        {/* Charts */}
+        {/* Compact Insights Cards */}
+        {analyticsInsights && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Games Needing Attention</h3>
+                  <p className="text-2xl font-bold text-amber-600 mt-1">
+                    {analyticsInsights.gamesNeedingAttention.count} ({analyticsInsights.gamesNeedingAttention.percentage}%)
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">No checks or &gt;6 months</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <Package className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Underutilized Games</h3>
+                  <p className="text-2xl font-bold text-blue-600 mt-1">
+                    {analyticsInsights.underutilizedGames.count} ({analyticsInsights.underutilizedGames.percentage}%)
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">Never played</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Charts */}
         {chartData && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Changes by Day - Line Chart */}
+            {/* Activity Over Time - Staff Activity */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Over Time</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Staff Activity Over Time</h3>
+                <div className="flex gap-2">
+                  {staffMembers.slice(0, 2).map((member) => (
+                    <button
+                      key={member.id}
+                      onClick={() => {
+                        setCompareStaff(prev =>
+                          prev.includes(member.id)
+                            ? prev.filter(id => id !== member.id)
+                            : prev.length < 2
+                            ? [...prev, member.id]
+                            : prev
+                        );
+                      }}
+                      className={`px-2 py-1 text-xs rounded ${
+                        compareStaff.includes(member.id)
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {member.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="h-72">
-                <Line
-                  data={{
-                    labels: chartData.changesByDay.map((d) =>
-                      new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    ),
-                    datasets: [
-                      {
-                        label: 'Created',
-                        data: chartData.changesByDay.map((d) => d.created),
-                        borderColor: 'rgb(34, 197, 94)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        fill: true,
-                        tension: 0.4,
+                {chartData.changesByStaffOverTime && chartData.changesByStaffOverTime.length > 0 ? (
+                  <Line
+                    data={{
+                      labels: Array.from(
+                        new Set(chartData.changesByStaffOverTime.map(d => d.date))
+                      ).map(date =>
+                        new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      ),
+                      datasets: Array.from(
+                        new Set(chartData.changesByStaffOverTime.map(d => d.staffName))
+                      ).map((staffName, index) => {
+                        const colors = [
+                          { border: 'rgb(99, 102, 241)', bg: 'rgba(99, 102, 241, 0.1)' },
+                          { border: 'rgb(34, 197, 94)', bg: 'rgba(34, 197, 94, 0.1)' }
+                        ];
+                        const color = colors[index] || colors[0];
+                        return {
+                          label: staffName,
+                          data: Array.from(
+                            new Set(chartData.changesByStaffOverTime?.map(d => d.date))
+                          ).map(date => {
+                            const entry = chartData.changesByStaffOverTime?.find(
+                              d => d.date === date && d.staffName === staffName
+                            );
+                            return entry?.totalActions || 0;
+                          }),
+                          borderColor: color.border,
+                          backgroundColor: color.bg,
+                          fill: true,
+                          tension: 0.4,
+                        };
+                      })
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { mode: 'index', intersect: false },
                       },
-                      {
-                        label: 'Updated',
-                        data: chartData.changesByDay.map((d) => d.updated),
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
+                      scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
                       },
-                      {
-                        label: 'Deleted',
-                        data: chartData.changesByDay.map((d) => d.deleted),
-                        borderColor: 'rgb(239, 68, 68)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                      },
-                      {
-                        label: 'Photos Added',
-                        data: chartData.changesByDay.map((d) => d.photo_added),
-                        borderColor: 'rgb(168, 85, 247)',
-                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'bottom',
-                      },
-                      tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          stepSize: 1,
-                        },
-                      },
-                    },
-                  }}
-                />
+                    }}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    Select staff members above to compare activity
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Changes by Category - Doughnut Chart */}
+            {/* Staff Knowledge Distribution */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Changes by Category</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staff Knowledge Distribution</h3>
               <div className="h-72 flex items-center justify-center">
-                <Doughnut
-                  data={{
-                    labels: ['Board Games', 'Play Logs', 'Staff Knowledge', 'Content Checks'],
-                    datasets: [
-                      {
-                        data: [
-                          chartData.changesByCategory.board_game,
-                          chartData.changesByCategory.play_log,
-                          chartData.changesByCategory.staff_knowledge,
-                          chartData.changesByCategory.content_check,
-                        ],
-                        backgroundColor: [
-                          'rgba(99, 102, 241, 0.8)',
-                          'rgba(251, 191, 36, 0.8)',
-                          'rgba(6, 182, 212, 0.8)',
-                          'rgba(16, 185, 129, 0.8)',
-                        ],
-                        borderColor: [
-                          'rgb(99, 102, 241)',
-                          'rgb(251, 191, 36)',
-                          'rgb(6, 182, 212)',
-                          'rgb(16, 185, 129)',
-                        ],
-                        borderWidth: 2,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'bottom',
-                      },
-                      tooltip: {
-                        callbacks: {
-                          label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${value} (${percentage}%)`;
+                {chartData.staffKnowledgeCounts && chartData.staffKnowledgeCounts.length > 0 ? (
+                  <Doughnut
+                    data={{
+                      labels: chartData.staffKnowledgeCounts.map(s => s.staffName),
+                      datasets: [
+                        {
+                          data: chartData.staffKnowledgeCounts.map(s => s.knowledgeCount),
+                          backgroundColor: [
+                            'rgba(99, 102, 241, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(6, 182, 212, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                          ],
+                          borderColor: [
+                            'rgb(99, 102, 241)',
+                            'rgb(251, 191, 36)',
+                            'rgb(6, 182, 212)',
+                            'rgb(16, 185, 129)',
+                            'rgb(239, 68, 68)',
+                          ],
+                          borderWidth: 2,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              const label = context.label || '';
+                              const value = context.parsed || 0;
+                              const total = (context.dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: ${value} games (${percentage}%)`;
+                            }
                           }
                         }
-                      }
-                    },
-                  }}
-                />
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="text-gray-500">No knowledge data available</div>
+                )}
               </div>
             </div>
 
-            {/* Changes by Staff - Bar Chart */}
-            {chartData.changesByStaff.length > 0 && (
+            {/* Weighted Top Contributors */}
+            {chartData.weightedContributions && chartData.weightedContributions.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Contributors</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Top Contributors (Weighted: Checks×3, Photos×2, Logs×1)
+                </h3>
                 <div className="h-72">
                   <Bar
                     data={{
-                      labels: chartData.changesByStaff.map((s) => s.staffName),
+                      labels: chartData.weightedContributions.map(s => s.staffName),
                       datasets: [
                         {
-                          label: 'Total Changes',
-                          data: chartData.changesByStaff.map((s) => s.totalChanges),
+                          label: 'Total Score',
+                          data: chartData.weightedContributions.map(s => s.totalScore),
                           backgroundColor: 'rgba(99, 102, 241, 0.8)',
                           borderColor: 'rgb(99, 102, 241)',
                           borderWidth: 2,
@@ -501,24 +554,131 @@ export default function ChangelogPage() {
                       responsive: true,
                       maintainAspectRatio: false,
                       plugins: {
-                        legend: {
-                          display: false,
-                        },
+                        legend: { display: false },
                         tooltip: {
                           callbacks: {
                             label: function(context) {
-                              return `Changes: ${context.parsed.y}`;
+                              const staff = chartData.weightedContributions?.[context.dataIndex];
+                              if (!staff) return '';
+                              return [
+                                `Score: ${staff.totalScore} points`,
+                                `Checks: ${staff.contentChecks} (×3)`,
+                                `Photos: ${staff.photos} (×2)`,
+                                `Logs: ${staff.playLogs} (×1)`
+                              ];
                             }
                           }
                         }
                       },
                       scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: {
-                            stepSize: 1,
-                          },
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Additional Insights */}
+        {analyticsInsights && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Knowledge Coverage */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <GraduationCap className="w-6 h-6 text-indigo-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Knowledge Coverage</h3>
+              </div>
+              <div className="text-center">
+                <p className="text-5xl font-bold text-indigo-600">{analyticsInsights.knowledgeCoverage.percentage}%</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {analyticsInsights.knowledgeCoverage.gamesWithKnowledge} of {analyticsInsights.knowledgeCoverage.totalGames} games have staff knowledge
+                </p>
+                <div className="mt-4 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${analyticsInsights.knowledgeCoverage.percentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Teaching Capacity */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <Users className="w-6 h-6 text-cyan-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Teaching Capacity</h3>
+              </div>
+              <div className="space-y-3">
+                {analyticsInsights.teachingCapacity.slice(0, 5).map((teacher, index) => (
+                  <div key={teacher.staffName} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '📚'}</span>
+                      <span className="font-medium text-gray-900">{teacher.staffName}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-cyan-600">{teacher.canTeachCount} games</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Staff Specialization */}
+            {analyticsInsights.staffSpecialization.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Staff Specialization</h3>
+                </div>
+                <div className="space-y-3">
+                  {analyticsInsights.staffSpecialization.slice(0, 5).map((staff) => (
+                    <div key={staff.staffName} className="border-b border-gray-100 pb-2 last:border-0">
+                      <p className="font-medium text-gray-900 mb-1">{staff.staffName}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {staff.topCategories.slice(0, 3).map((cat) => (
+                          <span
+                            key={cat.category}
+                            className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded"
+                          >
+                            {cat.category} ({cat.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Acquisition Trends */}
+            {analyticsInsights.acquisitionTrends.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <Package className="w-6 h-6 text-emerald-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Acquisition Trends (12 Months)</h3>
+                </div>
+                <div className="h-48">
+                  <Bar
+                    data={{
+                      labels: analyticsInsights.acquisitionTrends.map(t => t.period),
+                      datasets: [
+                        {
+                          label: 'Games Acquired',
+                          data: analyticsInsights.acquisitionTrends.map(t => t.count),
+                          backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                          borderColor: 'rgb(16, 185, 129)',
+                          borderWidth: 1,
                         },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                      },
+                      scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
                       },
                     }}
                   />
@@ -610,14 +770,12 @@ export default function ChangelogPage() {
           </div>
         </div>
 
-        {/* Changelog Table */}
+        {/* Activity Log Table */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Activity Log ({totalItems} entries)
-              </h2>
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Activity Log ({totalItems} entries)
+            </h2>
           </div>
 
           {isLoading ? (
