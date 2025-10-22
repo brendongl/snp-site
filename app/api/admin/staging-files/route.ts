@@ -46,7 +46,9 @@ export async function GET(request: NextRequest) {
 
       const content = await fs.readFile(fullPath);
 
-      return new NextResponse(content, {
+      // Convert Buffer to Blob for NextResponse
+      const blob = new Blob([content]);
+      return new NextResponse(blob, {
         headers: {
           'Content-Type': 'application/octet-stream',
           'X-File-Path': filePath,
