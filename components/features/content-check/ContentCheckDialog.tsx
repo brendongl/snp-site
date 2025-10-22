@@ -59,21 +59,28 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
   // Auto-select current staff member from localStorage
   useEffect(() => {
-    if (open && inspectors.length > 0) {
+    if (open && inspectors.length > 0 && !inspector) {
       const staffEmail = localStorage.getItem('staff_email');
       const staffName = localStorage.getItem('staff_name');
 
       if (staffName) {
-        // Find matching inspector by name
+        // Find matching inspector by name (case-insensitive)
         const matchingInspector = inspectors.find(
-          (insp) => insp.name.toLowerCase() === staffName.toLowerCase()
+          (insp) => insp.name.toLowerCase().trim() === staffName.toLowerCase().trim()
         );
-        if (matchingInspector && inspector !== matchingInspector.id) {
+
+        if (matchingInspector) {
           setInspector(matchingInspector.id);
+          console.log('Auto-selected inspector:', matchingInspector.name);
+        } else {
+          console.warn('No matching inspector found for staff name:', staffName);
+          console.log('Available inspectors:', inspectors.map(i => i.name));
         }
+      } else {
+        console.warn('No staff name found in localStorage');
       }
     }
-  }, [open, inspectors]);
+  }, [open, inspectors, inspector]);
 
   const loadInspectors = async () => {
     setLoadingInspectors(true);
@@ -93,13 +100,18 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   const handleSubmit = async () => {
     // Validation with detailed error messaging
     const missingFields: string[] = [];
-    if (!inspector) missingFields.push('Inspector');
     if (!status) missingFields.push('Status');
     if (!boxCondition) missingFields.push('Box Condition');
     if (!cardCondition) missingFields.push('Card Condition');
 
     if (missingFields.length > 0) {
       alert(`Please fill in all required fields:\n${missingFields.join(', ')}`);
+      return;
+    }
+
+    // If inspector is not set (auto-selection failed), show specific error
+    if (!inspector) {
+      alert('Unable to identify inspector. Please ensure you are logged in as staff.');
       return;
     }
 

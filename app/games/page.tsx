@@ -442,53 +442,61 @@ function GamesPageContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Sticky Header */}
+      {/* Sticky Header - Always visible, minimal on mobile */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container mx-auto px-4 py-4 max-w-full">
-          <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl md:text-3xl font-bold">Board Game Collection</h1>
-                <div
-                  className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help"
-                  title={`Build date: ${BUILD_DATE}`}
-                >
-                  v{VERSION}
-                </div>
+        <div className="container mx-auto px-4 py-3 max-w-full">
+          {/* Main header row - always visible */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Title and version - always visible */}
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">Board Game Collection</h1>
+              <div
+                className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
+                title={`Build date: ${BUILD_DATE}`}
+              >
+                v{VERSION}
               </div>
-              <p className="text-sm text-muted-foreground">
-                Showing {games.length} games
-              </p>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
-          {!isStaff && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStaffLogin(true)}
-            >
-              🔐 Staff Login
-            </Button>
-          )}
-          {isAdmin && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowAddGameDialog(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Add Boardgame</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          )}
-          {isStaff && <StaffMenu />}
+
+            {/* Action buttons - always visible */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!isStaff && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowStaffLogin(true)}
+                  className="whitespace-nowrap"
+                >
+                  <span className="hidden sm:inline">🔐 Staff Login</span>
+                  <span className="sm:hidden">🔐</span>
+                </Button>
+              )}
+              {isAdmin && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowAddGameDialog(true)}
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Add Boardgame</span>
+                </Button>
+              )}
+              {isStaff && <StaffMenu />}
             </div>
           </div>
+
+          {/* Secondary info - hidden on small screens when filters are collapsed */}
+          {!isHeaderCollapsed && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Showing {games.length} games
+            </div>
+          )}
         </div>
       </div>
 
       {/* Search and Filters - Collapsible */}
-      <div className="sticky top-16 z-30 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
+      <div className="sticky top-[3.75rem] sm:top-[4rem] md:top-[4.5rem] z-30 bg-background pb-4 mb-6 -mx-4 px-4 shadow-sm border-b transition-all duration-300">
         {isHeaderCollapsed ? (
           // Collapsed view - slim bar with active filters
           <div className="flex items-center justify-between gap-2 py-2 flex-wrap">

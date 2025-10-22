@@ -6,6 +6,39 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, User, Activity, Filter, Download, TrendingUp, Users, Package, CheckCircle } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData } from '@/types';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line, Doughnut, Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+interface StaffMember {
+  id: string;
+  name: string;
+}
 
 export default function ChangelogPage() {
   const router = useRouter();
@@ -19,6 +52,7 @@ export default function ChangelogPage() {
   const [chartData, setChartData] = useState<ChangelogChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +90,27 @@ export default function ChangelogPage() {
     setStaffName(name);
     setStaffId(id);
   }, [router, isAdmin]);
+
+  // Fetch staff members for filter dropdown
+  useEffect(() => {
+    const fetchStaffMembers = async () => {
+      try {
+        const response = await fetch('/api/staff-list');
+        if (response.ok) {
+          const data = await response.json();
+          const members = data.staff.map((s: any) => ({
+            id: s.stafflist_id,
+            name: s.staff_name,
+          }));
+          setStaffMembers(members);
+        }
+      } catch (err) {
+        console.error('Failed to fetch staff members:', err);
+      }
+    };
+
+    fetchStaffMembers();
+  }, []);
 
   // Fetch changelog data
   useEffect(() => {
@@ -261,6 +316,182 @@ export default function ChangelogPage() {
           </div>
         )}
 
+        {/* Charts */}
+        {chartData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Changes by Day - Line Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Over Time</h3>
+              <div className="h-72">
+                <Line
+                  data={{
+                    labels: chartData.changesByDay.map((d) =>
+                      new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ),
+                    datasets: [
+                      {
+                        label: 'Created',
+                        data: chartData.changesByDay.map((d) => d.created),
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                      },
+                      {
+                        label: 'Updated',
+                        data: chartData.changesByDay.map((d) => d.updated),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                      },
+                      {
+                        label: 'Deleted',
+                        data: chartData.changesByDay.map((d) => d.deleted),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                      },
+                      {
+                        label: 'Photos Added',
+                        data: chartData.changesByDay.map((d) => d.photo_added),
+                        borderColor: 'rgb(168, 85, 247)',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                      },
+                      tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                      },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          stepSize: 1,
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Changes by Category - Doughnut Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Changes by Category</h3>
+              <div className="h-72 flex items-center justify-center">
+                <Doughnut
+                  data={{
+                    labels: ['Board Games', 'Play Logs', 'Staff Knowledge', 'Content Checks'],
+                    datasets: [
+                      {
+                        data: [
+                          chartData.changesByCategory.board_game,
+                          chartData.changesByCategory.play_log,
+                          chartData.changesByCategory.staff_knowledge,
+                          chartData.changesByCategory.content_check,
+                        ],
+                        backgroundColor: [
+                          'rgba(99, 102, 241, 0.8)',
+                          'rgba(251, 191, 36, 0.8)',
+                          'rgba(6, 182, 212, 0.8)',
+                          'rgba(16, 185, 129, 0.8)',
+                        ],
+                        borderColor: [
+                          'rgb(99, 102, 241)',
+                          'rgb(251, 191, 36)',
+                          'rgb(6, 182, 212)',
+                          'rgb(16, 185, 129)',
+                        ],
+                        borderWidth: 2,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                          }
+                        }
+                      }
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Changes by Staff - Bar Chart */}
+            {chartData.changesByStaff.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Contributors</h3>
+                <div className="h-72">
+                  <Bar
+                    data={{
+                      labels: chartData.changesByStaff.map((s) => s.staffName),
+                      datasets: [
+                        {
+                          label: 'Total Changes',
+                          data: chartData.changesByStaff.map((s) => s.totalChanges),
+                          backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                          borderColor: 'rgb(99, 102, 241)',
+                          borderWidth: 2,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              return `Changes: ${context.parsed.y}`;
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          ticks: {
+                            stepSize: 1,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
@@ -312,6 +543,21 @@ export default function ChangelogPage() {
                 <option value="play_log">Play Logs</option>
                 <option value="staff_knowledge">Staff Knowledge</option>
                 <option value="content_check">Content Checks</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Staff Member</label>
+              <select
+                value={filters.staffId || ''}
+                onChange={(e) => handleFilterChange('staffId', e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">All Staff</option>
+                {staffMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex items-center">
