@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BoardGame } from '@/types';
-import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil, Upload } from 'lucide-react';
 import { ContentCheckBadge } from '@/components/features/content-check/ContentCheckBadge';
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
@@ -145,6 +145,17 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                   >
                     <Pencil className="w-4 h-4" />
                     Edit Game
+                  </Button>
+                )}
+                {!isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEditGame(true)}
+                    className="gap-2 w-full sm:w-auto"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Add Photos
                   </Button>
                 )}
                 <Button
@@ -468,13 +479,14 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
           />
         )}
 
-        {/* Edit Game Dialog */}
-        {isAdmin && (
+        {/* Edit Game Dialog (Admin = full edit, Staff = photos only) */}
+        {isStaff && (
           <EditGameDialog
             game={game}
             open={showEditGame}
             onClose={() => setShowEditGame(false)}
             onSave={onRefresh}
+            staffMode={!isAdmin}
           />
         )}
       </DialogContent>

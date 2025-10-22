@@ -17,9 +17,10 @@ interface EditGameDialogProps {
   open: boolean;
   onClose: () => void;
   onSave?: () => void;
+  staffMode?: boolean; // If true, only show photo upload (no editing or deleting)
 }
 
-export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogProps) {
+export function EditGameDialog({ game, open, onClose, onSave, staffMode = false }: EditGameDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -192,7 +193,9 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Game: {game.fields['Game Name']}</DialogTitle>
+          <DialogTitle>
+            {staffMode ? `Add Photos: ${game.fields['Game Name']}` : `Edit Game: ${game.fields['Game Name']}`}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -202,6 +205,9 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
             </div>
           )}
 
+          {/* Edit Fields - Admin Only */}
+          {!staffMode && (
+          <>
           {/* Game Name */}
           <div>
             <label className="block text-sm font-medium mb-2">Game Name</label>
@@ -319,9 +325,11 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
               />
             </div>
           </div>
+          </>
+          )}
 
           {/* Image Management */}
-          <div className="border-t pt-4 mt-6">
+          <div className={staffMode ? "" : "border-t pt-4 mt-6"}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium">Game Images</h3>
               <Button
@@ -366,15 +374,17 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteImage(image.hash)}
-                      className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                      disabled={isLoading || uploadingImage}
-                      title="Delete image"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {!staffMode && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteImage(image.hash)}
+                        className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        disabled={isLoading || uploadingImage}
+                        title="Delete image"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
                       #{index + 1}
                     </div>
@@ -389,39 +399,43 @@ export function EditGameDialog({ game, open, onClose, onSave }: EditGameDialogPr
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between items-center">
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isLoading || uploadingImage}
-            className="gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Game
-          </Button>
+        <DialogFooter className={staffMode ? "" : "flex justify-between items-center"}>
+          {!staffMode && (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isLoading || uploadingImage}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Game
+            </Button>
+          )}
 
           <div className="flex gap-2">
             <Button
               variant="outline"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isLoading || uploadingImage}
             >
-              Cancel
+              {staffMode ? 'Close' : 'Cancel'}
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+            {!staffMode && (
+              <Button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>
