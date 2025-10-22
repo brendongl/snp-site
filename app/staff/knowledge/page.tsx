@@ -1,13 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
-
-// Force dynamic rendering (no static generation)
-export const dynamic = 'force-dynamic';
 
 interface StaffKnowledgeEntry {
   id: string;
@@ -29,9 +26,8 @@ interface GroupedGame {
 const RECORDS_PER_PAGE = 20;
 const CONFIDENCE_LEVELS = ['Beginner', 'Intermediate', 'Expert', 'Instructor'];
 
-function KnowledgePageContent() {
+export default function KnowledgePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const isAdmin = useAdminMode();
   const [staffName, setStaffName] = useState<string | null>(null);
   const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
@@ -47,14 +43,19 @@ function KnowledgePageContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
 
-  // Check if coming from successful knowledge addition
+  // Check if coming from successful knowledge addition - only after mount
   useEffect(() => {
-    const fromAdd = searchParams?.get('fromAdd');
-    if (fromAdd === 'true') {
-      setShowMyKnowledgeOnly(true);
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromAdd = urlParams.get('fromAdd');
+      if (fromAdd === 'true') {
+        setShowMyKnowledgeOnly(true);
+      }
     }
-  }, [searchParams]);
+  }, []);
 
   // Check authentication
   useEffect(() => {
@@ -601,24 +602,5 @@ function KnowledgePageContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function KnowledgePage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Zap className="w-8 h-8 mx-auto mb-2 animate-pulse text-blue-600" />
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    }>
-      <KnowledgePageContent />
-    </Suspense>
   );
 }

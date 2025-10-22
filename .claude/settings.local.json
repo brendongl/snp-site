@@ -11,7 +11,8 @@
       "Bash(PGPASSWORD=\"mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST\" psql:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node:*)",
       "Bash(npm install:*)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node -e:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node -e:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
