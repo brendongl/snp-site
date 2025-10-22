@@ -37,8 +37,21 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     categories: game?.fields.Categories?.join(', ') || '',
   });
 
+  // Image staging state - track pending uploads and deletions
+  const [pendingUploads, setPendingUploads] = useState<File[]>([]);
+  const [pendingDeletions, setPendingDeletions] = useState<Set<string>>(new Set());
+
   // Get current images from the game
   const currentImages = game?.images || [];
+
+  // Reset pending changes when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setPendingUploads([]);
+      setPendingDeletions(new Set());
+      setError(null);
+    }
+  }, [open]);
 
   if (!game) return null;
 
@@ -50,68 +63,37 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadingImage(true);
-    setError(null);
+    // Stage files for upload (don't upload immediately)
+    const newFiles = Array.from(files);
+    setPendingUploads(prev => [...prev, ...newFiles]);
 
-    try {
-      const formData = new FormData();
-      formData.append('gameId', game.id);
-
-      // Add all selected files
-      Array.from(files).forEach((file) => {
-        formData.append('images', file);
-      });
-
-      const response = await fetch(`/api/games/${game.id}/images`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to upload images');
-      }
-
-      // Refresh the game data and close dialog
-      onSave?.();
-      onClose(); // Close dialog to show refreshed data when reopened
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload images');
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    // Clear input so same file can be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleDeleteImage = async (imageHash: string) => {
-    if (!confirm('Are you sure you want to delete this image?')) {
-      return;
-    }
+  const handleDeleteImage = (imageHash: string) => {
+    // Stage image for deletion (don't delete immediately)
+    setPendingDeletions(prev => new Set(prev).add(imageHash));
+  };
 
-    setError(null);
+  const handleRemovePendingUpload = (index: number) => {
+    // Remove a staged upload before it's been saved
+    setPendingUploads(prev => prev.filter((_, i) => i !== index));
+  };
 
-    try {
-      const response = await fetch(`/api/games/${game.id}/images/${imageHash}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete image');
-      }
-
-      // Refresh the game data and close dialog
-      onSave?.();
-      onClose(); // Close dialog to show refreshed data when reopened
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete image');
-    }
+  const handleUndoDelete = (imageHash: string) => {
+    // Undo a pending deletion
+    setPendingDeletions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imageHash);
+      return newSet;
+    });
   };
 
   const handleSave = async () => {
@@ -119,30 +101,69 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/games/${game.id}/edit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameName: formData.gameName,
-          description: formData.description,
-          yearReleased: formData.yearReleased ? parseInt(formData.yearReleased as string) : null,
-          minPlayers: formData.minPlayers,
-          maxPlayers: formData.maxPlayers,
-          complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
-          dateAcquired: formData.dateAcquired,
-          categories: formData.categories.split(',').map(c => c.trim()).filter(c => c.length > 0),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update game');
+      // Step 1: Process pending image deletions
+      if (pendingDeletions.size > 0) {
+        for (const imageHash of pendingDeletions) {
+          const response = await fetch(`/api/games/${game.id}/images/${imageHash}`, {
+            method: 'DELETE',
+          });
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || `Failed to delete image ${imageHash}`);
+          }
+        }
       }
+
+      // Step 2: Process pending image uploads
+      if (pendingUploads.length > 0) {
+        const imageFormData = new FormData();
+        imageFormData.append('gameId', game.id);
+        pendingUploads.forEach((file) => {
+          imageFormData.append('images', file);
+        });
+
+        const uploadResponse = await fetch(`/api/games/${game.id}/images`, {
+          method: 'POST',
+          body: imageFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const data = await uploadResponse.json();
+          throw new Error(data.error || 'Failed to upload images');
+        }
+      }
+
+      // Step 3: Save game metadata (only in admin mode)
+      if (!staffMode) {
+        const response = await fetch(`/api/games/${game.id}/edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameName: formData.gameName,
+            description: formData.description,
+            yearReleased: formData.yearReleased ? parseInt(formData.yearReleased as string) : null,
+            minPlayers: formData.minPlayers,
+            maxPlayers: formData.maxPlayers,
+            complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
+            dateAcquired: formData.dateAcquired,
+            categories: formData.categories.split(',').map(c => c.trim()).filter(c => c.length > 0),
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to update game');
+        }
+      }
+
+      // Clear pending changes
+      setPendingUploads([]);
+      setPendingDeletions(new Set());
 
       onSave?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save game');
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
     } finally {
       setIsLoading(false);
     }
@@ -362,31 +383,76 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
               />
             </div>
 
-            {/* Current Images */}
-            {currentImages.length > 0 ? (
+            {/* Current and Pending Images */}
+            {currentImages.length > 0 || pendingUploads.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {currentImages.map((image, index) => (
-                  <div key={image.hash} className="relative group">
-                    <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                {/* Existing Images */}
+                {currentImages.map((image, index) => {
+                  const isMarkedForDeletion = pendingDeletions.has(image.hash);
+                  return (
+                    <div key={image.hash} className="relative group">
+                      <div className={`aspect-square rounded-lg overflow-hidden border ${
+                        isMarkedForDeletion ? 'border-destructive opacity-50' : 'border-border'
+                      } bg-muted`}>
+                        <img
+                          src={`/api/images/${image.hash}`}
+                          alt={`Game image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        {isMarkedForDeletion && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                            <span className="text-white font-medium">Will be deleted</span>
+                          </div>
+                        )}
+                      </div>
+                      {!staffMode && (
+                        <button
+                          type="button"
+                          onClick={() => isMarkedForDeletion ? handleUndoDelete(image.hash) : handleDeleteImage(image.hash)}
+                          className={`absolute top-2 right-2 p-1.5 rounded-md transition-all shadow-lg z-10 ${
+                            isMarkedForDeletion
+                              ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+                              : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                          }`}
+                          disabled={isLoading}
+                          title={isMarkedForDeletion ? "Undo delete" : "Delete image"}
+                        >
+                          {isMarkedForDeletion ? <X className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
+                      )}
+                      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                        #{index + 1}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Pending Uploads */}
+                {pendingUploads.map((file, index) => (
+                  <div key={`pending-${index}`} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden border border-primary bg-muted">
                       <img
-                        src={`/api/images/${image.hash}`}
-                        alt={`Game image ${index + 1}`}
+                        src={URL.createObjectURL(file)}
+                        alt={`New upload ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                        <span className="text-primary-foreground font-medium bg-primary px-2 py-1 rounded text-xs">
+                          New
+                        </span>
+                      </div>
                     </div>
-                    {!staffMode && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteImage(image.hash)}
-                        className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                        disabled={isLoading || uploadingImage}
-                        title="Delete image"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePendingUpload(index)}
+                      className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all shadow-lg z-10"
+                      disabled={isLoading}
+                      title="Remove upload"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
-                      #{index + 1}
+                      New #{index + 1}
                     </div>
                   </div>
                 ))}
@@ -420,7 +486,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             >
               {staffMode ? 'Close' : 'Cancel'}
             </Button>
-            {!staffMode && (
+            {/* Show Save Changes for admin always, or for staff when there are pending image changes */}
+            {(!staffMode || pendingUploads.length > 0 || pendingDeletions.size > 0) && (
               <Button
                 onClick={handleSave}
                 disabled={isLoading}

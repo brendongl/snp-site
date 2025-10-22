@@ -476,6 +476,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
             onClose={() => setShowAddKnowledge(false)}
             gameId={game.id}
             gameName={game.fields['Game Name']}
+            onSuccess={onRefresh}
           />
         )}
 

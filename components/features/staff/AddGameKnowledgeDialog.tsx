@@ -12,6 +12,7 @@ interface AddGameKnowledgeDialogProps {
   onClose: () => void;
   gameId: string;
   gameName: string;
+  onSuccess?: () => void; // Callback to refresh parent data after successful knowledge addition
 }
 
 interface StaffMember {
@@ -27,8 +28,9 @@ export function AddGameKnowledgeDialog({
   onClose,
   gameId,
   gameName,
+  onSuccess,
 }: AddGameKnowledgeDialogProps) {
-  const [confidenceLevel, setConfidenceLevel] = useState<string>('Intermediate');
+  const [confidenceLevel, setConfidenceLevel] = useState<string>('');
   const [taughtBy, setTaughtBy] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -150,10 +152,15 @@ export function AddGameKnowledgeDialog({
       }
 
       // Reset form and close
-      setConfidenceLevel('Intermediate');
+      setConfidenceLevel('');
       setTaughtBy('');
       setNotes('');
       onClose();
+
+      // Trigger parent refresh to update UI (e.g., game card badges)
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add game knowledge');
     } finally {

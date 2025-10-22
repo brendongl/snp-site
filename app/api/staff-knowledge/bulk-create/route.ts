@@ -14,10 +14,16 @@ function mapConfidenceLevelToNumber(level: string): number {
   const levelMap: { [key: string]: number } = {
     'Beginner': 1,
     'Intermediate': 2,
-    'Proficient': 3,
-    'Expert': 4,
+    'Expert': 3,
+    'Instructor': 4,
   };
-  return levelMap[level] || 1; // Default to Beginner if unknown
+
+  // Throw error if confidence level is not recognized instead of defaulting
+  if (!levelMap[level]) {
+    throw new Error(`Invalid confidence level: ${level}. Must be one of: Beginner, Intermediate, Expert, Instructor`);
+  }
+
+  return levelMap[level];
 }
 
 export async function POST(req: Request) {
@@ -56,7 +62,7 @@ export async function POST(req: Request) {
           staffMemberId,
           gameId,
           confidenceLevel: confidenceLevelNum,
-          canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Proficient',
+          canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Instructor',
           notes: null,
         });
 

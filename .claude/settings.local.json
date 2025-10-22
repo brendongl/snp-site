@@ -1,18 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node scripts/migrate-staff-table.js \"postgresql://postgres:MMKApndfkrKrRhPyHxvAjWuhLTlKwdQz@centerbeam.proxy.rlwy.net:21795/railway\")",
-      "Bash(git add scripts/migrate-staff-table.js)",
-      "Bash(git commit -m \"fix: Migration script now handles NULL emails gracefully\n\nThe migration script was trying to set staff_email column to NOT NULL,\nbut existing records had NULL values. This caused the migration to fail.\n\nNow the script:\n1. Checks for NULL emails in the column\n2. If NULL values exist, logs a warning and skips the NOT NULL constraint\n3. Instructs user to run the sync endpoint to populate emails\n4. After sync completes, emails can be made NOT NULL\n\nThis allows the migration to complete successfully on existing databases\neven when they have incomplete data.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
-      "Bash(curl -s https://snp-site-staging.up.railway.app/api/games?limit=1)",
-      "Bash(git add lib/version.ts package.json)",
-      "Bash(git commit -m \"v1.3.10 - Update version numbers\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
-      "Bash(git add app/api/debug/staff-list/route.ts)",
-      "Bash(git commit -m \"Add temporary debug endpoint to inspect staff_list table contents\n\nThis endpoint queries PostgreSQL directly and shows all staff records\nincluding staffId and staffListId columns to debug sync issues.\n\nEndpoint: GET /api/debug/staff-list\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
       "Bash(npm run build:*)",
-      "Bash(taskkill:*)"
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

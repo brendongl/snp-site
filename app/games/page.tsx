@@ -84,6 +84,43 @@ function GamesPageContent() {
     }
   };
 
+  // Fetch staff knowledge (extracted for manual refresh)
+  const fetchStaffKnowledge = async () => {
+    if (!isStaff) return;
+
+    try {
+      const staffName = localStorage.getItem('staff_name');
+      if (!staffName) return;
+
+      const response = await fetch('/api/staff-knowledge');
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const knowledge = data.knowledge || [];
+
+      // Create a map of gameId -> confidence level for current staff member
+      const knowledgeMap = new Map<string, string>();
+      knowledge
+        .filter((k: any) => k.staffMember === staffName)
+        .forEach((k: any) => {
+          const matchingGame = games.find(g => g.fields['Game Name'] === k.gameName);
+          if (matchingGame) {
+            knowledgeMap.set(matchingGame.id, k.confidenceLevel);
+          }
+        });
+
+      setStaffKnowledge(knowledgeMap);
+    } catch (err) {
+      console.error('Error fetching staff knowledge:', err);
+    }
+  };
+
+  // Combined refresh function (for modal callbacks)
+  const handleRefresh = async () => {
+    await fetchGames();
+    await fetchStaffKnowledge();
+  };
+
   useEffect(() => {
     fetchGames();
   }, []);
@@ -94,36 +131,6 @@ function GamesPageContent() {
       setStaffKnowledge(new Map());
       return;
     }
-
-    const fetchStaffKnowledge = async () => {
-      try {
-        const staffName = localStorage.getItem('staff_name');
-        if (!staffName) return;
-
-        const response = await fetch('/api/staff-knowledge');
-        if (!response.ok) return;
-
-        const data = await response.json();
-        const knowledge = data.knowledge || [];
-
-        // Create a map of gameId -> confidence level for current staff member
-        const knowledgeMap = new Map<string, string>();
-        knowledge
-          .filter((k: any) => k.staffMember === staffName)
-          .forEach((k: any) => {
-            // Get game ID from the knowledge record
-            // Need to find the game by name since knowledge stores game names
-            const matchingGame = games.find(g => g.fields['Game Name'] === k.gameName);
-            if (matchingGame) {
-              knowledgeMap.set(matchingGame.id, k.confidenceLevel);
-            }
-          });
-
-        setStaffKnowledge(knowledgeMap);
-      } catch (err) {
-        console.error('Error fetching staff knowledge:', err);
-      }
-    };
 
     if (games.length > 0) {
       fetchStaffKnowledge();
@@ -744,7 +751,7 @@ function GamesPageContent() {
         game={selectedGame}
         open={!!selectedGame}
         onClose={() => setSelectedGame(null)}
-        onRefresh={fetchGames}
+        onRefresh={handleRefresh}
       />
 
       {/* Add Game Dialog (Staff Only) */}
