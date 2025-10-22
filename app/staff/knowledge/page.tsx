@@ -76,10 +76,10 @@ export default function KnowledgePage() {
   // Get unique staff members for dropdown
   const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
 
-  // Normalize name for comparison (case-insensitive, trim whitespace, normalize hyphens)
+  // Normalize name for comparison (case-insensitive, remove all spaces and hyphens)
   const normalizeName = (name: string | null | undefined): string => {
     if (!name) return '';
-    return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[-–—]/g, '-');
+    return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
   };
 
   // Filter and sort knowledge
@@ -337,7 +337,7 @@ export default function KnowledgePage() {
                       idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
                     }`}>
                       <div className="col-span-2 text-sm">{entry.gameName}</div>
-                      <div className="col-span-2 text-sm">{entry.staffMember}</div>
+                      <div className="col-span-2 text-sm">{normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}</div>
                       <select
                         value={editingData?.confidenceLevel || ''}
                         onChange={(e) => setEditingData(prev => prev ? {
@@ -400,7 +400,7 @@ export default function KnowledgePage() {
                         {entry.gameName}
                       </div>
                       <div className="col-span-2 text-muted-foreground">
-                        {entry.staffMember}
+                        {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
                       </div>
                       <div className="col-span-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>

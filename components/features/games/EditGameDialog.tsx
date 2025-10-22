@@ -27,6 +27,19 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
+  // Helper function to format date for input[type="date"]
+  const formatDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString) return '';
+    try {
+      // Extract just the date part (YYYY-MM-DD) from ISO timestamp
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+
   const [formData, setFormData] = useState({
     gameName: game?.fields['Game Name'] || '',
     description: game?.fields['Description'] || '',
@@ -34,7 +47,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     minPlayers: game?.fields['Min Players'] || '',
     maxPlayers: game?.fields['Max. Players'] || '',
     complexity: game?.fields['Complexity'] || 0,
-    dateAcquired: game?.fields['Date of Aquisition'] || '',
+    dateAcquired: formatDateForInput(game?.fields['Date of Aquisition']),
     categories: game?.fields.Categories || [],
   });
 
@@ -55,7 +68,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         minPlayers: game.fields['Min Players'] || '',
         maxPlayers: game.fields['Max. Players'] || '',
         complexity: game.fields['Complexity'] || 0,
-        dateAcquired: game.fields['Date of Aquisition'] || '',
+        dateAcquired: formatDateForInput(game.fields['Date of Aquisition']),
         categories: game.fields.Categories || [],
       });
     }

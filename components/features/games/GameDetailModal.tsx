@@ -369,25 +369,6 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                 </p>
               </div>
             )}
-
-            {/* Complexity Stars */}
-            {game.fields['Complexity'] && (
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Complexity</h3>
-                <div className="flex gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-6 w-6 rounded-full ${
-                        i < Math.round(game.fields['Complexity']!)
-                          ? 'bg-primary'
-                          : 'bg-muted'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

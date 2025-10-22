@@ -73,6 +73,18 @@ export default function PlayLogsPage() {
   // Get unique staff names for filter dropdown
   const uniqueStaff = Array.from(new Set(playLogs.map(log => log.staffName))).sort();
 
+  // Normalize name for comparison (case-insensitive, remove all spaces and hyphens)
+  const normalizeName = (name: string | null | undefined): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
+  };
+
+  // Check if current user can edit/delete a log (admin or log owner)
+  const canEditLog = (log: PlayLogEntry): boolean => {
+    if (isAdmin) return true;
+    return normalizeName(log.staffName) === normalizeName(staffName);
+  };
+
   // Filter and sort logs
   const filteredAndSortedLogs = [...playLogs]
     .filter(log => {
@@ -287,12 +299,12 @@ export default function PlayLogsPage() {
         {!isLoading && !error && filteredAndSortedLogs.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
-            <div className={`grid ${isAdmin ? 'grid-cols-12' : 'grid-cols-12'} bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0`}>
+            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
               <div className="col-span-2">Date</div>
               <div className="col-span-3">Game</div>
               <div className="col-span-2">Logged By</div>
-              <div className={isAdmin ? 'col-span-3' : 'col-span-5'}>Notes</div>
-              {isAdmin && <div className="col-span-2">Actions</div>}
+              <div className="col-span-3">Notes</div>
+              <div className="col-span-2">Actions</div>
             </div>
 
             {/* Table Rows */}
@@ -356,29 +368,33 @@ export default function PlayLogsPage() {
                       <div className="col-span-2 font-medium">{formatDate(log.sessionDate)}</div>
                       <div className="col-span-3 font-medium text-foreground">{log.gameName || 'Unknown Game'}</div>
                       <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
-                      <div className={`${isAdmin ? 'col-span-3' : 'col-span-5'} text-muted-foreground truncate`} title={log.notes || undefined}>
+                      <div className="col-span-3 text-muted-foreground truncate" title={log.notes || undefined}>
                         {log.notes || '—'}
                       </div>
-                      {isAdmin && (
-                        <div className="col-span-2 flex gap-2">
-                          <button
-                            onClick={() => handleEditLog(log)}
-                            disabled={isDeleting || isSaving}
-                            className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
-                            title="Edit play log"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLog(log.id)}
-                            disabled={isDeleting || isSaving}
-                            className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                            title="Delete play log"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="col-span-2 flex gap-2">
+                        {canEditLog(log) ? (
+                          <>
+                            <button
+                              onClick={() => handleEditLog(log)}
+                              disabled={isDeleting || isSaving}
+                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+                              title="Edit play log"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(log.id)}
+                              disabled={isDeleting || isSaving}
+                              className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                              title="Delete play log"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

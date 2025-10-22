@@ -40,6 +40,12 @@ export function AddGameKnowledgeDialog({
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
 
+  // Normalize name for comparison (case-insensitive, remove all spaces and hyphens)
+  const normalizeName = (name: string | null | undefined): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
+  };
+
   // Fetch staff members from Airtable Staff table when dialog opens
   useEffect(() => {
     if (!isOpen) return;
@@ -59,10 +65,11 @@ export function AddGameKnowledgeDialog({
 
         // Get current staff member's name to filter out
         const currentStaffName = localStorage.getItem('staff_name');
+        const normalizedCurrentName = normalizeName(currentStaffName);
 
         // Extract staff members with their record IDs, filtering out current user
         const staff = (data.staff || [])
-          .filter((member: any) => member.name !== currentStaffName)
+          .filter((member: any) => normalizeName(member.name) !== normalizedCurrentName)
           .map((member: any) => ({
             id: member.id,
             name: member.name,
