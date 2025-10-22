@@ -148,10 +148,10 @@ export async function DELETE(request: Request) {
     let staffId = '';
     try {
       const logDetails = await db.pool.query(`
-        SELECT g.name as game_name, sl.staff_name, pl.staff_id
+        SELECT g.name as game_name, sl.staff_name, sl.staff_id
         FROM play_logs pl
         LEFT JOIN games g ON pl.game_id = g.id
-        LEFT JOIN staff_list sl ON pl.staff_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.stafflist_id
         WHERE pl.id = $1
       `, [recordId]);
 

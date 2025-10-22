@@ -267,7 +267,12 @@ export default function ChangelogPage() {
   };
 
   const handleFilterChange = (key: keyof ChangelogFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    console.log(`[Changelog Page] Filter changed: ${key} = ${value}`);
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value };
+      console.log('[Changelog Page] New filters:', newFilters);
+      return newFilters;
+    });
     setCurrentPage(1);
   };
 
@@ -787,7 +792,12 @@ export default function ChangelogPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Staff Member</label>
               <select
                 value={filters.staffId || ''}
-                onChange={(e) => handleFilterChange('staffId', e.target.value || null)}
+                onChange={(e) => {
+                  const selectedId = e.target.value || null;
+                  const selectedMember = staffMembers.find(m => m.id === selectedId);
+                  console.log('[Staff Filter] Selected:', { id: selectedId, member: selectedMember });
+                  handleFilterChange('staffId', selectedId);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">All Staff</option>
