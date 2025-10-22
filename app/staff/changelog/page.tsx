@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, User, Activity, Filter, Download, TrendingUp, Users, Package, CheckCircle } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
-import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData } from '@/types';
+import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData, AnalyticsInsights } from '@/types';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -49,10 +49,13 @@ export default function ChangelogPage() {
   // Data state
   const [logs, setLogs] = useState<ChangelogEntry[]>([]);
   const [stats, setStats] = useState<ChangelogStats | null>(null);
+  const [previousStats, setPreviousStats] = useState<ChangelogStats | null>(null);
   const [chartData, setChartData] = useState<ChangelogChartData | null>(null);
+  const [analyticsInsights, setAnalyticsInsights] = useState<AnalyticsInsights | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [compareStaff, setCompareStaff] = useState<string[]>([]); // For staff comparison in Activity Over Time
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +115,25 @@ export default function ChangelogPage() {
     fetchStaffMembers();
   }, []);
 
+  // Fetch analytics insights
+  useEffect(() => {
+    if (!staffName || !isAdmin) return;
+
+    const fetchInsights = async () => {
+      try {
+        const response = await fetch('/api/analytics/insights');
+        if (response.ok) {
+          const data = await response.json();
+          setAnalyticsInsights(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch analytics insights:', err);
+      }
+    };
+
+    fetchInsights();
+  }, [staffName, isAdmin]);
+
   // Fetch changelog data
   useEffect(() => {
     if (!staffName || !isAdmin) return;
@@ -169,6 +191,7 @@ export default function ChangelogPage() {
         const params = new URLSearchParams({
           startDate: filters.startDate,
           endDate: filters.endDate,
+          includePreviousPeriod: 'true', // Always fetch previous period for comparison
         });
 
         if (filters.myChangesOnly && staffId) {
@@ -180,10 +203,16 @@ export default function ChangelogPage() {
         if (filters.eventType) params.append('eventType', filters.eventType);
         if (filters.category) params.append('category', filters.category);
 
+        // Add compareStaff parameter if staff are selected
+        if (compareStaff.length > 0) {
+          params.append('compareStaff', compareStaff.join(','));
+        }
+
         const response = await fetch(`/api/changelog/stats?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
           setChartData(data);
+          setPreviousStats(data.previousStats || null);
         }
       } catch (err) {
         console.error('Failed to fetch chart data:', err);
@@ -191,7 +220,7 @@ export default function ChangelogPage() {
     };
 
     fetchChartData();
-  }, [staffName, isAdmin, staffId, filters]);
+  }, [staffName, isAdmin, staffId, filters, compareStaff]);
 
   // Get event type badge color
   const getEventTypeBadge = (eventType: string) => {
@@ -231,6 +260,13 @@ export default function ChangelogPage() {
   const handleFilterChange = (key: keyof ChangelogFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  // Calculate percentage change for stats
+  const calculateChange = (current: number, previous: number): { value: number; isIncrease: boolean } => {
+    if (previous === 0) return { value: current > 0 ? 100 : 0, isIncrease: current > 0 };
+    const change = ((current - previous) / previous) * 100;
+    return { value: Math.abs(change), isIncrease: change >= 0 };
   };
 
   if (!staffName || !isAdmin) {

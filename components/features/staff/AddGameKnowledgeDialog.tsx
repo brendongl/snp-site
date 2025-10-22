@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ export function AddGameKnowledgeDialog({
   gameName,
   onSuccess,
 }: AddGameKnowledgeDialogProps) {
+  const router = useRouter();
   const [confidenceLevel, setConfidenceLevel] = useState<string>('');
   const [taughtBy, setTaughtBy] = useState('Myself'); // Default to "Myself"
   const [notes, setNotes] = useState('');
@@ -173,6 +175,9 @@ export function AddGameKnowledgeDialog({
       if (onSuccess) {
         onSuccess();
       }
+
+      // Redirect to Staff Knowledge page with fromAdd parameter to auto-check "My Knowledge Only"
+      router.push('/staff/knowledge?fromAdd=true');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add game knowledge');
     } finally {

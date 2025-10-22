@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
 interface StaffKnowledgeEntry {
@@ -16,11 +16,19 @@ interface StaffKnowledgeEntry {
   canTeach: boolean;
 }
 
+interface GroupedGame {
+  gameName: string;
+  entries: StaffKnowledgeEntry[];
+  totalPeople: number;
+  canTeachCount: number;
+}
+
 const RECORDS_PER_PAGE = 20;
 const CONFIDENCE_LEVELS = ['Beginner', 'Intermediate', 'Expert', 'Instructor'];
 
-export default function KnowledgePage() {
+function KnowledgePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isAdmin = useAdminMode();
   const [staffName, setStaffName] = useState<string | null>(null);
   const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
@@ -29,12 +37,21 @@ export default function KnowledgePage() {
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [gameNameSearch, setGameNameSearch] = useState<string>('');
-  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(true); // Default to true
+  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{ confidenceLevel: string; notes: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
+
+  // Check if coming from successful knowledge addition
+  useEffect(() => {
+    const fromAdd = searchParams?.get('fromAdd');
+    if (fromAdd === 'true') {
+      setShowMyKnowledgeOnly(true);
+    }
+  }, [searchParams]);
 
   // Check authentication
   useEffect(() => {
@@ -73,59 +90,99 @@ export default function KnowledgePage() {
     fetchKnowledge();
   }, [staffName]);
 
-  // Get unique staff members for dropdown
-  const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
+  // Get unique staff members for dropdown (excluding current user)
+  const uniqueStaff = useMemo(() => {
+    const staffSet = new Set(allKnowledge.map(k => k.staffMember));
+    const staffArray = Array.from(staffSet)
+      .filter(name => normalizeName(name) !== normalizeName(staffName))
+      .sort();
+    return staffArray;
+  }, [allKnowledge, staffName]);
 
-  // Normalize name for comparison (case-insensitive, remove all spaces and hyphens)
+  // Normalize name for comparison
   const normalizeName = (name: string | null | undefined): string => {
     if (!name) return '';
     return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
   };
 
-  // Filter and sort knowledge
-  const filteredAndSortedKnowledge = (() => {
+  // Determine view mode: grouped or list
+  const isListView = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
+
+  // Filter and prepare data
+  const processedData = useMemo(() => {
     let filtered = allKnowledge;
 
-    // Filter to current user if toggle is on
-    if (showMyKnowledgeOnly && staffName) {
-      const normalizedStaffName = normalizeName(staffName);
-      filtered = filtered.filter(k => normalizeName(k.staffMember) === normalizedStaffName);
-    }
-
-    // Filter by selected staff member
-    if (selectedStaff) {
-      filtered = filtered.filter(k => k.staffMember === selectedStaff);
-    }
-
-    // Filter by game name search (partial match, case-insensitive)
+    // Filter by search
     if (gameNameSearch) {
       filtered = filtered.filter(k =>
         k.gameName.toLowerCase().includes(gameNameSearch.toLowerCase())
       );
     }
 
-    // Filter by selected confidence level
+    // Filter by confidence level
     if (selectedConfidence) {
       filtered = filtered.filter(k => k.confidenceLevel === selectedConfidence);
     }
 
-    // Default sort by game name
-    const sorted = [...filtered].sort((a, b) => {
-      return (a.gameName || '').localeCompare(b.gameName || '');
-    });
+    // List view: Filter by specific staff or "My Knowledge Only"
+    if (isListView) {
+      if (showMyKnowledgeOnly) {
+        const normalizedStaffName = normalizeName(staffName);
+        filtered = filtered.filter(k => normalizeName(k.staffMember) === normalizedStaffName);
+      } else if (selectedStaff) {
+        filtered = filtered.filter(k => k.staffMember === selectedStaff);
+      }
 
-    return sorted;
-  })();
+      // Sort by game name for list view
+      return filtered.sort((a, b) => a.gameName.localeCompare(b.gameName));
+    }
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedKnowledge.length / RECORDS_PER_PAGE);
+    // Grouped view: Group by game name
+    const grouped = filtered.reduce((acc, entry) => {
+      if (!acc[entry.gameName]) {
+        acc[entry.gameName] = [];
+      }
+      acc[entry.gameName].push(entry);
+      return acc;
+    }, {} as Record<string, StaffKnowledgeEntry[]>);
+
+    // Convert to array and calculate counts
+    const groupedArray: GroupedGame[] = Object.entries(grouped).map(([gameName, entries]) => ({
+      gameName,
+      entries: entries.sort((a, b) => a.staffMember.localeCompare(b.staffMember)),
+      totalPeople: entries.length,
+      canTeachCount: entries.filter(e => e.canTeach).length,
+    }));
+
+    // Sort by game name
+    return groupedArray.sort((a, b) => a.gameName.localeCompare(b.gameName));
+  }, [allKnowledge, gameNameSearch, selectedConfidence, isListView, showMyKnowledgeOnly, selectedStaff, staffName]);
+
+  // Pagination
+  const totalPages = Math.ceil(
+    (isListView ? (processedData as StaffKnowledgeEntry[]).length : (processedData as GroupedGame[]).length) / RECORDS_PER_PAGE
+  );
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
-  const paginatedKnowledge = filteredAndSortedKnowledge.slice(startIndex, startIndex + RECORDS_PER_PAGE);
+  const paginatedData = Array.isArray(processedData)
+    ? processedData.slice(startIndex, startIndex + RECORDS_PER_PAGE)
+    : [];
 
-  // Reset to page 1 when filtering changes
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [showMyKnowledgeOnly, selectedConfidence, selectedStaff, gameNameSearch]);
+
+  const toggleGameExpansion = (gameName: string) => {
+    setExpandedGames(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gameName)) {
+        newSet.delete(gameName);
+      } else {
+        newSet.add(gameName);
+      }
+      return newSet;
+    });
+  };
 
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm('Are you sure you want to delete this knowledge entry?')) {
@@ -206,6 +263,11 @@ export default function KnowledgePage() {
     }
   };
 
+  const canEditEntry = (entry: StaffKnowledgeEntry): boolean => {
+    if (isAdmin) return true;
+    return normalizeName(entry.staffMember) === normalizeName(staffName);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -228,11 +290,10 @@ export default function KnowledgePage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Controls */}
+        {/* Filters */}
         <div className="mb-6 space-y-4">
-          {/* Filters and Sort */}
           <div className="flex flex-wrap gap-3 items-center">
-            {/* Game Name Search Input */}
+            {/* Game Name Search */}
             <input
               type="text"
               value={gameNameSearch}
@@ -241,7 +302,7 @@ export default function KnowledgePage() {
               className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
 
-            {/* Staff Filter Dropdown */}
+            {/* Staff Filter */}
             <select
               value={selectedStaff || ''}
               onChange={(e) => setSelectedStaff(e.target.value || null)}
@@ -253,7 +314,7 @@ export default function KnowledgePage() {
               ))}
             </select>
 
-            {/* Confidence Level Filter Dropdown */}
+            {/* Confidence Level Filter */}
             <select
               value={selectedConfidence || ''}
               onChange={(e) => setSelectedConfidence(e.target.value || null)}
@@ -266,14 +327,14 @@ export default function KnowledgePage() {
             </select>
 
             {/* My Knowledge Only Checkbox */}
-            <label className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-muted/50 transition-colors">
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background cursor-pointer hover:bg-muted/50 transition-colors">
               <input
                 type="checkbox"
                 checked={showMyKnowledgeOnly}
                 onChange={(e) => setShowMyKnowledgeOnly(e.target.checked)}
                 className="w-4 h-4 rounded cursor-pointer"
               />
-              My Knowledge Only
+              <span className="text-sm font-medium">My Knowledge Only</span>
             </label>
           </div>
         </div>
@@ -281,8 +342,10 @@ export default function KnowledgePage() {
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filteredAndSortedKnowledge.length} record{filteredAndSortedKnowledge.length !== 1 ? 's' : ''}
-            {showMyKnowledgeOnly ? ' of your knowledge' : ''} — Showing page {currentPage} of {totalPages || 1}
+            {isListView
+              ? `${(paginatedData as StaffKnowledgeEntry[]).length} record${(paginatedData as StaffKnowledgeEntry[]).length !== 1 ? 's' : ''}`
+              : `${(paginatedData as GroupedGame[]).length} game${(paginatedData as GroupedGame[]).length !== 1 ? 's' : ''}`
+            } — Page {currentPage} of {totalPages || 1}
           </p>
         </div>
 
@@ -305,7 +368,7 @@ export default function KnowledgePage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filteredAndSortedKnowledge.length === 0 && (
+        {!isLoading && !error && paginatedData.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
               {showMyKnowledgeOnly ? 'No knowledge entries for you' : 'No knowledge entries found'}
@@ -313,170 +376,246 @@ export default function KnowledgePage() {
           </div>
         )}
 
-        {/* Knowledge Table */}
-        {!isLoading && !error && filteredAndSortedKnowledge.length > 0 && (
+        {/* LIST VIEW */}
+        {!isLoading && !error && isListView && paginatedData.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
-              <div className="col-span-2">Game</div>
-              <div className="col-span-2">Staff Member</div>
-              <div className="col-span-2">Confidence Level</div>
-              <div className="col-span-2">Was Taught By</div>
-              <div className="col-span-1">Can Teach</div>
-              <div className="col-span-1">Notes</div>
-              <div className="col-span-1">Actions</div>
+            {/* Table for larger screens */}
+            <div className="hidden sm:block">
+              <table className="w-full">
+                <thead className="bg-muted border-b">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-sm font-semibold">Game</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold">Level</th>
+                    <th className="text-center px-4 py-3 text-sm font-semibold">Can Teach</th>
+                    <th className="text-right px-4 py-3 text-sm font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(paginatedData as StaffKnowledgeEntry[]).map((entry, idx) => (
+                    <tr key={entry.id} className={`${idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'} hover:bg-accent transition-colors`}>
+                      {editingId === entry.id ? (
+                        // Edit Mode
+                        <>
+                          <td className="px-4 py-3 font-medium">{entry.gameName}</td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={editingData?.confidenceLevel || ''}
+                              onChange={(e) => setEditingData(prev => prev ? { ...prev, confidenceLevel: e.target.value } : null)}
+                              className="px-2 py-1 border border-border rounded text-sm bg-background"
+                              disabled={isSaving}
+                            >
+                              {CONFIDENCE_LEVELS.map(level => (
+                                <option key={level} value={level}>{level}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {entry.canTeach ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1 justify-end">
+                              <button
+                                onClick={handleSaveEdit}
+                                disabled={isSaving}
+                                className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => { setEditingId(null); setEditingData(null); }}
+                                disabled={isSaving}
+                                className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        // Normal View
+                        <>
+                          <td className="px-4 py-3 font-medium">{entry.gameName}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
+                              {entry.confidenceLevel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {entry.canTeach ? <span className="text-green-600 font-semibold text-lg">✓</span> : <span className="text-gray-400">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {canEditEntry(entry) && (
+                              <div className="flex gap-1 justify-end">
+                                <button
+                                  onClick={() => handleEditEntry(entry)}
+                                  disabled={isDeleting || isSaving}
+                                  className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEntry(entry.id)}
+                                  disabled={isDeleting || isSaving}
+                                  className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Table Rows */}
-            <div className="divide-y divide-border">
-              {paginatedKnowledge.map((entry, idx) => (
-                <div key={entry.id}>
-                  {editingId === entry.id ? (
-                    // Edit Mode
-                    <div className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center ${
-                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                    }`}>
-                      <div className="col-span-2 text-sm">{entry.gameName}</div>
-                      <div className="col-span-2 text-sm">{normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}</div>
-                      <select
-                        value={editingData?.confidenceLevel || ''}
-                        onChange={(e) => setEditingData(prev => prev ? {
-                          ...prev,
-                          confidenceLevel: e.target.value
-                        } : null)}
-                        className="col-span-2 px-2 py-1 border border-border rounded text-xs bg-background"
-                        disabled={isSaving}
-                      >
-                        {CONFIDENCE_LEVELS.map(level => (
-                          <option key={level} value={level}>{level}</option>
-                        ))}
-                      </select>
-                      <div className="col-span-2 text-sm">{entry.taughtBy || '—'}</div>
-                      <div className="col-span-1">
-                        {entry.canTeach ? (
-                          <span className="text-green-600 font-semibold">✓</span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </div>
-                      <textarea
-                        value={editingData?.notes || ''}
-                        onChange={(e) => setEditingData(prev => prev ? {
-                          ...prev,
-                          notes: e.target.value
-                        } : null)}
-                        className="col-span-1 px-2 py-1 border border-border rounded text-xs bg-background"
-                        rows={2}
-                        disabled={isSaving}
-                      />
-                      <div className="col-span-1 flex gap-1">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={isSaving}
-                          className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(null);
-                            setEditingData(null);
-                          }}
-                          disabled={isSaving}
-                          className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // Normal View
-                    <div
-                      className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
-                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                      }`}
-                    >
-                      <div className="col-span-2 font-medium truncate" title={entry.gameName}>
-                        {entry.gameName}
-                      </div>
-                      <div className="col-span-2 text-muted-foreground">
-                        {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
+            {/* Mobile Card View */}
+            <div className="block sm:hidden divide-y">
+              {(paginatedData as StaffKnowledgeEntry[]).map((entry) => (
+                <div key={entry.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm mb-2">{entry.gameName}</div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
                           {entry.confidenceLevel}
                         </span>
-                      </div>
-                      <div className="col-span-2 text-muted-foreground truncate" title={entry.taughtBy || 'Not specified'}>
-                        {entry.taughtBy || '—'}
-                      </div>
-                      <div className="col-span-1">
-                        {entry.canTeach ? (
-                          <span className="text-green-600 font-semibold">✓</span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </div>
-                      <div className="col-span-1 text-muted-foreground truncate" title={entry.notes}>
-                        {entry.notes || '—'}
-                      </div>
-                      <div className="col-span-1 flex gap-1">
-                        {(isAdmin || entry.staffMember === staffName) ? (
-                          <>
-                            <button
-                              onClick={() => handleEditEntry(entry)}
-                              disabled={isDeleting || isSaving}
-                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
-                              title="Edit entry"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEntry(entry.id)}
-                              disabled={isDeleting || isSaving}
-                              className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                              title="Delete entry"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
+                        {entry.canTeach && <span className="text-green-600 font-semibold">✓ Can Teach</span>}
                       </div>
                     </div>
-                  )}
+                    {canEditEntry(entry) && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleEditEntry(entry)}
+                          className="p-2 text-primary hover:bg-primary/10 rounded"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-4 border-t border-border bg-muted/30">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </button>
-                <div className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
+        {/* GROUPED VIEW */}
+        {!isLoading && !error && !isListView && paginatedData.length > 0 && (
+          <div className="space-y-2">
+            {(paginatedData as GroupedGame[]).map((group) => {
+              const isExpanded = expandedGames.has(group.gameName);
+
+              return (
+                <div key={group.gameName} className="border border-border rounded-lg overflow-hidden bg-white">
+                  {/* Collapsed Row */}
+                  <div
+                    className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleGameExpansion(group.gameName)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button className="text-muted-foreground hover:text-foreground transition-colors">
+                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </button>
+                      <div className="font-semibold text-sm truncate">{group.gameName}</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="px-2 py-1 bg-gray-100 rounded whitespace-nowrap">
+                        {group.totalPeople} {group.totalPeople === 1 ? 'person' : 'people'}
+                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded whitespace-nowrap">
+                        {group.canTeachCount} can teach
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t divide-y bg-gray-50">
+                      {group.entries.map((entry) => (
+                        <div key={entry.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-sm text-muted-foreground w-32 truncate">
+                              {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
+                              {entry.confidenceLevel}
+                            </span>
+                            {entry.canTeach && <span className="text-green-600 font-semibold text-sm">✓</span>}
+                          </div>
+                          {canEditEntry(entry) && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
+                                className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && !error && paginatedData.length > 0 && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border rounded text-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 border rounded text-sm hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function KnowledgePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Zap className="w-8 h-8 mx-auto mb-2 animate-pulse text-blue-600" />
+              <p className="text-sm text-muted-foreground">Loading Staff Knowledge...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <KnowledgePageContent />
+    </Suspense>
   );
 }

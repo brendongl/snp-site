@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution 3: Compact Badge Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Solution 3: Compact Badge Layout</h1>
+        <p class="text-sm text-gray-600 mb-6">
+            ✅ Pros: Dense info display, visual icons, no horizontal scroll<br>
+            ❌ Cons: May still feel cramped on very small screens
+        </p>
+
+        <!-- Filters (compact) -->
+        <div class="mb-4 flex gap-2 flex-wrap">
+            <input type="text" placeholder="Search games..." class="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm">
+            <select class="px-3 py-2 border rounded-lg text-sm">
+                <option>All Levels</option>
+                <option>Beginner</option>
+                <option>Intermediate</option>
+                <option>Expert</option>
+                <option>Instructor</option>
+            </select>
+        </div>
+
+        <p class="text-xs text-gray-500 mb-3">32 records • Showing page 1 of 2</p>
+
+        <!-- Compact Badge Layout -->
+        <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
+            <!-- Header - Icon-based for mobile -->
+            <div class="bg-gray-100 border-b">
+                <div class="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-semibold">
+                    <div class="col-span-5 sm:col-span-4">Game</div>
+                    <div class="col-span-3 sm:col-span-2 text-center">Level</div>
+                    <div class="col-span-2 sm:col-span-3 text-center hidden sm:block">Info</div>
+                    <div class="col-span-2 sm:col-span-2 text-center">By</div>
+                    <div class="col-span-2 sm:col-span-1 text-right">Action</div>
+                </div>
+            </div>
+
+            <div class="divide-y">
+                <!-- Row 1 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Wingspan">
+                        Wingspan
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] sm:text-xs font-medium">Expert</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-green-600 font-semibold" title="Can Teach">✓</span>
+                        <span class="text-gray-400">•</span>
+                        <span class="text-gray-600 truncate" title="Has notes">📝</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Emily Davis">
+                        Emily
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Catan">
+                        Catan
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px] sm:text-xs font-medium">Inter.</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-gray-400" title="Can't Teach Yet">✗</span>
+                        <span class="text-gray-400">•</span>
+                        <span class="text-gray-600 truncate" title="Has notes">📝</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Sarah Johnson">
+                        Sarah
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Ticket to Ride">
+                        Ticket to Ride
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] sm:text-xs font-medium">Begin.</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-gray-400" title="Can't Teach Yet">✗</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Self-learned">
+                        —
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Azul">
+                        Azul
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] sm:text-xs font-medium">Instr.</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-green-600 font-semibold" title="Can Teach">✓</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Myself">
+                        Myself
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="7 Wonders Duel">
+                        7 Wonders Duel
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] sm:text-xs font-medium">Expert</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-green-600 font-semibold" title="Can Teach">✓</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Michael Chen">
+                        Michael
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 6 -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Splendor">
+                        Splendor
+                    </div>
+                    <div class="col-span-3 sm:col-span-2 flex justify-center">
+                        <span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px] sm:text-xs font-medium">Inter.</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center gap-1.5 text-xs">
+                        <span class="text-gray-400" title="Can't Teach Yet">✗</span>
+                        <span class="text-gray-400">•</span>
+                        <span class="text-gray-600 truncate" title="Has notes">📝</span>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate" title="Myself">
+                        Myself
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-1">
+                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 7 - Edit Mode Example -->
+                <div class="grid grid-cols-12 gap-2 px-3 py-2.5 text-sm bg-blue-50 border-2 border-blue-200 items-center">
+                    <div class="col-span-5 sm:col-span-4 font-medium truncate" title="Pandemic">
+                        Pandemic
+                    </div>
+                    <div class="col-span-3 sm:col-span-2">
+                        <select class="w-full px-1 py-0.5 border rounded text-[10px] sm:text-xs bg-white">
+                            <option>Beginner</option>
+                            <option selected>Intermediate</option>
+                            <option>Expert</option>
+                            <option>Instructor</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3 hidden sm:flex justify-center">
+                        <input type="text" placeholder="Notes..." class="w-full px-1 py-0.5 border rounded text-xs bg-white">
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 text-center text-[10px] sm:text-xs text-gray-600 truncate">
+                        Alex
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 flex justify-end gap-0.5">
+                        <button class="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px] hover:bg-blue-700">
+                            ✓
+                        </button>
+                        <button class="px-1.5 py-0.5 bg-gray-200 text-gray-700 rounded text-[10px] hover:bg-gray-300">
+                            ✗
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend for symbols (helpful for mobile) -->
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-xs font-semibold mb-2">Legend:</p>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div><span class="text-green-600 font-semibold">✓</span> Can teach</div>
+                <div><span class="text-gray-400">✗</span> Can't teach yet</div>
+                <div><span>📝</span> Has notes</div>
+                <div><span class="text-gray-600">—</span> Not specified</div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex justify-center gap-2">
+            <button class="px-3 py-1.5 border rounded text-sm disabled:opacity-50" disabled>Previous</button>
+            <button class="px-3 py-1.5 bg-blue-600 text-white rounded text-sm">1</button>
+            <button class="px-3 py-1.5 border rounded text-sm hover:bg-gray-50">2</button>
+            <button class="px-3 py-1.5 border rounded text-sm hover:bg-gray-50">Next</button>
+        </div>
+    </div>
+</body>
+</html>
