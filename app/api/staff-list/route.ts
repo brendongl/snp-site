@@ -8,6 +8,11 @@ export async function GET(request: Request) {
     // Fetch staff list from PostgreSQL cache
     const staff = await getStaffList();
 
+    console.log(`[API /staff-list] Fetched ${staff.length} staff members`);
+    if (staff.length > 0) {
+      console.log('[API /staff-list] Sample staff member:', staff[0]);
+    }
+
     return NextResponse.json({
       staff,
       count: staff.length,

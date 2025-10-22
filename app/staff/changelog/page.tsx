@@ -100,11 +100,19 @@ export default function ChangelogPage() {
         const response = await fetch('/api/staff-list');
         if (response.ok) {
           const data = await response.json();
-          const members = data.staff.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-          }));
-          setStaffMembers(members);
+          console.log('Staff list API response:', data);
+          if (data.staff && Array.isArray(data.staff)) {
+            const members = data.staff.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+            }));
+            console.log('Mapped staff members:', members);
+            setStaffMembers(members);
+          } else {
+            console.error('Invalid staff data format:', data);
+          }
+        } else {
+          console.error('Failed to fetch staff list:', response.status, response.statusText);
         }
       } catch (err) {
         console.error('Failed to fetch staff members:', err);
@@ -776,6 +784,9 @@ export default function ChangelogPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">All Staff</option>
+                {staffMembers.length === 0 && (
+                  <option disabled>Loading staff...</option>
+                )}
                 {staffMembers.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.name}
