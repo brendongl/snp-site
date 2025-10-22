@@ -109,11 +109,14 @@ export default function KnowledgePage() {
     return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
   };
 
-  // Determine view mode: grouped or list
+  // Determine view mode (calculate here for external use, don't include in useMemo deps)
   const isListView = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
 
   // Filter and prepare data
   const processedData = useMemo(() => {
+    // Use the same logic to determine view mode
+    const listViewMode = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
+
     let filtered = allKnowledge;
 
     // Filter by search
@@ -129,7 +132,7 @@ export default function KnowledgePage() {
     }
 
     // List view: Filter by specific staff or "My Knowledge Only"
-    if (isListView) {
+    if (listViewMode) {
       if (showMyKnowledgeOnly) {
         const normalizedStaffName = normalizeName(staffName);
         filtered = filtered.filter(k => normalizeName(k.staffMember) === normalizedStaffName);
@@ -160,7 +163,7 @@ export default function KnowledgePage() {
 
     // Sort by game name
     return groupedArray.sort((a, b) => a.gameName.localeCompare(b.gameName));
-  }, [allKnowledge, gameNameSearch, selectedConfidence, isListView, showMyKnowledgeOnly, selectedStaff, staffName]);
+  }, [allKnowledge, gameNameSearch, selectedConfidence, showMyKnowledgeOnly, selectedStaff, staffName]);
 
   // Pagination
   const totalPages = Math.ceil(
