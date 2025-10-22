@@ -26,11 +26,10 @@ export default function KnowledgePage() {
   const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'staff' | 'confidence'>('staff');
   const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
-  const [selectedGameName, setSelectedGameName] = useState<string | null>(null);
-  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(false);
+  const [gameNameSearch, setGameNameSearch] = useState<string>('');
+  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(true); // Default to true
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{ confidenceLevel: string; notes: string } | null>(null);
@@ -74,9 +73,8 @@ export default function KnowledgePage() {
     fetchKnowledge();
   }, [staffName]);
 
-  // Get unique staff members and game names for dropdowns
+  // Get unique staff members for dropdown
   const uniqueStaff = Array.from(new Set(allKnowledge.map(k => k.staffMember))).sort();
-  const uniqueGameNames = Array.from(new Set(allKnowledge.map(k => k.gameName))).sort();
 
   // Filter and sort knowledge
   const filteredAndSortedKnowledge = (() => {
@@ -92,25 +90,21 @@ export default function KnowledgePage() {
       filtered = filtered.filter(k => k.staffMember === selectedStaff);
     }
 
-    // Filter by selected game name
-    if (selectedGameName) {
-      filtered = filtered.filter(k => k.gameName === selectedGameName);
+    // Filter by game name search (partial match, case-insensitive)
+    if (gameNameSearch) {
+      filtered = filtered.filter(k =>
+        k.gameName.toLowerCase().includes(gameNameSearch.toLowerCase())
+      );
     }
 
-    // Filter by selected confidence level (not removed, just moving to filtering not sorting)
+    // Filter by selected confidence level
     if (selectedConfidence) {
       filtered = filtered.filter(k => k.confidenceLevel === selectedConfidence);
     }
 
-    // Sort based on selected sort option
+    // Default sort by game name
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'confidence') {
-        const confidenceOrder = { 'Beginner': 0, 'Intermediate': 1, 'Expert': 2, 'Instructor': 3 };
-        return (confidenceOrder[a.confidenceLevel as keyof typeof confidenceOrder] || 0) -
-               (confidenceOrder[b.confidenceLevel as keyof typeof confidenceOrder] || 0);
-      }
-      // Default: sort by staff member
-      return (a.staffMember || '').localeCompare(b.staffMember || '');
+      return (a.gameName || '').localeCompare(b.gameName || '');
     });
 
     return sorted;
@@ -121,10 +115,10 @@ export default function KnowledgePage() {
   const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
   const paginatedKnowledge = filteredAndSortedKnowledge.slice(startIndex, startIndex + RECORDS_PER_PAGE);
 
-  // Reset to page 1 when filtering or sorting changes
+  // Reset to page 1 when filtering changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, showMyKnowledgeOnly, selectedConfidence, selectedStaff, selectedGameName]);
+  }, [showMyKnowledgeOnly, selectedConfidence, selectedStaff, gameNameSearch]);
 
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm('Are you sure you want to delete this knowledge entry?')) {
@@ -231,17 +225,14 @@ export default function KnowledgePage() {
         <div className="mb-6 space-y-4">
           {/* Filters and Sort */}
           <div className="flex flex-wrap gap-3 items-center">
-            {/* Game Name Filter Dropdown */}
-            <select
-              value={selectedGameName || ''}
-              onChange={(e) => setSelectedGameName(e.target.value || null)}
-              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-            >
-              <option value="">All Games</option>
-              {uniqueGameNames.map(game => (
-                <option key={game} value={game}>{game}</option>
-              ))}
-            </select>
+            {/* Game Name Search Input */}
+            <input
+              type="text"
+              value={gameNameSearch}
+              onChange={(e) => setGameNameSearch(e.target.value)}
+              placeholder="Search games..."
+              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
 
             {/* Staff Filter Dropdown */}
             <select
@@ -265,16 +256,6 @@ export default function KnowledgePage() {
               {CONFIDENCE_LEVELS.map(level => (
                 <option key={level} value={level}>{level}</option>
               ))}
-            </select>
-
-            {/* Sort By Dropdown */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'staff' | 'confidence')}
-              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-            >
-              <option value="staff">Sort by Staff</option>
-              <option value="confidence">Sort by Level</option>
             </select>
 
             {/* My Knowledge Only Checkbox */}
