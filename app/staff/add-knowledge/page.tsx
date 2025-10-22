@@ -29,6 +29,8 @@ export default function AddKnowledgePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clearConfirmed, setClearConfirmed] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showLevelExplanation, setShowLevelExplanation] = useState(false);
+  const [pendingLevel, setPendingLevel] = useState<string | null>(null);
 
   // Check authentication
   useEffect(() => {
@@ -155,13 +157,42 @@ export default function AddKnowledgePage() {
     }
   }, [step, staffName]);
 
+  const getLevelExplanation = (level: string) => {
+    switch (level) {
+      case 'Beginner':
+        return "You have chosen Beginner level - all the games you select now will mark your knowledge as Beginner level. What does that mean? That means you have played the game at least once or watched people play it, but you would not be able to teach the game, or help very much if someone asked you about some specific mechanisms.";
+      case 'Intermediate':
+        return "You have chosen Intermediate level - all the games you select now will mark your knowledge as Intermediate. What does that mean? It means you have played the game a few times OR you could teach the game while checking the manual for some details that you can't remember.";
+      case 'Expert':
+        return "You have chosen Expert level - all the games you select now will mark your knowledge as Expert. What does that mean? That means the system will mark you as a staff member who is able and willing to TEACH the game to customers and other staff. You should be able to teach the game without the manual, and only referring to the manual for minor and unusual details.";
+      case 'Instructor':
+        return "You have chosen Instructor level - all the games you select now will mark your knowledge as Instructor. What does that mean? That means the system will mark you as a staff member who is able and willing to TEACH the game to customers and other staff. You should be able to teach the game without the manual, and remember all niche and unusual rules and situations in the game. We can burn the manual and just use your knowledge because you know the game details like the back of your hands :)";
+      default:
+        return "";
+    }
+  };
+
   const handleConfidenceLevelSelect = (level: string) => {
-    setConfidenceLevel(level);
-    setStep('select-games');
-    setCurrentPage(1);
-    setSelectedGames(new Set());
-    setClearConfirmed(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPendingLevel(level);
+    setShowLevelExplanation(true);
+  };
+
+  const confirmLevelSelection = () => {
+    if (pendingLevel) {
+      setConfidenceLevel(pendingLevel);
+      setStep('select-games');
+      setCurrentPage(1);
+      setSelectedGames(new Set());
+      setClearConfirmed(false);
+      setShowLevelExplanation(false);
+      setPendingLevel(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const cancelLevelSelection = () => {
+    setShowLevelExplanation(false);
+    setPendingLevel(null);
   };
 
   const handleChangePage = (newPage: number) => {
@@ -504,6 +535,32 @@ Click OK to confirm or Cancel to go back.`;
           </div>
         )}
       </div>
+
+      {/* Level Explanation Dialog */}
+      {showLevelExplanation && pendingLevel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 max-w-2xl w-full p-6">
+            <h3 className="text-2xl font-bold mb-4">{pendingLevel} Level</h3>
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 whitespace-pre-line">
+              {getLevelExplanation(pendingLevel)}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelLevelSelection}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={confirmLevelSelection}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                I Understand, Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
