@@ -64,21 +64,19 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
   // Fetch expansions when modal opens
   useEffect(() => {
     const fetchExpansions = async () => {
-      if (!open || !game || !game.fields['Game Expansions Link'] || game.fields['Game Expansions Link'].length === 0) {
+      if (!open || !game) {
         return;
       }
 
       setLoadingExpansions(true);
       try {
-        const response = await fetch('/api/games');
+        // Use dedicated expansions endpoint that queries by base_game_id
+        const response = await fetch(`/api/games/${game.id}/expansions`);
         const data = await response.json();
 
-        // Filter to get only the expansion games linked to this base game
-        const expansionGames = data.games.filter((g: BoardGame) =>
-          game.fields['Game Expansions Link']!.includes(g.id)
-        );
-
-        setExpansions(expansionGames);
+        if (data.success && data.expansions) {
+          setExpansions(data.expansions);
+        }
       } catch (error) {
         console.error('Failed to fetch expansions:', error);
       } finally {
@@ -183,7 +181,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                   className="gap-2 w-full sm:w-auto"
                 >
                   <History className="w-4 h-4" />
-                  View History
+                  Check History
                 </Button>
               </div>
             </div>
@@ -375,13 +373,13 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
             {/* Complexity Stars */}
             {game.fields['Complexity'] && (
               <div>
-                <h3 className="text-sm font-semibold mb-2">Difficulty Rating</h3>
+                <h3 className="text-sm font-semibold mb-2">Complexity</h3>
                 <div className="flex gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
                       className={`h-6 w-6 rounded-full ${
-                        i < game.fields['Complexity']!
+                        i < Math.round(game.fields['Complexity']!)
                           ? 'bg-primary'
                           : 'bg-muted'
                       }`}
@@ -394,7 +392,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
         </div>
 
         {/* Expansions Section */}
-        {game.fields['Game Expansions Link'] && game.fields['Game Expansions Link'].length > 0 && (
+        {(loadingExpansions || expansions.length > 0) && (
           <div className="mt-6 pt-6 border-t">
             <h3 className="text-lg font-semibold mb-4">Expansions</h3>
             {loadingExpansions ? (

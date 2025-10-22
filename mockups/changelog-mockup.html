@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - Sip & Play Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #ffffff;
+      color: #0a0a0a;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1152px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* Header Section */
+    .header {
+      border-bottom: 1px solid #e5e5e5;
+      background-color: #fafafa;
+      padding: 24px 0;
+    }
+
+    .back-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #525252;
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 16px;
+      transition: color 0.2s;
+    }
+
+    .back-nav:hover {
+      color: #0a0a0a;
+    }
+
+    .header h1 {
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle {
+      color: #737373;
+      font-size: 14px;
+    }
+
+    .logged-in {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #525252;
+    }
+
+    /* Controls Section */
+    .controls {
+      background-color: #fafafa;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 32px;
+      border: 1px solid #e5e5e5;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #525252;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    select, input[type="date"] {
+      padding: 8px 12px;
+      border: 1px solid #d4d4d4;
+      border-radius: 8px;
+      background-color: #ffffff;
+      color: #0a0a0a;
+      font-size: 14px;
+      min-width: 160px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input[type="date"]:focus {
+      outline: none;
+      border-color: #0a0a0a;
+      box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      background-color: #ffffff;
+      padding: 4px;
+    }
+
+    .btn-toggle {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: transparent;
+      color: #525252;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-toggle.active {
+      background-color: #0a0a0a;
+      color: #ffffff;
+    }
+
+    .btn-toggle:hover:not(.active) {
+      background-color: #f5f5f5;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background-color: #ffffff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .checkbox-group:hover {
+      background-color: #f5f5f5;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Analytics Section */
+    .analytics-section {
+      margin-bottom: 32px;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .stats-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background-color: #fafafa;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e5e5;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #0a0a0a;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #737373;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .stat-change.positive {
+      color: #16a34a;
+    }
+
+    .stat-change.negative {
+      color: #dc2626;
+    }
+
+    .chart-card {
+      background-color: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #e5e5e5;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #0a0a0a;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    /* Table Section */
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .results-count {
+      font-size: 14px;
+      color: #525252;
+    }
+
+    .table-wrapper {
+      background-color: #ffffff;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table thead {
+      background-color: #fafafa;
+      position: sticky;
+      top: 0;
+    }
+
+    .table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #525252;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    .table td {
+      padding: 16px;
+      font-size: 14px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .table tbody tr:hover {
+      background-color: #fafafa;
+    }
+
+    .table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Event Type Badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-created {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-updated {
+      background-color: #fef3c7;
+      color: #854d0e;
+    }
+
+    .badge-deleted {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Category Icons */
+    .category-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .icon {
+      font-size: 16px;
+    }
+
+    /* Timestamp */
+    .timestamp {
+      color: #737373;
+      font-size: 13px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding: 16px 0;
+    }
+
+    .pagination-info {
+      font-size: 14px;
+      color: #525252;
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pagination-btn {
+      padding: 8px 16px;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      background-color: #ffffff;
+      color: #0a0a0a;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background-color: #fafafa;
+      border-color: #d4d4d4;
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .control-row {
+        flex-direction: column;
+      }
+
+      .table-wrapper {
+        overflow-x: auto;
+      }
+
+      .table {
+        min-width: 800px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <a href="#" class="back-nav">
+        <span>←</span>
+        <span>Back to Staff Menu</span>
+      </a>
+      <h1>Changelog</h1>
+      <p class="header-subtitle">Track all system changes and activity</p>
+      <p class="logged-in">Logged in as: <strong>Admin User</strong></p>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top: 32px; padding-bottom: 32px;">
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label">Time Period</label>
+          <div class="btn-group">
+            <button class="btn-toggle active" onclick="setTimePeriod('day')">Day</button>
+            <button class="btn-toggle" onclick="setTimePeriod('week')">Week</button>
+            <button class="btn-toggle" onclick="setTimePeriod('month')">Month</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Date Range</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="date" value="2025-01-15">
+            <span style="display: flex; align-items: center; color: #737373;">to</span>
+            <input type="date" value="2025-01-22">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Staff Member</label>
+          <select>
+            <option>All Staff</option>
+            <option>Sarah Martinez</option>
+            <option>Mike Chen</option>
+            <option>Emily Rodriguez</option>
+            <option>James Wilson</option>
+            <option>Admin User</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Event Type</label>
+          <select>
+            <option>All Events</option>
+            <option>Created</option>
+            <option>Updated</option>
+            <option>Deleted</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Category</label>
+          <select>
+            <option>All Categories</option>
+            <option>🎲 Board Games</option>
+            <option>📊 Play Logs</option>
+            <option>🧠 Staff Knowledge</option>
+            <option>✓ Content Checks</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <label class="checkbox-group">
+          <input type="checkbox">
+          <span style="font-size: 14px;">Show My Changes Only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-value">247</div>
+        <div class="stat-label">Total Changes</div>
+        <div class="stat-change positive">↑ 18% from last week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">89</div>
+        <div class="stat-label">Game Updates</div>
+        <div class="stat-change positive">↑ 23% from last week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">124</div>
+        <div class="stat-label">Play Logs Added</div>
+        <div class="stat-change positive">↑ 15% from last week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">34</div>
+        <div class="stat-label">Knowledge Updates</div>
+        <div class="stat-change negative">↓ 5% from last week</div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts -->
+    <div class="analytics-section">
+      <div class="analytics-grid">
+        <div class="chart-card">
+          <h3 class="chart-title">Changes by Day</h3>
+          <div class="chart-container">
+            <canvas id="barChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3 class="chart-title">Changes by Category</h3>
+          <div class="chart-container">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3 class="chart-title">Activity by Staff Member</h3>
+        <div class="chart-container">
+          <canvas id="staffChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-header">
+      <div class="results-count">
+        Showing <strong>1-20</strong> of <strong>247</strong> changes
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Event</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Changed By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="timestamp">Jan 22, 2025<br>2:45 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">📊</span>Play Log</span></td>
+            <td>New play session logged for <strong>Catan</strong> (2.5 hours)</td>
+            <td>Sarah Martinez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 22, 2025<br>1:30 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>Updated images for <strong>Wingspan</strong> (added 3 photos)</td>
+            <td>Mike Chen</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 22, 2025<br>11:20 AM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">🧠</span>Staff Knowledge</span></td>
+            <td>Added knowledge entry: <strong>Ticket to Ride</strong> - Intermediate level</td>
+            <td>Emily Rodriguez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 22, 2025<br>10:15 AM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">✓</span>Content Check</span></td>
+            <td>Content check completed for <strong>Pandemic</strong> - Perfect Condition</td>
+            <td>James Wilson</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>4:50 PM</td>
+            <td><span class="badge badge-deleted">Deleted</span></td>
+            <td><span class="category-icon"><span class="icon">🧠</span>Staff Knowledge</span></td>
+            <td>Removed duplicate knowledge entry for <strong>Azul</strong></td>
+            <td>Admin User</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>3:30 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>New game added: <strong>7 Wonders Duel</strong></td>
+            <td>Sarah Martinez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>2:15 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>Updated complexity rating for <strong>Gloomhaven</strong> (Medium → Heavy)</td>
+            <td>Mike Chen</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>1:45 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">📊</span>Play Log</span></td>
+            <td>New play session logged for <strong>Splendor</strong> (1.5 hours)</td>
+            <td>Emily Rodriguez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>12:30 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🧠</span>Staff Knowledge</span></td>
+            <td>Updated confidence level for <strong>Codenames</strong> (Beginner → Intermediate)</td>
+            <td>James Wilson</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 21, 2025<br>11:00 AM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">✓</span>Content Check</span></td>
+            <td>Content check completed for <strong>Carcassonne</strong> - Minor Issues</td>
+            <td>Sarah Martinez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>5:20 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>Updated player count for <strong>King of Tokyo</strong> (2-5 → 2-6)</td>
+            <td>Mike Chen</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>4:45 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">📊</span>Play Log</span></td>
+            <td>New play session logged for <strong>Azul</strong> (1 hour)</td>
+            <td>Emily Rodriguez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>3:30 PM</td>
+            <td><span class="badge badge-deleted">Deleted</span></td>
+            <td><span class="category-icon"><span class="icon">📊</span>Play Log</span></td>
+            <td>Removed duplicate play log for <strong>Ticket to Ride</strong></td>
+            <td>Admin User</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>2:15 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🧠</span>Staff Knowledge</span></td>
+            <td>Added teaching notes for <strong>Dominion</strong></td>
+            <td>Sarah Martinez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>1:00 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>New game added: <strong>Terraforming Mars</strong></td>
+            <td>James Wilson</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 20, 2025<br>11:45 AM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">✓</span>Content Check</span></td>
+            <td>Content check completed for <strong>Dixit</strong> - Perfect Condition</td>
+            <td>Mike Chen</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 19, 2025<br>4:30 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">📊</span>Play Log</span></td>
+            <td>New play session logged for <strong>Scythe</strong> (3 hours)</td>
+            <td>Emily Rodriguez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 19, 2025<br>3:15 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>Updated year released for <strong>Root</strong> (2017 → 2018)</td>
+            <td>Sarah Martinez</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 19, 2025<br>2:00 PM</td>
+            <td><span class="badge badge-created">Created</span></td>
+            <td><span class="category-icon"><span class="icon">🧠</span>Staff Knowledge</span></td>
+            <td>Added knowledge entry: <strong>Everdell</strong> - Expert level</td>
+            <td>James Wilson</td>
+          </tr>
+          <tr>
+            <td class="timestamp">Jan 19, 2025<br>12:45 PM</td>
+            <td><span class="badge badge-updated">Updated</span></td>
+            <td><span class="category-icon"><span class="icon">🎲</span>Board Game</span></td>
+            <td>Updated images for <strong>Spirit Island</strong> (replaced 2 photos)</td>
+            <td>Mike Chen</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <div class="pagination-info">
+        Page <strong>1</strong> of <strong>13</strong>
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" disabled>
+          <span>←</span>
+          <span>Previous</span>
+        </button>
+        <button class="pagination-btn">
+          <span>Next</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Charts
+    const barChartCtx = document.getElementById('barChart').getContext('2d');
+    const pieChartCtx = document.getElementById('pieChart').getContext('2d');
+    const staffChartCtx = document.getElementById('staffChart').getContext('2d');
+
+    // Bar Chart - Changes by Day
+    new Chart(barChartCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Jan 15', 'Jan 16', 'Jan 17', 'Jan 18', 'Jan 19', 'Jan 20', 'Jan 21', 'Jan 22'],
+        datasets: [
+          {
+            label: 'Created',
+            data: [12, 15, 18, 14, 20, 16, 19, 22],
+            backgroundColor: '#dcfce7',
+            borderColor: '#16a34a',
+            borderWidth: 1
+          },
+          {
+            label: 'Updated',
+            data: [8, 10, 12, 9, 15, 11, 13, 16],
+            backgroundColor: '#fef3c7',
+            borderColor: '#ca8a04',
+            borderWidth: 1
+          },
+          {
+            label: 'Deleted',
+            data: [2, 1, 3, 2, 4, 3, 2, 3],
+            backgroundColor: '#fee2e2',
+            borderColor: '#dc2626',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 5
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+
+    // Pie Chart - Changes by Category
+    new Chart(pieChartCtx, {
+      type: 'pie',
+      data: {
+        labels: ['Board Games', 'Play Logs', 'Staff Knowledge', 'Content Checks'],
+        datasets: [{
+          data: [89, 124, 34, 35],
+          backgroundColor: [
+            '#93c5fd',
+            '#a78bfa',
+            '#fcd34d',
+            '#86efac'
+          ],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+
+    // Staff Activity Chart
+    new Chart(staffChartCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Sarah Martinez', 'Mike Chen', 'Emily Rodriguez', 'James Wilson', 'Admin User'],
+        datasets: [{
+          label: 'Total Changes',
+          data: [68, 52, 61, 45, 21],
+          backgroundColor: [
+            '#93c5fd',
+            '#fca5a5',
+            '#fcd34d',
+            '#86efac',
+            '#c4b5fd'
+          ],
+          borderColor: '#0a0a0a',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 10
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+
+    // Interactive Controls
+    function setTimePeriod(period) {
+      // Remove active class from all buttons
+      document.querySelectorAll('.btn-toggle').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Add active class to clicked button
+      event.target.classList.add('active');
+
+      console.log('Time period set to:', period);
+      // In real implementation, this would filter the data
+    }
+  </script>
+</body>
+</html>

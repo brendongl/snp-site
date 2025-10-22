@@ -632,15 +632,15 @@ function GamesPageContent() {
                       }
                     }}
                   >
-                    <SelectTrigger className="w-[130px] sm:w-[180px]">
-                      <SelectValue placeholder="Staff Sort..." />
+                    <SelectTrigger className="w-[200px] sm:w-[240px]">
+                      <SelectValue placeholder="Sort by Checks" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Staff Sorting Options</SelectItem>
-                      <SelectItem value="lastChecked">Last Checked ↓</SelectItem>
-                      <SelectItem value="lastCheckedDesc">Last Checked ↑</SelectItem>
-                      <SelectItem value="totalChecks">Total Checks ↓</SelectItem>
-                      <SelectItem value="totalChecksDesc">Total Checks ↑</SelectItem>
+                      <SelectItem value="none">Sort by Checks</SelectItem>
+                      <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
+                      <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
+                      <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
+                      <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

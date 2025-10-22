@@ -31,8 +31,8 @@ export async function GET() {
     const confidenceLevelMap: { [key: number]: string } = {
       1: 'Beginner',
       2: 'Intermediate',
-      3: 'Proficient',
-      4: 'Expert',
+      3: 'Expert',
+      4: 'Instructor',
     };
 
     const knowledge = result.rows.map((row) => ({

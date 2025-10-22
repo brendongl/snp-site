@@ -171,17 +171,13 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
 
   const handleDelete = async () => {
     const gameName = game.fields['Game Name'];
-    const confirmText = `DELETE ${gameName}`;
 
-    const userInput = prompt(
+    const confirmed = confirm(
       `⚠️ WARNING: This will permanently delete "${gameName}" and all associated data.\n\n` +
-      `Type exactly: ${confirmText}\n\nto confirm deletion:`
+      `Are you sure you want to continue?`
     );
 
-    if (userInput !== confirmText) {
-      if (userInput !== null) {
-        alert('Deletion cancelled - text did not match');
-      }
+    if (!confirmed) {
       return;
     }
 

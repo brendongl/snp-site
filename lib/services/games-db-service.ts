@@ -433,8 +433,8 @@ class GamesDbService {
           gameData.id,
           gameData.name,
           gameData.description || null,
-          JSON.stringify(gameData.categories || []),
-          JSON.stringify(gameData.mechanisms || []),
+          gameData.categories || [],
+          gameData.mechanisms || [],
           gameData.yearReleased || null,
           gameData.minPlayers || null,
           gameData.maxPlayers || null,
@@ -519,7 +519,7 @@ class GamesDbService {
       }
       if (updates.categories !== undefined) {
         setClauses.push(`categories = $${paramCount++}`);
-        values.push(JSON.stringify(updates.categories));
+        values.push(updates.categories); // PostgreSQL handles array conversion automatically
       }
       if (updates.year_released !== undefined) {
         setClauses.push(`year_released = $${paramCount++}`);
@@ -551,11 +551,11 @@ class GamesDbService {
       }
       if (updates.latest_check_status !== undefined) {
         setClauses.push(`latest_check_status = $${paramCount++}`);
-        values.push(JSON.stringify(updates.latest_check_status));
+        values.push(updates.latest_check_status);
       }
       if (updates.latest_check_notes !== undefined) {
         setClauses.push(`latest_check_notes = $${paramCount++}`);
-        values.push(JSON.stringify(updates.latest_check_notes));
+        values.push(updates.latest_check_notes);
       }
       if (updates.total_checks !== undefined) {
         setClauses.push(`total_checks = $${paramCount++}`);

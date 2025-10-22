@@ -28,6 +28,11 @@ export default function PlayLogsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Filter state
+  const [gameSearch, setGameSearch] = useState<string>('');
+  const [staffFilter, setStaffFilter] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<string>('');
+
   // Check authentication
   useEffect(() => {
     const name = localStorage.getItem('staff_name');
@@ -65,10 +70,32 @@ export default function PlayLogsPage() {
     fetchPlayLogs();
   }, [staffName]);
 
-  // Sort by most recent first
-  const sortedLogs = [...playLogs].sort((a, b) => {
-    return new Date(b.sessionDate || 0).getTime() - new Date(a.sessionDate || 0).getTime();
-  });
+  // Get unique staff names for filter dropdown
+  const uniqueStaff = Array.from(new Set(playLogs.map(log => log.staffName))).sort();
+
+  // Filter and sort logs
+  const filteredAndSortedLogs = [...playLogs]
+    .filter(log => {
+      // Game search filter
+      if (gameSearch && !log.gameName.toLowerCase().includes(gameSearch.toLowerCase())) {
+        return false;
+      }
+      // Staff filter
+      if (staffFilter && log.staffName !== staffFilter) {
+        return false;
+      }
+      // Date filter
+      if (dateFilter) {
+        const logDate = new Date(log.sessionDate).toISOString().split('T')[0];
+        if (logDate !== dateFilter) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      return new Date(b.sessionDate || 0).getTime() - new Date(a.sessionDate || 0).getTime();
+    });
 
   const handleDeleteLog = async (logId: string) => {
     if (!confirm('Are you sure you want to delete this play log?')) {
@@ -165,10 +192,57 @@ export default function PlayLogsPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap gap-3 items-center">
+          {/* Game Search */}
+          <input
+            type="text"
+            value={gameSearch}
+            onChange={(e) => setGameSearch(e.target.value)}
+            placeholder="Search games..."
+            className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+          />
+
+          {/* Staff Filter */}
+          <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+          >
+            <option value="">All Staff</option>
+            {uniqueStaff.map(staff => (
+              <option key={staff} value={staff}>{staff}</option>
+            ))}
+          </select>
+
+          {/* Date Filter */}
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+          />
+
+          {/* Clear Filters */}
+          {(gameSearch || staffFilter || dateFilter) && (
+            <button
+              onClick={() => {
+                setGameSearch('');
+                setStaffFilter('');
+                setDateFilter('');
+              }}
+              className="px-3 py-2 rounded-lg text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+
         {/* Results count */}
         <div className="mb-6">
           <p className="text-sm text-muted-foreground">
-            {sortedLogs.length} play log{sortedLogs.length !== 1 ? 's' : ''}
+            {filteredAndSortedLogs.length} play log{filteredAndSortedLogs.length !== 1 ? 's' : ''}
+            {(gameSearch || staffFilter || dateFilter) && ` (filtered from ${playLogs.length} total)`}
           </p>
         </div>
 
@@ -191,7 +265,7 @@ export default function PlayLogsPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && sortedLogs.length === 0 && (
+        {!isLoading && !error && filteredAndSortedLogs.length === 0 && (
           <div className="text-center py-12">
             <Play className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
             <p className="text-muted-foreground">No play logs recorded yet</p>
@@ -199,7 +273,7 @@ export default function PlayLogsPage() {
         )}
 
         {/* Play Logs List - Table Format */}
-        {!isLoading && !error && sortedLogs.length > 0 && (
+        {!isLoading && !error && filteredAndSortedLogs.length > 0 && (
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
             <div className={`grid ${isAdmin ? 'grid-cols-12' : 'grid-cols-12'} bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0`}>
@@ -212,7 +286,7 @@ export default function PlayLogsPage() {
 
             {/* Table Rows */}
             <div className="divide-y divide-border">
-              {sortedLogs.map((log, idx) => (
+              {filteredAndSortedLogs.map((log, idx) => (
                 <div key={log.id}>
                   {editingId === log.id ? (
                     // Edit Mode
