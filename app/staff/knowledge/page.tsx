@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
+// Force dynamic rendering (no static generation)
+export const dynamic = 'force-dynamic';
+
 interface StaffKnowledgeEntry {
   id: string;
   staffMember: string;
@@ -609,7 +612,7 @@ export default function KnowledgePage() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <Zap className="w-8 h-8 mx-auto mb-2 animate-pulse text-blue-600" />
-              <p className="text-sm text-muted-foreground">Loading Staff Knowledge...</p>
+              <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
           </div>
         </div>
