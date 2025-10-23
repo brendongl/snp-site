@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, User, Play, Zap, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Play, Zap, Trash2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
 interface PlayLogEntry {
@@ -14,6 +14,14 @@ interface PlayLogEntry {
   sessionDate: string; // Changed from playDate
   durationHours?: number | null;
   notes?: string | null;
+}
+
+interface GroupedLogs {
+  date: string;
+  dateFormatted: string;
+  logs: PlayLogEntry[];
+  gameCount: number;
+  staffCount: number;
 }
 
 export default function PlayLogsPage() {
@@ -27,6 +35,7 @@ export default function PlayLogsPage() {
   const [editingData, setEditingData] = useState<{ notes: string; sessionDate: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
   // Filter state
   const [gameSearch, setGameSearch] = useState<string>('');
@@ -85,9 +94,9 @@ export default function PlayLogsPage() {
     return normalizeName(log.staffName) === normalizeName(staffName);
   };
 
-  // Filter and sort logs
-  const filteredAndSortedLogs = [...playLogs]
-    .filter(log => {
+  // Filter logs
+  const filteredLogs = useMemo(() => {
+    return playLogs.filter(log => {
       // Game search filter
       if (gameSearch && !log.gameName.toLowerCase().includes(gameSearch.toLowerCase())) {
         return false;
@@ -104,10 +113,56 @@ export default function PlayLogsPage() {
         }
       }
       return true;
-    })
-    .sort((a, b) => {
-      return new Date(b.sessionDate || 0).getTime() - new Date(a.sessionDate || 0).getTime();
     });
+  }, [playLogs, gameSearch, staffFilter, dateFilter]);
+
+  // Group logs by date
+  const groupedLogs = useMemo(() => {
+    const groups: Record<string, PlayLogEntry[]> = {};
+
+    filteredLogs.forEach(log => {
+      const date = new Date(log.sessionDate);
+      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(log);
+    });
+
+    // Convert to array and calculate statistics
+    const groupedArray: GroupedLogs[] = Object.entries(groups).map(([date, logs]) => {
+      const dateObj = new Date(date);
+      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+      const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = dateObj.getDate();
+
+      const uniqueStaff = new Set(logs.map(log => log.staffName));
+
+      return {
+        date,
+        dateFormatted: `${dayNum} ${dayName} ${monthName}`,
+        logs: logs.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()),
+        gameCount: logs.length,
+        staffCount: uniqueStaff.size,
+      };
+    });
+
+    // Sort by date descending
+    return groupedArray.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredLogs]);
+
+  const toggleDateExpansion = (date: string) => {
+    setExpandedDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(date)) {
+        newSet.delete(date);
+      } else {
+        newSet.add(date);
+      }
+      return newSet;
+    });
+  };
 
   const handleDeleteLog = async (logId: string) => {
     if (!confirm('Are you sure you want to delete this play log?')) {
@@ -264,7 +319,7 @@ export default function PlayLogsPage() {
         {/* Results count */}
         <div className="mb-6">
           <p className="text-sm text-muted-foreground">
-            {filteredAndSortedLogs.length} play log{filteredAndSortedLogs.length !== 1 ? 's' : ''}
+            {groupedLogs.length} day{groupedLogs.length !== 1 ? 's' : ''} • {filteredLogs.length} play log{filteredLogs.length !== 1 ? 's' : ''}
             {(gameSearch || staffFilter || dateFilter) && ` (filtered from ${playLogs.length} total)`}
           </p>
         </div>
@@ -288,118 +343,138 @@ export default function PlayLogsPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && filteredAndSortedLogs.length === 0 && (
+        {!isLoading && !error && groupedLogs.length === 0 && (
           <div className="text-center py-12">
             <Play className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
             <p className="text-muted-foreground">No play logs recorded yet</p>
           </div>
         )}
 
-        {/* Play Logs List - Table Format */}
-        {!isLoading && !error && filteredAndSortedLogs.length > 0 && (
-          <div className="border border-border rounded-lg overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
-              <div className="col-span-2">Date</div>
-              <div className="col-span-3">Game</div>
-              <div className="col-span-2">Logged By</div>
-              <div className="col-span-3">Notes</div>
-              <div className="col-span-2">Actions</div>
-            </div>
+        {/* Play Logs List - Grouped by Date */}
+        {!isLoading && !error && groupedLogs.length > 0 && (
+          <div className="space-y-2">
+            {groupedLogs.map((group) => {
+              const isExpanded = expandedDates.has(group.date);
 
-            {/* Table Rows */}
-            <div className="divide-y divide-border">
-              {filteredAndSortedLogs.map((log, idx) => (
-                <div key={log.id}>
-                  {editingId === log.id ? (
-                    // Edit Mode
-                    <div className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center ${
-                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                    }`}>
-                      <input
-                        type="datetime-local"
-                        value={editingData?.sessionDate?.split('T')[0] || ''}
-                        onChange={(e) => setEditingData(prev => prev ? {
-                          ...prev,
-                          sessionDate: e.target.value
-                        } : null)}
-                        className="col-span-2 px-2 py-1 border border-border rounded text-xs bg-background"
-                        disabled={isSaving}
-                      />
-                      <div className="col-span-3 text-sm">{log.gameName}</div>
-                      <div className="col-span-2 text-sm">{log.staffName}</div>
-                      <textarea
-                        value={editingData?.notes || ''}
-                        onChange={(e) => setEditingData(prev => prev ? {
-                          ...prev,
-                          notes: e.target.value
-                        } : null)}
-                        className="col-span-3 px-2 py-1 border border-border rounded text-xs bg-background"
-                        rows={2}
-                        disabled={isSaving}
-                      />
-                      <div className="col-span-2 flex gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={isSaving}
-                          className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(null);
-                            setEditingData(null);
-                          }}
-                          disabled={isSaving}
-                          className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+              return (
+                <div key={group.date} className="border border-border rounded-lg overflow-hidden bg-white">
+                  {/* Collapsed Row */}
+                  <div
+                    className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleDateExpansion(group.date)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <button className="text-muted-foreground hover:text-foreground transition-colors">
+                        {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </button>
+                      <div className="font-semibold text-sm">{group.dateFormatted}</div>
                     </div>
-                  ) : (
-                    // Normal View
-                    <div
-                      className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-start hover:bg-accent transition-colors ${
-                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                      }`}
-                    >
-                      <div className="col-span-2 font-medium">{formatDate(log.sessionDate)}</div>
-                      <div className="col-span-3 font-medium text-foreground">{log.gameName || 'Unknown Game'}</div>
-                      <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
-                      <div className="col-span-3 text-muted-foreground truncate" title={log.notes || undefined}>
-                        {log.notes || '—'}
-                      </div>
-                      <div className="col-span-2 flex gap-2">
-                        {canEditLog(log) ? (
-                          <>
-                            <button
-                              onClick={() => handleEditLog(log)}
-                              disabled={isDeleting || isSaving}
-                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
-                              title="Edit play log"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteLog(log.id)}
-                              disabled={isDeleting || isSaving}
-                              className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
-                              title="Delete play log"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded whitespace-nowrap">
+                        🎲 {group.gameCount}
+                      </span>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded whitespace-nowrap">
+                        👤 {group.staffCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t divide-y bg-gray-50">
+                      {group.logs.map((log, idx) => (
+                        <div key={log.id}>
+                          {editingId === log.id ? (
+                            // Edit Mode
+                            <div className="px-4 py-3 bg-white">
+                              <div className="grid grid-cols-12 gap-4 text-sm items-center">
+                                <input
+                                  type="datetime-local"
+                                  value={editingData?.sessionDate || ''}
+                                  onChange={(e) => setEditingData(prev => prev ? {
+                                    ...prev,
+                                    sessionDate: e.target.value
+                                  } : null)}
+                                  className="col-span-2 px-2 py-1 border border-border rounded text-xs bg-background"
+                                  disabled={isSaving}
+                                />
+                                <div className="col-span-3 text-sm">{log.gameName}</div>
+                                <div className="col-span-2 text-sm">{log.staffName}</div>
+                                <textarea
+                                  value={editingData?.notes || ''}
+                                  onChange={(e) => setEditingData(prev => prev ? {
+                                    ...prev,
+                                    notes: e.target.value
+                                  } : null)}
+                                  className="col-span-3 px-2 py-1 border border-border rounded text-xs bg-background"
+                                  rows={2}
+                                  disabled={isSaving}
+                                />
+                                <div className="col-span-2 flex gap-2">
+                                  <button
+                                    onClick={handleSaveEdit}
+                                    disabled={isSaving}
+                                    className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setEditingData(null);
+                                    }}
+                                    disabled={isSaving}
+                                    className="px-2 py-1 bg-muted text-foreground rounded text-xs hover:bg-muted/80"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            // Normal View
+                            <div className="px-4 py-3 hover:bg-gray-100 transition-colors">
+                              <div className="grid grid-cols-12 gap-4 text-sm items-start">
+                                <div className="col-span-2 text-muted-foreground">{formatDate(log.sessionDate)}</div>
+                                <div className="col-span-3 font-medium">{log.gameName || 'Unknown Game'}</div>
+                                <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
+                                <div className="col-span-3 text-muted-foreground truncate" title={log.notes || undefined}>
+                                  {log.notes || '—'}
+                                </div>
+                                <div className="col-span-2 flex gap-2">
+                                  {canEditLog(log) ? (
+                                    <>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleEditLog(log); }}
+                                        disabled={isDeleting || isSaving}
+                                        className="p-1 text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-50"
+                                        title="Edit play log"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteLog(log.id); }}
+                                        disabled={isDeleting || isSaving}
+                                        className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-50"
+                                        title="Delete play log"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </div>

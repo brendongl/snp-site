@@ -4,9 +4,24 @@ import { logKnowledgeCreated, logKnowledgeDeleted } from '@/lib/services/changel
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const db = DatabaseService.initialize();
+    const url = new URL(request.url);
+    const allGames = url.searchParams.get('allGames') === 'true';
+
+    // If requesting all games list for knowledge gap analysis
+    if (allGames) {
+      const gamesResult = await db.pool.query(`
+        SELECT DISTINCT name
+        FROM games
+        WHERE name IS NOT NULL
+        ORDER BY name
+      `);
+
+      const games = gamesResult.rows.map(row => row.name);
+      return NextResponse.json({ games });
+    }
 
     // Fetch all staff knowledge records with game names and staff names via JOIN
     console.log('Fetching staff knowledge with names from PostgreSQL...');

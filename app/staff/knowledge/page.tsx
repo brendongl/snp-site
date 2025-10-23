@@ -31,12 +31,14 @@ export default function KnowledgePage() {
   const isAdmin = useAdminMode();
   const [staffName, setStaffName] = useState<string | null>(null);
   const [allKnowledge, setAllKnowledge] = useState<StaffKnowledgeEntry[]>([]);
+  const [allGames, setAllGames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConfidence, setSelectedConfidence] = useState<string | null>(null);
+  const [selectedConfidenceLevels, setSelectedConfidenceLevels] = useState<Set<string>>(new Set());
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [gameNameSearch, setGameNameSearch] = useState<string>('');
-  const [showMyKnowledgeOnly, setShowMyKnowledgeOnly] = useState(false);
+  const [showKnowledgeGaps, setShowKnowledgeGaps] = useState(false);
+  const [showTrainingOpportunities, setShowTrainingOpportunities] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{ confidenceLevel: string; notes: string } | null>(null);
@@ -45,19 +47,7 @@ export default function KnowledgePage() {
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
 
-  // Check if coming from successful knowledge addition - only after mount
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const fromAdd = urlParams.get('fromAdd');
-      if (fromAdd === 'true') {
-        setShowMyKnowledgeOnly(true);
-      }
-    }
-  }, []);
-
-  // Check authentication
+  // Check authentication and set default filter
   useEffect(() => {
     const name = localStorage.getItem('staff_name');
     if (!name) {
@@ -65,33 +55,43 @@ export default function KnowledgePage() {
       return;
     }
     setStaffName(name);
+    // Set default filter to logged-in user's knowledge
+    setSelectedStaff(name);
   }, [router]);
 
-  // Fetch staff knowledge data
+  // Fetch staff knowledge data and all games
   useEffect(() => {
     if (!staffName) return;
 
-    const fetchKnowledge = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch('/api/staff-knowledge');
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch knowledge: ${response.statusText}`);
+        // Fetch knowledge data
+        const knowledgeResponse = await fetch('/api/staff-knowledge');
+        if (!knowledgeResponse.ok) {
+          throw new Error(`Failed to fetch knowledge: ${knowledgeResponse.statusText}`);
         }
+        const knowledgeData = await knowledgeResponse.json();
+        setAllKnowledge(knowledgeData.knowledge || []);
 
-        const data = await response.json();
-        setAllKnowledge(data.knowledge || []);
+        // Fetch all games for knowledge gap analysis
+        const gamesResponse = await fetch('/api/staff-knowledge?allGames=true');
+        if (gamesResponse.ok) {
+          const gamesData = await gamesResponse.json();
+          setAllGames(gamesData.games || []);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load knowledge');
+        setError(err instanceof Error ? err.message : 'Failed to load data');
         setAllKnowledge([]);
+        setAllGames([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchKnowledge();
+    fetchData();
   }, [staffName]);
 
   // Normalize name for comparison (must be before useMemo that uses it)
@@ -100,22 +100,20 @@ export default function KnowledgePage() {
     return name.toLowerCase().trim().replace(/[\s\-–—]+/g, '');
   };
 
-  // Get unique staff members for dropdown (excluding current user)
+  // Get unique staff members for dropdown (including current user)
   const uniqueStaff = useMemo(() => {
     const staffSet = new Set(allKnowledge.map(k => k.staffMember));
-    const staffArray = Array.from(staffSet)
-      .filter(name => normalizeName(name) !== normalizeName(staffName))
-      .sort();
+    const staffArray = Array.from(staffSet).sort();
     return staffArray;
-  }, [allKnowledge, staffName]);
+  }, [allKnowledge]);
 
   // Determine view mode (calculate here for external use, don't include in useMemo deps)
-  const isListView = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
+  const isListView = selectedStaff !== null && selectedStaff !== '';
 
   // Filter and prepare data
   const processedData = useMemo(() => {
     // Use the same logic to determine view mode
-    const listViewMode = showMyKnowledgeOnly || (selectedStaff !== null && selectedStaff !== '');
+    const listViewMode = selectedStaff !== null && selectedStaff !== '';
 
     let filtered = allKnowledge;
 
@@ -126,23 +124,21 @@ export default function KnowledgePage() {
       );
     }
 
-    // Filter by confidence level
-    if (selectedConfidence) {
-      filtered = filtered.filter(k => k.confidenceLevel === selectedConfidence);
+    // Filter by confidence level(s)
+    if (selectedConfidenceLevels.size > 0) {
+      filtered = filtered.filter(k => selectedConfidenceLevels.has(k.confidenceLevel));
     }
 
-    // List view: Filter by specific staff or "My Knowledge Only"
+    // List view: Filter by specific staff
     if (listViewMode) {
-      if (showMyKnowledgeOnly) {
-        const normalizedStaffName = normalizeName(staffName);
-        filtered = filtered.filter(k => normalizeName(k.staffMember) === normalizedStaffName);
-      } else if (selectedStaff) {
+      if (selectedStaff) {
         filtered = filtered.filter(k => k.staffMember === selectedStaff);
       }
 
       // Sort by game name for list view
       return filtered.sort((a, b) => a.gameName.localeCompare(b.gameName));
     }
+
 
     // Grouped view: Group by game name
     const grouped = filtered.reduce((acc, entry) => {
@@ -153,17 +149,47 @@ export default function KnowledgePage() {
       return acc;
     }, {} as Record<string, StaffKnowledgeEntry[]>);
 
+    // Apply Knowledge Gaps filter if enabled
+    if (showKnowledgeGaps) {
+      // Find games with no knowledge entries
+      const gamesWithKnowledge = new Set(allKnowledge.map(k => k.gameName));
+      const gapsOnly: Record<string, StaffKnowledgeEntry[]> = {};
+
+      allGames.forEach(gameName => {
+        if (!gamesWithKnowledge.has(gameName)) {
+          // Include games with no knowledge entries
+          gapsOnly[gameName] = [];
+        }
+      });
+
+      // Replace grouped with gaps only
+      Object.assign(grouped, gapsOnly);
+    }
+
     // Convert to array and calculate counts
-    const groupedArray: GroupedGame[] = Object.entries(grouped).map(([gameName, entries]) => ({
+    let groupedArray: GroupedGame[] = Object.entries(grouped).map(([gameName, entries]) => ({
       gameName,
       entries: entries.sort((a, b) => a.staffMember.localeCompare(b.staffMember)),
       totalPeople: entries.length,
       canTeachCount: entries.filter(e => e.canTeach).length,
     }));
 
+    if (showTrainingOpportunities) {
+      // Training opportunities: at least 1 Expert/Instructor AND 0 Beginner/Intermediate
+      groupedArray = groupedArray.filter(group => {
+        const hasExpertOrInstructor = group.entries.some(e =>
+          e.confidenceLevel === 'Expert' || e.confidenceLevel === 'Instructor'
+        );
+        const hasBeginnerOrIntermediate = group.entries.some(e =>
+          e.confidenceLevel === 'Beginner' || e.confidenceLevel === 'Intermediate'
+        );
+        return hasExpertOrInstructor && !hasBeginnerOrIntermediate;
+      });
+    }
+
     // Sort by game name
     return groupedArray.sort((a, b) => a.gameName.localeCompare(b.gameName));
-  }, [allKnowledge, gameNameSearch, selectedConfidence, showMyKnowledgeOnly, selectedStaff, staffName]);
+  }, [allKnowledge, allGames, gameNameSearch, selectedConfidenceLevels, selectedStaff, showKnowledgeGaps, showTrainingOpportunities]);
 
   // Pagination
   const totalPages = Math.ceil(
@@ -177,7 +203,7 @@ export default function KnowledgePage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [showMyKnowledgeOnly, selectedConfidence, selectedStaff, gameNameSearch]);
+  }, [selectedConfidenceLevels, selectedStaff, gameNameSearch, showKnowledgeGaps, showTrainingOpportunities]);
 
   const toggleGameExpansion = (gameName: string) => {
     setExpandedGames(prev => {
@@ -186,6 +212,18 @@ export default function KnowledgePage() {
         newSet.delete(gameName);
       } else {
         newSet.add(gameName);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleConfidenceLevel = (level: string) => {
+    setSelectedConfidenceLevels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(level)) {
+        newSet.delete(level);
+      } else {
+        newSet.add(level);
       }
       return newSet;
     });
@@ -320,29 +358,47 @@ export default function KnowledgePage() {
                 <option key={staff} value={staff}>{staff}</option>
               ))}
             </select>
+          </div>
 
-            {/* Confidence Level Filter */}
-            <select
-              value={selectedConfidence || ''}
-              onChange={(e) => setSelectedConfidence(e.target.value || null)}
-              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+          {/* Confidence Level Toggles */}
+          <div className="flex flex-wrap gap-2">
+            {CONFIDENCE_LEVELS.map(level => (
+              <button
+                key={level}
+                onClick={() => toggleConfidenceLevel(level)}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                  selectedConfidenceLevels.has(level)
+                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+
+          {/* Special Filters */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowKnowledgeGaps(!showKnowledgeGaps)}
+              className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                showKnowledgeGaps
+                  ? 'border-red-500 bg-red-50 text-red-700 font-medium'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+              }`}
             >
-              <option value="">All Levels</option>
-              {CONFIDENCE_LEVELS.map(level => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
-
-            {/* My Knowledge Only Checkbox */}
-            <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background cursor-pointer hover:bg-muted/50 transition-colors">
-              <input
-                type="checkbox"
-                checked={showMyKnowledgeOnly}
-                onChange={(e) => setShowMyKnowledgeOnly(e.target.checked)}
-                className="w-4 h-4 rounded cursor-pointer"
-              />
-              <span className="text-sm font-medium">My Knowledge Only</span>
-            </label>
+              📚 Knowledge Gaps
+            </button>
+            <button
+              onClick={() => setShowTrainingOpportunities(!showTrainingOpportunities)}
+              className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                showTrainingOpportunities
+                  ? 'border-green-500 bg-green-50 text-green-700 font-medium'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              🎯 Training Opportunities
+            </button>
           </div>
         </div>
 
@@ -377,9 +433,7 @@ export default function KnowledgePage() {
         {/* Empty State */}
         {!isLoading && !error && paginatedData.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {showMyKnowledgeOnly ? 'No knowledge entries for you' : 'No knowledge entries found'}
-            </p>
+            <p className="text-muted-foreground">No knowledge entries found</p>
           </div>
         )}
 
@@ -538,10 +592,10 @@ export default function KnowledgePage() {
                     </div>
                     <div className="flex items-center gap-3 text-xs">
                       <span className="px-2 py-1 bg-gray-100 rounded whitespace-nowrap">
-                        {group.totalPeople} {group.totalPeople === 1 ? 'person' : 'people'}
+                        👨‍👩‍👧‍👦 {group.totalPeople}
                       </span>
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded whitespace-nowrap">
-                        {group.canTeachCount} can teach
+                        🧙‍♂️ {group.canTeachCount}
                       </span>
                     </div>
                   </div>
