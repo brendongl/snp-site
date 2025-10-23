@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Last Updated**: October 23, 2025
+**Current Version**: 1.4.7
+**Hosting**: Railway (Docker containers)
+**Domain**: https://sipnplay.cafe
+
+---
+
 ## Quick Start
 
 ### Build & Run Commands
@@ -9,7 +16,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev              # Start dev server (Turbopack, port 3000+)
 npm run build            # Build for production
 npm run start            # Run production build
-npm run migrate:content-checks  # One-time migration for content checks
+npm run migrate:content-checks  # Migrate content checks to PostgreSQL
+npm run migrate:images          # Migrate images to persistent volume
+npm run download:images         # Download images from database
+npm run notify:discord          # Send Discord notification
 ```
 
 ### Before Any Git Push
@@ -18,7 +28,7 @@ npm run migrate:content-checks  # One-time migration for content checks
 **ALL revisions (minor or major) MUST go to the `staging` branch first for testing.** The `main` branch is production-only and is only updated when explicitly instructed with "push to main".
 
 **Standard Deployment Workflow:**
-1. Update version in `lib/version.ts` AND `package.json`
+1. Update version in [lib/version.ts](lib/version.ts) AND [package.json](package.json)
 2. Run `npm run build` to verify no errors
 3. Use the commit template below
 4. Push to `staging` branch: `git push origin staging`
@@ -33,8 +43,8 @@ npm run migrate:content-checks  # One-time migration for content checks
 
 ### Version Numbering
 - **MAJOR.MINOR.PATCH** (semantic versioning)
-- Update BOTH `lib/version.ts` and `package.json` together
-- Example: `1.0.5`
+- Update BOTH [lib/version.ts](lib/version.ts) and [package.json](package.json) together
+- Example: `1.4.7`
 
 ### Git Commit Template
 ```bash
@@ -59,103 +69,257 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
   - Trigger phrase: "push to main"
   - Railway auto-deploys from this branch to production
 
-**Workflow Examples:**
-- New feature: Create commit → Push to staging → Test → User says "push to main" → Merge to main
-- Bug fix: Create commit → Push to staging → Verify fix → User says "push to main" → Merge to main
-- Hotfix: Same process, just faster turnaround
+---
+
+## Core Architecture
+
+### Database & Data Flow (v1.3.5+)
+
+**Primary Data Source: PostgreSQL**
+- Production database hosted on Railway
+- 5 core tables: `games`, `game_images`, `play_logs`, `content_checks`, `staff_knowledge`
+- Connection pool managed via [lib/db/postgres.ts](lib/db/postgres.ts)
+- Full schema details: [docs/POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md)
+
+**Secondary Data Source: Airtable**
+- Used for backfill operations and data verification
+- Staff table sync for authentication
+- Accessed via [lib/airtable/games-service.ts](lib/airtable/games-service.ts)
+
+**Data Flow (Simplified)**
+```
+Browser Request (/games)
+    ↓
+GamesPageContent (Client Component)
+    ↓
+Fetch /api/games (PostgreSQL-first)
+    ↓
+GamesDbService (Primary)
+    ↓
+PostgreSQL Database (Always fresh)
+    ├─ If success → Return games from database
+    └─ If error → Log error and return empty/cached data
+    ↓
+Filter/Sort/Render (Client-side)
+```
+
+### Service Layer Architecture
+
+All database access goes through service classes in [lib/services/](lib/services/):
+
+| Service | Purpose | Key Methods |
+|---------|---------|-------------|
+| [games-db-service.ts](lib/services/games-db-service.ts) | Games data access | `getAllGames()`, `getGameById()`, `updateGame()` |
+| [content-checks-db-service.ts](lib/services/content-checks-db-service.ts) | Content check history | `getChecksByGameId()`, `createCheck()` |
+| [play-logs-db-service.ts](lib/services/play-logs-db-service.ts) | Game session tracking | `getLogsByGameId()`, `createLog()` |
+| [staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts) | Staff expertise levels | `getKnowledgeByStaffMember()`, `getTeachersForGame()` |
+| [changelog-service.ts](lib/services/changelog-service.ts) | Changelog tracking | `getAllChangelogs()`, `createChangelog()` |
+| [bgg-api.ts](lib/services/bgg-api.ts) | BoardGameGeek integration | `getGameDetails()`, `searchGames()` |
+
+See [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) for detailed usage examples.
+
+### Caching Strategy
+
+**Four-Layer Caching:**
+
+1. **PostgreSQL (Primary)** - Always-fresh data
+   - No TTL, always queried first
+   - Connection pool for performance
+
+2. **Persistent Volume (Images)**
+   - Location: `/app/data/images/` on Railway
+   - Content-based deduplication (MD5 hashing)
+   - See [docs/RAILWAY_PERSISTENT_VOLUME_SETUP.md](docs/RAILWAY_PERSISTENT_VOLUME_SETUP.md)
+
+3. **In-Memory Cache**
+   - Games data cached for quick API responses
+   - Play log cache for analytics
+
+4. **Browser Cache**
+   - Images: 1 year (Cache-Control: immutable)
+   - API responses: No cache header
+
+---
 
 ## Project Structure
 
 ```
 snp-site/
 ├── app/                          # Next.js app directory
-│   ├── api/                      # API routes
-│   │   ├── games/               # Games data endpoints
-│   │   ├── images/              # Image caching
+│   ├── api/                      # API routes (44+ endpoints)
+│   │   ├── games/               # Games CRUD endpoints
+│   │   ├── images/              # Image caching & serving
 │   │   ├── content-checks/      # Content check logs
-│   │   └── ...
-│   ├── games/                   # Games page
+│   │   ├── admin/               # Admin-only operations
+│   │   ├── staff/               # Staff operations
+│   │   ├── play-logs/           # Play session tracking
+│   │   ├── changelog/           # Changelog data
+│   │   └── analytics/           # Analytics insights
+│   ├── games/                   # Games catalog page
+│   ├── staff/                   # Staff-only pages
+│   │   ├── knowledge/           # Staff expertise management
+│   │   ├── play-logs/           # Play session logs
+│   │   ├── changelog/           # Changelog viewer
+│   │   ├── check-history/       # Content check history
+│   │   └── add-knowledge/       # Add expertise
 │   └── page.tsx                 # Home page
 ├── components/                   # React components
 │   └── features/                # Feature-specific components
 ├── lib/                         # Utility libraries
+│   ├── services/                # Database service layer (7 files)
+│   ├── db/                      # PostgreSQL connection pool
 │   ├── cache/                   # Cache management
-│   │   ├── games-cache.ts
-│   │   └── image-cache.ts
-│   ├── airtable/                # Airtable API integration
+│   ├── airtable/                # Airtable API (secondary)
+│   ├── hooks/                   # Custom React hooks
+│   ├── storage/                 # Persistent volume management
+│   ├── analytics/               # Mixpanel integration
+│   ├── discord/                 # Discord webhooks
 │   └── version.ts               # Version constant (UPDATE THIS!)
+├── scripts/                     # Migration & utility scripts (33 files)
+├── docs/                        # Detailed documentation (17 files)
 ├── .claude/                     # Claude Code settings
-│   └── project-workflow.md      # Detailed workflow guide
 ├── package.json                 # Dependencies (UPDATE VERSION!)
 └── Dockerfile                   # Docker configuration
 ```
 
-## Core Architecture
+---
 
-### Data Flow (Simplified)
-```
-Browser Request (/games)
-    ↓
-GamesPageContent (Client Component)
-    ↓
-Fetch /api/games (cache-first)
-    ↓
-Games Cache (1-hour TTL)
-    ├─ If fresh → Return cached games
-    ├─ If stale → Fetch from Airtable + Update cache
-    └─ If error → Return cached data (even if stale)
-    ↓
-GamesService (Airtable Integration)
-    ↓
-Filter/Sort/Render (Client-side)
-```
-
-### Three Caching Layers
-
-#### 1. **Games Cache** (1-hour TTL)
-- **File:** `data/games-cache.json`
-- **Pattern:** Cache-first with Airtable fallback
-- **Endpoints:**
-  - `GET /api/games` - Returns cached games with metadata
-  - `POST /api/games/refresh` - Incremental refresh
-  - `POST /api/games/refresh?full=true` - Hard refresh (recaches images)
-- **Graceful Degradation:** Returns stale cache on network errors
-
-#### 2. **Image Cache** (Content-based deduplication)
-- **Location:** `data/images/` (files) + `data/image-cache-metadata.json` (metadata)
-- **Strategy:** Hashes image bytes (MD5) to detect duplicates
-- **Benefits:** Reduces storage when same image appears in multiple records
-- **Fallback:** Handles Airtable URL expiry (~12 hours) by fetching fresh URLs
-- **Windows Safe:** Atomic writes with fallback strategies prevent corruption
-
-#### 3. **Browser Cache**
-- **Images:** 1 year (Cache-Control: immutable)
-- **API responses:** No cache header (always fresh)
-
-### Airtable Integration
-- **Source:** Airtable API (Board Games base)
-- **Service:** [lib/airtable/games-service.ts](lib/airtable/games-service.ts)
-- **Key Methods:**
-  - `getAllGames()` - Full refresh
-  - `getUpdatedGames(since)` - Incremental (since timestamp)
-  - `filterGames()` - Client-side filtering logic
-  - `sortGames()` - Client-side sorting logic
-- **Fields Used:** Game Name, Categories, Images, Year Released, Complexity, Player counts, Latest Check Date, Expansion status
+## Major Features
 
 ### Staff Mode
-- **Detection:** URL parameter `?staff=true`
-- **Hook:** [lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)
-- **Features:**
+- **Detection**: URL parameter `?staff=true`
+- **Hook**: [lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)
+- **Features**:
   - Add Game dialog
   - Hard Refresh button
   - Staff-only sort options (Last Checked, Total Checks)
   - Check status badges on game cards
+  - Access to staff pages ([app/staff/](app/staff/))
 
-### Filtering & Sorting (Client-Side)
-- **Filters:** Search, categories, year range, player count, complexity, quick filters
-- **Sort Options:** Alphabetical, year, max players, complexity, date acquired, last checked (staff), total checks (staff)
-- **Implementation:** All filtering/sorting happens in browser after fetching games
-- **Special Logic:** Expansions hidden from main list but shown in parent game details
+### Admin Mode
+- **Detection**: User role check via NextAuth
+- **Hook**: [lib/hooks/useAdminMode.ts](lib/hooks/useAdminMode.ts)
+- **Features**:
+  - Storage management ([/api/admin/storage](app/api/admin/storage/route.ts))
+  - Image migration ([/api/admin/migrate-images](app/api/admin/migrate-images/route.ts))
+  - Airtable sync ([/api/admin/sync-to-airtable](app/api/admin/sync-to-airtable/route.ts))
+  - Staging file operations ([/api/admin/staging-files](app/api/admin/staging-files/route.ts))
+
+### Changelog System (v1.4.0+)
+- **Service**: [lib/services/changelog-service.ts](lib/services/changelog-service.ts)
+- **API**: [/api/changelog](app/api/changelog/route.ts), [/api/changelog/stats](app/api/changelog/stats/route.ts)
+- **Page**: [app/staff/changelog/page.tsx](app/staff/changelog/page.tsx)
+- **Features**: Version tracking, analytics, staff activity logs
+- **Details**: [docs/CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md)
+
+### Play Logs System
+- **Service**: [lib/services/play-logs-db-service.ts](lib/services/play-logs-db-service.ts)
+- **API**: [/api/play-logs](app/api/play-logs/route.ts)
+- **Page**: [app/staff/play-logs/page.tsx](app/staff/play-logs/page.tsx)
+- **Features**: Session tracking, player counts, duration, staff logging
+
+### Staff Knowledge Management
+- **Service**: [lib/services/staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts)
+- **API**: [/api/staff-knowledge](app/api/staff-knowledge/route.ts)
+- **Pages**: [app/staff/knowledge/page.tsx](app/staff/knowledge/page.tsx), [app/staff/add-knowledge/page.tsx](app/staff/add-knowledge/page.tsx)
+- **Features**: Expertise tracking, confidence levels, can_teach flags
+
+### BoardGameGeek Integration
+- **Service**: [lib/services/bgg-api.ts](lib/services/bgg-api.ts)
+- **API**: [/api/games/bgg/[id]](app/api/games/bgg/[id]/route.ts)
+- **Features**: Game details fetch, ratings, metadata enrichment
+
+### Analytics
+- **Integration**: Mixpanel ([lib/analytics/mixpanel.ts](lib/analytics/mixpanel.ts))
+- **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
+- **Features**: Page views, user tracking, event logging
+
+---
+
+## Environment Variables
+
+### Required
+
+```bash
+# PostgreSQL Database (CRITICAL - Required for all operations)
+DATABASE_URL=postgresql://user:pass@host:port/database
+
+# Airtable (For backfill and staff sync)
+AIRTABLE_API_KEY=key_xxxxxxxxxxxxx
+
+# Authentication
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=your-secret-key-generate-with-openssl-rand-base64-32
+```
+
+### Optional (Uses hardcoded defaults if not set)
+
+```bash
+# Airtable Base Configuration
+AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
+AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
+AIRTABLE_GAMES_VIEW_ID=viwRxfowOlqk8LkAd
+AIRTABLE_CUSTOMER_BASE_ID=appoZWe34JHo21N1z
+AIRTABLE_CUSTOMER_TABLE_ID=tblfat1kxUvaNnfaQ
+
+# External Integrations
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/xxx
+FACEBOOK_APP_ID=xxxxxxxxxxxxx
+FACEBOOK_APP_SECRET=xxxxxxxxxxxxx
+FACEBOOK_PAGE_ID=xxxxxxxxxxxxx
+FACEBOOK_ACCESS_TOKEN=xxxxxxxxxxxxx
+N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/xxx
+N8N_API_KEY=xxxxxxxxxxxxx
+GOOGLE_MAPS_API_KEY=xxxxxxxxxxxxx
+
+# Performance (Optional)
+REDIS_URL=redis://localhost:6379
+```
+
+See `.env.example` for full list and format.
+
+---
+
+## API Endpoints Reference
+
+**Total Endpoints: 44+**
+
+### Core Endpoints
+- `GET /api/games` - Fetch all games from PostgreSQL
+- `GET /api/games/[id]` - Single game details
+- `GET /api/games/random` - Random game picker
+- `POST /api/games/create` - Create new game
+- `POST /api/games/[id]/edit` - Update game metadata
+- `GET /api/images/[hash]` - Serve cached images
+
+### Staff Endpoints
+- `GET /api/staff-knowledge` - All expertise records
+- `POST /api/staff-knowledge` - Create/update knowledge
+- `GET /api/play-logs` - Game session logs
+- `POST /api/play-logs` - Log new play session
+- `GET /api/content-checks` - Content check history
+- `POST /api/content-checks/refresh` - Refresh check cache
+
+### Admin Endpoints (6)
+- `POST /api/admin/migrate-images` - Migrate images to volume
+- `GET /api/admin/storage` - Storage usage stats
+- `POST /api/admin/sync-to-airtable` - Push data to Airtable
+- `GET /api/admin/staging-files` - List staging files
+- `POST /api/admin/copy-volume` - Copy persistent volume
+- `POST /api/admin/download-images` - Download images
+
+### Analytics & Changelog
+- `GET /api/changelog` - Changelog entries
+- `GET /api/changelog/stats` - Changelog statistics
+- `GET /api/analytics/insights` - Analytics data
+
+### Diagnostics
+- `GET /api/health` - System health check
+- `GET /api/debug/logs` - Recent application logs
+
+**See individual route files in [app/api/](app/api/) for detailed parameters and responses.**
+
+---
 
 ## Common Development Tasks
 
@@ -168,45 +332,39 @@ Filter/Sort/Render (Client-side)
 ### Adding a New Sort Option
 1. Add to sort options in [app/games/page.tsx](app/games/page.tsx)
 2. Implement sort logic in [lib/airtable/games-service.ts](lib/airtable/games-service.ts) - `sortGames()` method
-3. Add UI option to sort dropdown in games page
+3. Add UI option to sort dropdown
 
-### Extending Staff Features
-1. Check for `useStaffMode()` in component to gate feature
-2. Wrap staff-only UI in conditional render
-3. Add staff-only API endpoint if needed
-4. Test by visiting `/games?staff=true`
+### Adding a New Database Table
+1. Create migration script in [scripts/](scripts/) (e.g., `create-new-table.js`)
+2. Run migration on staging database first
+3. Create service class in [lib/services/](lib/services/) (e.g., `new-table-service.ts`)
+4. Add API endpoints in [app/api/](app/api/)
+5. Update TypeScript types in [types/index.ts](types/index.ts)
+6. Test thoroughly on staging before production
 
-### Debugging Cache Issues
+### Updating Database Schema
+1. Write migration script to add/modify columns
+2. Test on staging database
+3. Update service layer to use new fields
+4. Update TypeScript types
+5. Verify with test queries
+
+### Debugging Issues
 ```bash
-# View overall health (cache status, Airtable connectivity, environment)
+# View overall health (database, Airtable, environment)
 curl http://localhost:3000/api/health
 
 # View recent logs (last 50 entries)
 curl http://localhost:3000/api/debug/logs
 
-# Manual cache refresh (incremental)
-curl -X POST http://localhost:3000/api/games/refresh
+# Check database connection
+curl http://localhost:3000/api/test-connectivity
 
-# Manual cache refresh (hard - recaches images)
-curl -X POST http://localhost:3000/api/games/refresh?full=true
+# View storage usage (admin only)
+curl http://localhost:3000/api/admin/storage
 ```
 
-### Updating Airtable Field Mapping
-1. Add/update field in Airtable
-2. Update [types/index.ts](types/index.ts) - BoardGame or ContentCheck interface
-3. Update [lib/airtable/games-service.ts](lib/airtable/games-service.ts) - field references
-4. If new filter needed, follow "Adding a New Filter" steps above
-
-### Deploying to Railway
-After pushing to GitHub:
-1. GitHub Actions automatically builds Docker image
-2. Push to `ghcr.io/brendongl/snp-site:latest`
-3. Railway detects new image and auto-deploys
-4. See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed setup
-
-**Manual Deploy (if needed):**
-- Force redeploy via Railway dashboard: Settings → Restart
-- Or make a new commit and push to trigger rebuild
+---
 
 ## Key Files Reference
 
@@ -214,103 +372,150 @@ After pushing to GitHub:
 |------|---------|---|
 | [lib/version.ts](lib/version.ts) | Version constant shown in app | Every release |
 | [package.json](package.json) | Package version (must match lib/version.ts) | Every release |
-| [lib/airtable/games-service.ts](lib/airtable/games-service.ts) | Airtable API integration | Change field names or fetch logic |
-| [lib/cache/games-cache.ts](lib/cache/games-cache.ts) | Games cache TTL and logic | Adjust caching strategy |
-| [lib/cache/image-cache.ts](lib/cache/image-cache.ts) | Image deduplication | Change hash algorithm or expiry |
-| [types/index.ts](types/index.ts) | Type definitions | Add new Airtable fields |
-| [app/games/page.tsx](app/games/page.tsx) | Main UI and filtering/sorting | Add filters, sort options, or features |
-| [Dockerfile](Dockerfile) | Container configuration | Change dependencies or setup |
-| [.env.local](.env.local) | Local environment (not committed) | Set API keys for development |
+| [lib/services/games-db-service.ts](lib/services/games-db-service.ts) | Games database access | Add new game queries |
+| [lib/db/postgres.ts](lib/db/postgres.ts) | PostgreSQL connection pool | Change DB config |
+| [lib/airtable/games-service.ts](lib/airtable/games-service.ts) | Airtable API integration (secondary) | Backfill operations |
+| [types/index.ts](types/index.ts) | TypeScript type definitions | Add new fields or tables |
+| [app/games/page.tsx](app/games/page.tsx) | Main games UI and filtering | Add filters or features |
+| [Dockerfile](Dockerfile) | Docker container config | Change dependencies |
+| [.env.example](.env.example) | Environment variable template | Add new integrations |
 
-## API Endpoints Reference
-
-### Games Management
-- `GET /api/games` - Fetch all games (cache-first strategy)
-- `GET /api/games/[id]` - Fetch single game by ID
-- `GET /api/games/random` - Get random game from collection
-- `POST /api/games/refresh` - Incremental refresh (incremental sync from Airtable)
-- `POST /api/games/refresh?full=true` - Hard refresh (full sync + recache images)
-
-### Image Serving
-- `GET /api/images/[hash]` - Serve cached image by hash
-- `GET /api/images/proxy?url=...` - Direct proxy with auto-caching (fallback)
-
-### Content Checks
-- `GET /api/content-checks` - Fetch all content checks with staff name mapping
-- `POST /api/content-checks/refresh` - Refresh content check cache
-- `GET /api/games/content-check?gameId=...` - Get checks for specific game
-
-### Diagnostics
-- `GET /api/health` - Full health check (DNS, Airtable connectivity, cache stats, env validation)
-- `GET /api/debug/logs` - Recent application logs (last 50 entries)
+---
 
 ## Deployment Workflow
 
 1. **Local Development**
    - `npm run dev` (runs on localhost:3000+)
-   - Make changes and test
+   - Make changes and test locally
    - `npm run build` to verify no errors
 
 2. **Version & Commit**
-   - Update `lib/version.ts` and `package.json`
-   - Commit with version in message
-   - Use the template above
+   - Update [lib/version.ts](lib/version.ts) and [package.json](package.json)
+   - Commit with version in message (use template above)
 
-3. **Push to GitHub**
-   - `git push origin main`
+3. **Push to Staging**
+   - `git push origin staging`
    - GitHub Actions automatically builds Docker image
-   - Image pushed to `ghcr.io/brendongl/snp-site:latest`
+   - Railway deploys to staging environment
+   - Test thoroughly on staging
 
-4. **Deploy to Railway**
-   - Railway watches your repo for changes
-   - Auto-deploys on GitHub push
-   - Visit `https://sipnplay.cafe` to see live changes
-   - See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for setup details
+4. **Deploy to Production**
+   - Wait for user to say "push to main"
+   - `git push origin main`
+   - Railway auto-deploys to production
+   - Visit https://sipnplay.cafe to verify
 
-## Architecture Notes
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) for detailed setup.
 
-### Caching Strategy (v1.0.4+)
-- **Games**: Cache with 1-hour TTL, falls back to Airtable after expiry
-- **Images**: Content-based deduplication prevents duplicate downloads
-- **Resilience**: Graceful fallbacks for failed API calls
-
-### Error Handling
-- Windows file permission issues handled with fallback writes
-- Airtable API timeouts use cached data
-- Image load failures don't crash the app
-
-### Key Dependencies
-- Next.js 15.5 (Turbopack)
-- React 18+
-- Airtable API (board game data)
-- Docker (deployment)
+---
 
 ## Error Handling & Resilience
 
 ### Multi-Level Fallback Pattern
-The application uses a graceful degradation strategy:
 ```
 Request for /api/games:
-  1. Check if games cache is fresh (< 1 hour old)
-     ✓ Return cached data → Done
+  1. Query PostgreSQL (primary)
+     ✓ Success → Return data
+     ✗ Error → Log error + return empty array
 
-  2. If stale, fetch from Airtable
-     ✓ Success → Update cache + return data
-     ✗ Error → Return cached data (even if stale)
-     ✗ No cache → Return error as last resort
+  2. Image requests check persistent volume first
+     ✓ Cache hit → Serve from /app/data/images/
+     ✗ Cache miss → Fetch from Airtable + cache
+
+  3. Critical errors return graceful degradation
+     - Empty arrays instead of crashes
+     - Stale cache if available
+     - Error logs for debugging
 ```
 
-### Network Resilience Features
-- **Timeouts:** 30-second default (configurable)
-- **IPv4 Forcing:** For Docker environments with DNS issues
-- **Airtable 410 Errors:** Attempts to fetch fresh URLs when image links expire
-- **File System Failures:** Fallback write strategies prevent crash on permission errors
+### Resilience Features
+- **Connection Pool**: Reuses PostgreSQL connections
+- **Timeouts**: 30-second default for external APIs
+- **Graceful Degradation**: Never crash, always return something
+- **Persistent Volumes**: Images survive container restarts
+- **Error Logging**: [lib/logger.ts](lib/logger.ts) with file persistence
 
-### Error Logging
-- **Logger:** [lib/logger.ts](lib/logger.ts) - Enhanced logging with file persistence
-- **Log Storage:** `data/logs/` (persisted) + in-memory buffer (1000 entries)
-- **Log Levels:** info, warn, error, debug, api
-- **View Logs:** `GET /api/debug/logs` endpoint
+---
+
+## Documentation Structure
+
+### Root Documentation (3 files only)
+- [README.md](README.md) - Project overview
+- [CLAUDE.md](CLAUDE.md) - Development workflow (this file)
+- [CHANGELOG.md](CHANGELOG.md) - Version history
+
+### Detailed Documentation → [docs/](docs/) directory
+| File | Purpose |
+|------|---------|
+| [POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) | Complete migration overview |
+| [DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) | Service layer usage guide |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Infrastructure setup |
+| [STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) | Staging environment |
+| [RAILWAY_PERSISTENT_VOLUME_SETUP.md](docs/RAILWAY_PERSISTENT_VOLUME_SETUP.md) | Persistent volume config |
+| [CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md) | Changelog feature details |
+| [AIRTABLE_POSTGRES_MIGRATION.md](docs/AIRTABLE_POSTGRES_MIGRATION.md) | Migration troubleshooting |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues & fixes |
+| [DOCKER.md](docs/DOCKER.md) | Build process reference |
+| [AIRTABLE_SCHEMA.md](docs/AIRTABLE_SCHEMA.md) | Airtable schema reference |
+
+### Documentation Hygiene Rules
+
+**Never Commit:**
+- Session notes (SESSION_SUMMARY.md, STATUS.md)
+- Status updates or temporary summaries
+- Test screenshots or artifacts
+- .env files or secrets
+
+**File Lifecycle:**
+- **Feature work** → Feature branch + PR (describe in PR body)
+- **Status update** → Git commit messages (not STATUS.md)
+- **Bug fix notes** → Code comments (not FIX_SUMMARY.md)
+- **Test artifacts** → .gitignore (never commit)
+
+---
+
+## Custom Hooks & Utilities
+
+### useStaffMode
+- **Location**: [lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)
+- **Purpose**: Detect `?staff=true` URL parameter
+- **Returns**: Boolean indicating staff mode is active
+- **Used in**: GameDetailModal, GameCard, GameFilters components
+
+### useAdminMode
+- **Location**: [lib/hooks/useAdminMode.ts](lib/hooks/useAdminMode.ts)
+- **Purpose**: Detect admin user role via NextAuth
+- **Returns**: Boolean indicating admin mode is active
+- **Used in**: Admin pages, admin endpoints
+
+### Logger Singleton
+- **Location**: [lib/logger.ts](lib/logger.ts)
+- **Features**:
+  - Console output with emoji prefixes
+  - File persistence to `data/logs/`
+  - In-memory buffer (last 1000 entries)
+  - Methods: `info()`, `warn()`, `error()`, `debug()`, `api()`
+
+---
+
+## Architecture Patterns
+
+### Separation of Concerns
+- **Services** ([lib/services/](lib/services/)) - Database access layer
+- **API Routes** ([app/api/](app/api/)) - Request handling and validation
+- **Components** ([components/](components/)) - UI rendering
+- **Hooks** ([lib/hooks/](lib/hooks/)) - Reusable client-side logic
+- **Types** ([types/index.ts](types/index.ts)) - TypeScript definitions
+
+### Key Design Principles
+1. **Database-First**: PostgreSQL is primary, Airtable is secondary
+2. **Service Layer**: All database access through service classes
+3. **Graceful Degradation**: Errors never crash the app
+4. **Content Deduplication**: Hash-based image caching
+5. **Atomic Writes**: File operations use temp file + rename
+6. **Connection Pooling**: Reuse PostgreSQL connections
+
+---
 
 ## Troubleshooting
 
@@ -328,182 +533,24 @@ npm run dev
 # Server will use next available port (3000, 3001, 3002, etc.)
 ```
 
+### Database Connection Issues
+- Verify `DATABASE_URL` in environment
+- Check Railway PostgreSQL service status
+- Test connection: `curl http://localhost:3000/api/test-connectivity`
+- Review logs: `curl http://localhost:3000/api/debug/logs`
+
 ### Image Caching Issues
-- Check `data/image-cache-metadata.json` integrity
-- If corrupted, delete file and hard-refresh will rebuild it
-- Windows: Fallback error handling attempts multiple write strategies
+- Check persistent volume is mounted at `/app/data`
+- Verify image files exist: `ls /app/data/images/`
+- Check metadata file: `cat /app/data/image-cache-metadata.json`
+- Use admin endpoint: `GET /api/admin/storage`
 
-## Custom Hooks & Utilities
-
-### useStaffMode
-- **Location:** [lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)
-- **Purpose:** Detect `?staff=true` URL parameter
-- **Returns:** Boolean indicating staff mode is active
-- **Used in:** GameDetailModal, GameCard, GameFilters components
-
-### useCachedImageUrl
-- **Location:** [lib/cache/use-cached-image.ts](lib/cache/use-cached-image.ts)
-- **Purpose:** Transform image URL to `/api/images/[hash]` for cached serving
-- **Generates:** MD5 hash of original URL
-- **Client-side only:** No server dependency
-
-### createFetchWithTimeout
-- **Location:** [lib/fetch-config.ts](lib/fetch-config.ts)
-- **Purpose:** Fetch with timeout + IPv4 forcing
-- **Timeout:** 30 seconds (configurable)
-- **Use Case:** Docker environments with network issues
-
-### Logger Singleton
-- **Location:** [lib/logger.ts](lib/logger.ts)
-- **Features:**
-  - Console output with emoji prefixes
-  - File persistence to `data/logs/`
-  - In-memory buffer (last 1000 entries)
-  - Methods: `info()`, `warn()`, `error()`, `debug()`, `api()`
-
-## Settings & Configuration
-
-### Environment Variables
-**Required for Airtable:**
-```
-AIRTABLE_API_KEY=<your-api-key>
-```
-
-**Optional (uses hardcoded defaults if not set):**
-```
-AIRTABLE_GAMES_BASE_ID=apppFvSDh2JBc0qAu
-AIRTABLE_GAMES_TABLE_ID=tblIuIJN5q3W6oXNr
-AIRTABLE_GAMES_VIEW_ID=viwRxfowOlqk8LkAd
-```
-
-**NextAuth (minimal setup):**
-```
-NEXTAUTH_SECRET=<generated-secret>
-NEXTAUTH_URL=https://your-domain.com
-```
-
-See `.claude/settings.local.json` for Claude Code extension preferences.
-
-## Documentation & Project Hygiene
-
-### Documentation Guidelines
-
-**Root Documentation (Only 3 files):**
-- `README.md` - Project overview (what is this?)
-- `CLAUDE.md` - Development workflow (this file)
-- `CHANGELOG.md` - Version history
-
-**Detailed Documentation** → `/docs/` directory only:
-- Architecture guides, feature docs, setup instructions, troubleshooting
-- Never create detailed docs in root directory
-
-**Never Commit:**
-- Session notes (CATEGORIES_FIX_SUMMARY.md, SESSION_SUMMARY.md, STATUS.md)
-- Status updates or temporary summaries
-- Test screenshots or artifacts
-- .env files or secrets
-
-### File Lifecycle & Naming
-
-| What | Where | How |
-|------|-------|-----|
-| New feature work | Feature branch + PR | Describe in PR body, not separate file |
-| Session summary | PR description | Summarize work, delete temp notes |
-| Status update | Git commit messages | Don't create STATUS.md |
-| Bug fix notes | Code comments | Not a FIX_SUMMARY.md file |
-| Test screenshots | .gitignore | Never commit to version control |
-| Deprecated docs | Git history | Archive via tags, delete from root |
-
-### Rules to Prevent Mess
-
-1. **One Purpose Per File** - Don't mix concerns
-2. **No Session Notes in Root** - Archive to git history via commits
-3. **No Duplicate Documentation** - One file per topic
-4. **Max 3 Top-Level .md Files** - README, CLAUDE, CHANGELOG only
-5. **Keep Detailed Docs in `/docs/`** - Separate from root
-6. **Test Artifacts to .gitignore** - Never version control screenshots/logs
-7. **No Status Updates** - Use git commits and PR descriptions instead
-
-### When Adding Documentation
-
-Ask yourself:
-- "Does this file already exist for this topic?" → If yes, update it
-- "Will this be outdated in 2 weeks?" → If yes, put in code comment, not separate file
-- "Is this a session note?" → If yes, summarize in PR, don't commit
-- "Is this root-level or docs/-level?" → Most detailed docs go in `/docs/`
-
-### Documentation Structure
-
-```
-✅ GOOD: Few files, clear organization
-README.md              ← GitHub landing page
-CLAUDE.md             ← Dev guide (this file)
-CHANGELOG.md          ← Version history
-
-docs/
-├── DEPLOYMENT.md              ← Infrastructure setup
-├── TROUBLESHOOTING.md        ← Common issues & fixes
-├── DOCKER.md                 ← Build process reference
-├── AIRTABLE_SCHEMA.md       ← Database schema
-└── [feature docs...]          ← Feature-specific documentation
-
-❌ AVOID: Many files in root
-CATEGORIES_FIX_SUMMARY.md     ← One-time task, delete after done
-SESSION_SUMMARY.md             ← Session notes, delete after commit
-STATUS.md                      ← Status updates, use git commits instead
-MIGRATION_SUMMARY.md           ← Historical info, archive to git
-```
-
-### Workflow Examples
-
-**Adding a Feature:**
-```
-1. Create feature branch: git checkout -b feature/my-feature
-2. Implement feature and commit regularly
-3. Create Pull Request with description (not a FEATURE_SUMMARY.md)
-4. Summarize work in PR body
-5. Merge PR
-6. If docs need updating, edit docs/* files
-7. Never leave FEATURE_SUMMARY.md or SESSION_SUMMARY.md behind
-```
-
-**Fixing a Bug:**
-```
-1. Add code comments explaining the fix
-2. Commit with descriptive message
-3. Update docs/TROUBLESHOOTING.md if applicable
-4. Don't create FIX_SUMMARY.md or BUG_NOTES.md
-```
-
-**Major Migration:**
-```
-1. Work in dedicated branch
-2. Commit with clear messages
-3. On merge, git tags the commit (archives to history)
-4. Delete temporary notes/summaries
-5. Update DEPLOYMENT.md or relevant docs
-6. Never leave MIGRATION_SUMMARY.md in root
-```
+### Migration Script Errors
+- Always test on staging database first
+- Verify `DATABASE_URL` points to correct environment
+- Check migration script logs for detailed errors
+- Use transaction rollback on failures
 
 ---
 
-**Last Updated**: October 20, 2025
-**Current Version**: 1.2.0
-**Hosting**: Railway → Cloudflare
-**Domain**: https://sipnplay.cafe
-
-## Architecture Notes
-
-### Separation of Concerns
-- **Services** ([lib/airtable/](lib/airtable/)) - Airtable API integration
-- **Cache** ([lib/cache/](lib/cache/)) - File persistence and deduplication
-- **API Routes** ([app/api/](app/api/)) - Request handling and caching coordination
-- **Components** ([components/](components/)) - UI rendering and user interaction
-- **Hooks** ([lib/hooks/](lib/hooks/)) - Reusable client-side logic
-
-### Key Patterns
-1. **Cache-First:** Always check local cache before fetching from Airtable
-2. **Graceful Degradation:** Errors never crash the app; fallbacks keep service running
-3. **Content Deduplication:** Image hashing prevents duplicate storage
-4. **Non-Blocking Background Tasks:** Image caching doesn't block API responses
-5. **Atomic Writes:** File operations use temp file + rename to prevent corruption
+**For detailed documentation on specific topics, see the [docs/](docs/) directory.**

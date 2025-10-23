@@ -19,8 +19,8 @@ interface StaffKnowledgeEntry {
 interface GroupedGame {
   gameName: string;
   entries: StaffKnowledgeEntry[];
-  totalPeople: number;
-  canTeachCount: number;
+  beginnerIntermediateCount: number;
+  expertInstructorCount: number;
 }
 
 const RECORDS_PER_PAGE = 20;
@@ -55,8 +55,16 @@ export default function KnowledgePage() {
       return;
     }
     setStaffName(name);
-    // Set default filter to logged-in user's knowledge
-    setSelectedStaff(name);
+
+    // Only set default filter to logged-in user if NOT coming from add page
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromAdd = urlParams.get('fromAdd');
+      if (fromAdd !== 'true') {
+        // Set default filter to logged-in user's knowledge
+        setSelectedStaff(name);
+      }
+    }
   }, [router]);
 
   // Fetch staff knowledge data and all games
@@ -162,7 +170,8 @@ export default function KnowledgePage() {
         }
       });
 
-      // Replace grouped with gaps only
+      // Replace grouped with ONLY gaps (clear existing)
+      Object.keys(grouped).forEach(key => delete grouped[key]);
       Object.assign(grouped, gapsOnly);
     }
 
@@ -170,20 +179,38 @@ export default function KnowledgePage() {
     let groupedArray: GroupedGame[] = Object.entries(grouped).map(([gameName, entries]) => ({
       gameName,
       entries: entries.sort((a, b) => a.staffMember.localeCompare(b.staffMember)),
-      totalPeople: entries.length,
-      canTeachCount: entries.filter(e => e.canTeach).length,
+      beginnerIntermediateCount: entries.filter(e =>
+        e.confidenceLevel === 'Beginner' || e.confidenceLevel === 'Intermediate'
+      ).length,
+      expertInstructorCount: entries.filter(e =>
+        e.confidenceLevel === 'Expert' || e.confidenceLevel === 'Instructor'
+      ).length,
     }));
 
     if (showTrainingOpportunities) {
-      // Training opportunities: at least 1 Expert/Instructor AND 0 Beginner/Intermediate
+      // Training opportunities: 1-2 Expert/Instructor AND max 2 Beginner OR max 2 Intermediate
       groupedArray = groupedArray.filter(group => {
-        const hasExpertOrInstructor = group.entries.some(e =>
+        const expertInstructorCount = group.entries.filter(e =>
           e.confidenceLevel === 'Expert' || e.confidenceLevel === 'Instructor'
-        );
-        const hasBeginnerOrIntermediate = group.entries.some(e =>
-          e.confidenceLevel === 'Beginner' || e.confidenceLevel === 'Intermediate'
-        );
-        return hasExpertOrInstructor && !hasBeginnerOrIntermediate;
+        ).length;
+        const beginnerCount = group.entries.filter(e =>
+          e.confidenceLevel === 'Beginner'
+        ).length;
+        const intermediateCount = group.entries.filter(e =>
+          e.confidenceLevel === 'Intermediate'
+        ).length;
+
+        // Must have 1-2 Expert/Instructor
+        if (expertInstructorCount < 1 || expertInstructorCount > 2) {
+          return false;
+        }
+
+        // Must have max 2 Beginner OR max 2 Intermediate (not both over 2)
+        if (beginnerCount <= 2 || intermediateCount <= 2) {
+          return true;
+        }
+
+        return false;
       });
     }
 
@@ -361,7 +388,7 @@ export default function KnowledgePage() {
           </div>
 
           {/* Confidence Level Toggles */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {CONFIDENCE_LEVELS.map(level => (
               <button
                 key={level}
@@ -375,12 +402,25 @@ export default function KnowledgePage() {
                 {level}
               </button>
             ))}
+            <span className="text-xs text-muted-foreground italic ml-2">
+              * Experts & Instructors can teach
+            </span>
           </div>
 
           {/* Special Filters */}
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setShowKnowledgeGaps(!showKnowledgeGaps)}
+              onClick={() => {
+                const newValue = !showKnowledgeGaps;
+                setShowKnowledgeGaps(newValue);
+                if (newValue) {
+                  // Clear other filters and set to All Staff
+                  setSelectedStaff(null);
+                  setSelectedConfidenceLevels(new Set());
+                  setShowTrainingOpportunities(false);
+                  setGameNameSearch('');
+                }
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
                 showKnowledgeGaps
                   ? 'border-red-500 bg-red-50 text-red-700 font-medium'
@@ -390,7 +430,15 @@ export default function KnowledgePage() {
               📚 Knowledge Gaps
             </button>
             <button
-              onClick={() => setShowTrainingOpportunities(!showTrainingOpportunities)}
+              onClick={() => {
+                const newValue = !showTrainingOpportunities;
+                setShowTrainingOpportunities(newValue);
+                if (newValue) {
+                  // Set to All Staff and clear knowledge gaps
+                  setSelectedStaff(null);
+                  setShowKnowledgeGaps(false);
+                }
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
                 showTrainingOpportunities
                   ? 'border-green-500 bg-green-50 text-green-700 font-medium'
@@ -447,7 +495,6 @@ export default function KnowledgePage() {
                   <tr>
                     <th className="text-left px-4 py-3 text-sm font-semibold">Game</th>
                     <th className="text-left px-4 py-3 text-sm font-semibold">Level</th>
-                    <th className="text-center px-4 py-3 text-sm font-semibold">Can Teach</th>
                     <th className="text-right px-4 py-3 text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -469,9 +516,6 @@ export default function KnowledgePage() {
                                 <option key={level} value={level}>{level}</option>
                               ))}
                             </select>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {entry.canTeach ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">—</span>}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-end">
@@ -500,9 +544,6 @@ export default function KnowledgePage() {
                             <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
                               {entry.confidenceLevel}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {entry.canTeach ? <span className="text-green-600 font-semibold text-lg">✓</span> : <span className="text-gray-400">—</span>}
                           </td>
                           <td className="px-4 py-3">
                             {canEditEntry(entry) && (
@@ -545,7 +586,6 @@ export default function KnowledgePage() {
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
                           {entry.confidenceLevel}
                         </span>
-                        {entry.canTeach && <span className="text-green-600 font-semibold">✓ Can Teach</span>}
                       </div>
                     </div>
                     {canEditEntry(entry) && (
@@ -592,10 +632,10 @@ export default function KnowledgePage() {
                     </div>
                     <div className="flex items-center gap-3 text-xs">
                       <span className="px-2 py-1 bg-gray-100 rounded whitespace-nowrap">
-                        👨‍👩‍👧‍👦 {group.totalPeople}
+                        👨‍👩‍👧‍👦 {group.beginnerIntermediateCount}
                       </span>
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded whitespace-nowrap">
-                        🧙‍♂️ {group.canTeachCount}
+                        🧙‍♂️ {group.expertInstructorCount}
                       </span>
                     </div>
                   </div>
@@ -606,13 +646,12 @@ export default function KnowledgePage() {
                       {group.entries.map((entry) => (
                         <div key={entry.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors">
                           <div className="flex items-center gap-3 flex-1">
-                            <span className="text-sm text-muted-foreground w-32 truncate">
+                            <span className="text-sm text-muted-foreground">
                               {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
                             </span>
                             <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
                               {entry.confidenceLevel}
                             </span>
-                            {entry.canTeach && <span className="text-green-600 font-semibold text-sm">✓</span>}
                           </div>
                           {canEditEntry(entry) && (
                             <div className="flex gap-1">
