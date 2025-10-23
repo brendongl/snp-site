@@ -10,7 +10,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const game = await gamesService.getGameById(id);
+
+    // Fetch from PostgreSQL with images
+    const db = DatabaseService.initialize();
+    const game = await db.games.getGameById(id);
 
     if (!game) {
       return NextResponse.json(
@@ -19,7 +22,17 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(game);
+    // Fetch images for this game
+    const images = await db.games.getGameImages(id);
+
+    // Return game with images
+    return NextResponse.json({
+      success: true,
+      game: {
+        ...game,
+        images,
+      },
+    });
   } catch (error) {
     console.error('Error fetching game:', error);
     return NextResponse.json(

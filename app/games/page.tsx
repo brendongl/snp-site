@@ -119,6 +119,21 @@ function GamesPageContent() {
   const handleRefresh = async () => {
     await fetchGames();
     await fetchStaffKnowledge();
+
+    // If a game is currently selected, refresh its data to show updated images
+    if (selectedGame) {
+      try {
+        const response = await fetch(`/api/games/${selectedGame.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.game) {
+            setSelectedGame(data.game);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh selected game:', error);
+      }
+    }
   };
 
   useEffect(() => {
