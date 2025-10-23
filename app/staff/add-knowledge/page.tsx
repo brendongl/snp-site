@@ -9,6 +9,7 @@ interface Game {
   id: string;
   name: string;
   image: string;
+  isExpansion?: boolean;
 }
 
 const CONFIDENCE_LEVELS = ['Beginner', 'Intermediate', 'Expert', 'Instructor'];
@@ -31,6 +32,8 @@ export default function AddKnowledgePage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showLevelExplanation, setShowLevelExplanation] = useState(false);
   const [pendingLevel, setPendingLevel] = useState<string | null>(null);
+  const [hideKnownGames, setHideKnownGames] = useState(true);
+  const [knownGameIds, setKnownGameIds] = useState<Set<string>>(new Set());
 
   // Check authentication
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function AddKnowledgePage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch('/api/games');
+        const response = await fetch('/api/games-with-expansions');
 
         if (!response.ok) {
           throw new Error(`Failed to fetch games: ${response.statusText}`);
@@ -80,60 +83,38 @@ export default function AddKnowledgePage() {
             id: game.id,
             name: game.fields?.['Game Name'] || game.name || 'Unknown Game',
             image: imageUrl,
+            isExpansion: game.isExpansion || false,
           };
         });
 
         // Fetch staff knowledge to filter out games the user already knows
-        let filteredGamesList = gamesList;
         try {
-          const apiKey = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY ||
-            process.env.AIRTABLE_API_KEY;
-          if (apiKey && staffId) {
-            // Query the Staff Game Knowledge table directly for current staff member
-            const baseId = 'apppFvSDh2JBc0qAu';
-            const knowledgeTableId = 'tblgdqR2DTAcjVFBd';
+          if (staffId) {
+            // Fetch staff knowledge from PostgreSQL via our API
+            const knowledgeResponse = await fetch('/api/staff-knowledge');
 
-            let allRecords: any[] = [];
-            let offset: string | undefined;
+            if (knowledgeResponse.ok) {
+              const knowledgeData = await knowledgeResponse.json();
+              const knownIds = new Set<string>();
 
-            do {
-              const url = new URL(
-                `https://api.airtable.com/v0/${baseId}/${knowledgeTableId}`
-              );
-              url.searchParams.set('pageSize', '100');
-              url.searchParams.set(
-                'filterByFormula',
-                `{Staff Member} = "${staffId}"`
-              );
-              if (offset) url.searchParams.set('offset', offset);
-
-              const knowledgeResponse = await fetch(url.toString(), {
-                headers: { Authorization: `Bearer ${apiKey}` },
+              // Filter for current staff member's knowledge
+              knowledgeData.knowledge?.forEach((entry: any) => {
+                if (entry.staffMember === staffName) {
+                  // Get the game ID from the knowledge entry
+                  // We need to look up the game ID by name
+                  const matchingGame = gamesList.find((g: any) => {
+                    // Remove expansion suffix for matching
+                    const gameName = entry.gameName;
+                    const cleanGameName = g.name.replace(/ \(Expansion for .*\)$/, '');
+                    return cleanGameName === gameName || g.name === gameName;
+                  });
+                  if (matchingGame) {
+                    knownIds.add(matchingGame.id);
+                  }
+                }
               });
 
-              if (knowledgeResponse.ok) {
-                const data = await knowledgeResponse.json();
-                allRecords = allRecords.concat(data.records || []);
-                offset = data.offset;
-              } else {
-                break;
-              }
-            } while (offset);
-
-            // Extract known game IDs
-            const knownGameIds = new Set<string>();
-            allRecords.forEach((record: any) => {
-              const gameIds = record.fields['Game'] || [];
-              gameIds.forEach((gameId: string) => {
-                knownGameIds.add(gameId);
-              });
-            });
-
-            // Filter out games the staff member already knows
-            if (knownGameIds.size > 0) {
-              filteredGamesList = gamesList.filter(
-                (game: Game) => !knownGameIds.has(game.id)
-              );
+              setKnownGameIds(knownIds);
             }
           }
         } catch (err) {
@@ -142,7 +123,8 @@ export default function AddKnowledgePage() {
         }
 
         setGames(gamesList);
-        setFilteredGames(filteredGamesList);
+        // Apply filtering based on hideKnownGames state
+        setFilteredGames(gamesList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load games');
         setGames([]);
@@ -156,6 +138,17 @@ export default function AddKnowledgePage() {
       fetchGames();
     }
   }, [step, staffName]);
+
+  // Apply filtering based on hideKnownGames toggle
+  useEffect(() => {
+    if (games.length > 0) {
+      if (hideKnownGames && knownGameIds.size > 0) {
+        setFilteredGames(games.filter(game => !knownGameIds.has(game.id)));
+      } else {
+        setFilteredGames(games);
+      }
+    }
+  }, [games, hideKnownGames, knownGameIds]);
 
   const getLevelExplanation = (level: string) => {
     switch (level) {
@@ -323,11 +316,29 @@ Click OK to confirm or Cancel to go back.`;
             <div className="sticky top-0 z-50 bg-background border-b border-border mb-6">
               <div className="p-4 space-y-3">
                 {/* Header Info */}
-                <div>
-                  <h2 className="text-2xl font-bold">Select Games - {confidenceLevel}</h2>
-                  <p className="text-muted-foreground mt-1">
-                    Selected: {selectedGames.size} games — Page {currentPage} of {totalPages || 1}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">Select Games - {confidenceLevel}</h2>
+                    <p className="text-muted-foreground mt-1">
+                      Selected: {selectedGames.size} games — Page {currentPage} of {totalPages || 1}
+                      {knownGameIds.size > 0 && hideKnownGames && (
+                        <span className="text-primary"> — Hiding {knownGameIds.size} known games</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Toggle for hiding/showing known games */}
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hideKnownGames}
+                        onChange={(e) => setHideKnownGames(e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium">Hide games I already know</span>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Controls */}
