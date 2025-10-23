@@ -4,12 +4,83 @@ import { CreateGameInput } from '@/types';
 import { logger } from '@/lib/logger';
 import DatabaseService from '@/lib/services/db-service';
 import crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
 
 /**
- * Generate MD5 hash for image URL
+ * Generate MD5 hash for image content (not URL)
  */
-function generateImageHash(imageUrl: string): string {
-  return crypto.createHash('md5').update(imageUrl).digest('hex');
+function generateImageContentHash(buffer: Buffer): string {
+  return crypto.createHash('md5').update(buffer).digest('hex');
+}
+
+/**
+ * Download and cache an image from a URL
+ * Returns the hash of the cached image
+ */
+async function downloadAndCacheImage(imageUrl: string): Promise<string | null> {
+  try {
+    // Ensure cache directory exists
+    if (!fs.existsSync(IMAGE_CACHE_DIR)) {
+      fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true, mode: 0o755 });
+    }
+
+    // Download image
+    logger.debug('Image Download', 'Downloading image', { imageUrl });
+    const response = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      logger.warn('Image Download', 'Failed to download image', { imageUrl, status: response.status });
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const hash = generateImageContentHash(buffer);
+
+    // Detect file extension from URL or content-type
+    const urlParts = imageUrl.split('?')[0]; // Remove query params
+    const urlExtension = urlParts.split('.').pop()?.toLowerCase() || '';
+    const contentType = response.headers.get('content-type') || '';
+
+    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    let extension = validExtensions.includes(urlExtension) ? urlExtension : null;
+
+    if (!extension) {
+      // Fallback to content-type
+      const typeMap: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/svg+xml': 'svg',
+      };
+      extension = typeMap[contentType] || 'jpg';
+    }
+
+    const filePath = path.join(IMAGE_CACHE_DIR, `${hash}.${extension}`);
+
+    // Check if already cached
+    if (fs.existsSync(filePath)) {
+      logger.debug('Image Download', 'Image already cached', { hash, imageUrl });
+      return hash;
+    }
+
+    // Save to disk
+    fs.writeFileSync(filePath, buffer);
+    logger.info('Image Download', 'Successfully cached image', { hash, size: buffer.length, imageUrl });
+
+    return hash;
+  } catch (error) {
+    logger.error('Image Download', 'Error downloading/caching image', error instanceof Error ? error : new Error(String(error)), { imageUrl });
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -143,12 +214,20 @@ export async function POST(request: Request) {
       });
     }
 
-    // Add images to PostgreSQL
+    // Download and cache images to disk, then add to PostgreSQL
     for (const imageUrl of imageUrls) {
       try {
-        const hash = generateImageHash(imageUrl);
+        // Download and cache the image (returns hash of image content)
+        const hash = await downloadAndCacheImage(imageUrl);
+
+        if (!hash) {
+          logger.warn('Game Creation', 'Failed to download/cache image, skipping', { imageUrl });
+          continue;
+        }
+
+        // Add to PostgreSQL with the content hash
         await db.games.addGameImage(gameId, imageUrl, hash);
-        logger.debug('Game Creation', 'Added image to PostgreSQL', { imageUrl, hash });
+        logger.debug('Game Creation', 'Downloaded, cached, and added image to PostgreSQL', { imageUrl, hash });
       } catch (imageError) {
         logger.warn('Game Creation', 'Failed to add image', { imageUrl, error: imageError });
       }
