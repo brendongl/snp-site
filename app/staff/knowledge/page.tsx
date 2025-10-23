@@ -672,8 +672,9 @@ export default function KnowledgePage() {
                       {/* Game Gallery Link */}
                       <div className="px-4 py-2 border-b bg-gray-100">
                         <Link
-                          href={`/games?search=${encodeURIComponent(group.gameName)}`}
+                          href="/games"
                           className="text-xs text-primary hover:text-primary/80 underline inline-flex items-center gap-1"
+                          title={`View ${group.gameName} in Game Gallery`}
                         >
                           View in Game Gallery →
                         </Link>
