@@ -677,11 +677,18 @@ function GamesPageContent() {
         // Pictures Only Mode - 3 column grid with just images
         <div className="grid grid-cols-3 gap-2 pt-4">
           {filteredAndSortedGames.map((game) => {
-            const firstImage = game.fields.Images?.[0];
-            const originalImageUrl = firstImage?.thumbnails?.large?.url || firstImage?.url;
-            const imageUrl = originalImageUrl
-              ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
-              : undefined;
+            // Check both PostgreSQL structure (game.images) and Airtable structure (game.fields.Images)
+            const firstImage = game.images?.[0] || game.fields.Images?.[0];
+            const originalImageUrl = firstImage?.url ||
+              (firstImage && 'thumbnails' in firstImage ? firstImage.thumbnails?.large?.url : undefined);
+
+            // Use hash-based route for PostgreSQL images, fallback to proxy for Airtable
+            const imageHash = firstImage && 'hash' in firstImage ? firstImage.hash : null;
+            const imageUrl = imageHash
+              ? `/api/images/${imageHash}`
+              : originalImageUrl
+                ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
+                : undefined;
 
             return (
               <div
