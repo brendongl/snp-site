@@ -86,6 +86,8 @@ export async function POST(request: Request) {
       maxPlayers: bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),
       bggId: bggId.toString(),
       dateOfAcquisition: dateOfAcquisition || new Date().toISOString().split('T')[0],
+      minPlaytime: bggData.minPlaytime || null,
+      maxPlaytime: bggData.maxPlaytime || null,
     };
 
     // Add optional fields

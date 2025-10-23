@@ -17,7 +17,9 @@
       "Bash(git reset:*)",
       "Bash(git stash:*)",
       "Bash(git pull:*)",
-      "Bash(node scripts/add-mechanisms-column.js:*)"
+      "Bash(node scripts/add-mechanisms-column.js:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway\" node scripts/add-and-backfill-columns.js:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

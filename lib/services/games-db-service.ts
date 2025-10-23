@@ -414,6 +414,8 @@ class GamesDbService {
     baseGameId?: string;
     bggId?: string;
     dateOfAcquisition?: string;
+    minPlaytime?: number;
+    maxPlaytime?: number;
   }): Promise<{ id: string }> {
     const client = await this.pool.connect();
     try {
@@ -425,9 +427,10 @@ class GamesDbService {
           id, name, description, categories, mechanisms, year_released,
           min_players, max_players, best_player_amount, complexity,
           cost_price, game_size, deposit, base_game_id,
-          bgg_id, date_of_acquisition, created_at, updated_at
+          bgg_id, date_of_acquisition, min_playtime, max_playtime,
+          created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
         ) RETURNING id`,
         [
           gameData.id,
@@ -446,6 +449,8 @@ class GamesDbService {
           gameData.baseGameId || null,
           gameData.bggId || null,
           gameData.dateOfAcquisition || new Date().toISOString().split('T')[0],
+          gameData.minPlaytime || null,
+          gameData.maxPlaytime || null,
         ]
       );
 

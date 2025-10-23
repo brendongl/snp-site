@@ -171,6 +171,8 @@ export interface BGGGameData {
   maxPlayers: number;
   bestPlayerCount?: number;
   playingTime: number;
+  minPlaytime: number;
+  maxPlaytime: number;
   minAge: number;
   complexity: number; // Weight/complexity rating (1-5)
   categories: string[];

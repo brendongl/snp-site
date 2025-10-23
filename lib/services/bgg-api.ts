@@ -283,6 +283,8 @@ export async function fetchBGGGame(gameId: number): Promise<BGGGameData> {
       maxPlayers: item.maxplayers ? parseInt(item.maxplayers['@_value']) || 0 : 0,
       bestPlayerCount,
       playingTime: item.playingtime ? parseInt(item.playingtime['@_value']) || 0 : 0,
+      minPlaytime: item.minplaytime ? parseInt(item.minplaytime['@_value']) || 0 : 0,
+      maxPlaytime: item.maxplaytime ? parseInt(item.maxplaytime['@_value']) || 0 : 0,
       minAge: item.minage ? parseInt(item.minage['@_value']) || 0 : 0,
       complexity: Math.ceil(complexity), // Round UP as requested
       categories,
