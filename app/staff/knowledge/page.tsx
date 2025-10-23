@@ -23,7 +23,7 @@ interface GroupedGame {
   expertInstructorCount: number;
 }
 
-const RECORDS_PER_PAGE = 20;
+const RECORDS_PER_PAGE = 50;
 const CONFIDENCE_LEVELS = ['Beginner', 'Intermediate', 'Expert', 'Instructor'];
 
 export default function KnowledgePage() {
@@ -46,6 +46,7 @@ export default function KnowledgePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Check authentication and set default filter
   useEffect(() => {
@@ -102,6 +103,16 @@ export default function KnowledgePage() {
     fetchData();
   }, [staffName]);
 
+  // Add scroll listener for sticky header
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 150);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Normalize name for comparison (must be before useMemo that uses it)
   const normalizeName = (name: string | null | undefined): string => {
     if (!name) return '';
@@ -114,6 +125,11 @@ export default function KnowledgePage() {
     const staffArray = Array.from(staffSet).sort();
     return staffArray;
   }, [allKnowledge]);
+
+  // Get all unique game names for dropdown
+  const uniqueGameNames = useMemo(() => {
+    return [...allGames].sort();
+  }, [allGames]);
 
   // Determine view mode (calculate here for external use, don't include in useMemo deps)
   const isListView = selectedStaff !== null && selectedStaff !== '';
@@ -342,15 +358,19 @@ export default function KnowledgePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card">
+      {/* Back to Games - Always visible */}
+      <div className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3 max-w-6xl">
+          <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Games
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Header - Hides when scrolling */}
+      <div className={`border-b border-border bg-card transition-all duration-200 ${isScrolled ? 'h-0 overflow-hidden opacity-0' : 'h-auto opacity-100'}`}>
         <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="flex items-center gap-3 mb-4">
-            <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Games
-            </Link>
-          </div>
           <div>
             <h1 className="text-3xl font-bold">Staff Game Knowledge</h1>
             <p className="text-muted-foreground mt-2">
@@ -360,25 +380,25 @@ export default function KnowledgePage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Filters */}
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Game Name Search */}
-            <input
-              type="text"
+      {/* Sticky Filters Header */}
+      <div className={`sticky bg-card border-b border-border z-30 ${isScrolled ? 'top-[49px]' : 'top-0'}`}>
+        <div className="container mx-auto px-4 py-2 max-w-6xl space-y-2">
+          {/* Row 1: Game Search + Staff Filter */}
+          <div className="flex gap-2">
+            <select
               value={gameNameSearch}
               onChange={(e) => setGameNameSearch(e.target.value)}
-              placeholder="Search games..."
-              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-
-            {/* Staff Filter */}
+              className="flex-1 px-3 py-1.5 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+            >
+              <option value="">All Games</option>
+              {uniqueGameNames.map(game => (
+                <option key={game} value={game}>{game}</option>
+              ))}
+            </select>
             <select
               value={selectedStaff || ''}
               onChange={(e) => setSelectedStaff(e.target.value || null)}
-              className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+              className="flex-1 px-3 py-1.5 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <option value="">All Staff</option>
               {uniqueStaff.map(staff => (
@@ -387,13 +407,13 @@ export default function KnowledgePage() {
             </select>
           </div>
 
-          {/* Confidence Level Toggles */}
-          <div className="flex flex-wrap gap-2 items-center">
+          {/* Row 2: Confidence Levels */}
+          <div className="flex gap-2">
             {CONFIDENCE_LEVELS.map(level => (
               <button
                 key={level}
                 onClick={() => toggleConfidenceLevel(level)}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                className={`flex-1 px-2 py-1 rounded-lg text-xs border transition-all ${
                   selectedConfidenceLevels.has(level)
                     ? 'border-primary bg-primary/10 text-primary font-medium'
                     : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
@@ -402,13 +422,10 @@ export default function KnowledgePage() {
                 {level}
               </button>
             ))}
-            <span className="text-xs text-muted-foreground italic ml-2">
-              * Experts & Instructors can teach
-            </span>
           </div>
 
-          {/* Special Filters */}
-          <div className="flex flex-wrap gap-2">
+          {/* Row 3: Special Filters */}
+          <div className="flex gap-2">
             <button
               onClick={() => {
                 const newValue = !showKnowledgeGaps;
@@ -421,9 +438,12 @@ export default function KnowledgePage() {
                   setGameNameSearch('');
                 }
               }}
-              className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+              disabled={selectedStaff !== null && selectedStaff !== ''}
+              className={`flex-1 px-3 py-1 rounded-lg text-xs border transition-all ${
                 showKnowledgeGaps
                   ? 'border-red-500 bg-red-50 text-red-700 font-medium'
+                  : selectedStaff !== null && selectedStaff !== ''
+                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
               }`}
             >
@@ -439,16 +459,28 @@ export default function KnowledgePage() {
                   setShowKnowledgeGaps(false);
                 }
               }}
-              className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+              disabled={selectedStaff !== null && selectedStaff !== ''}
+              className={`flex-1 px-3 py-1 rounded-lg text-xs border transition-all ${
                 showTrainingOpportunities
                   ? 'border-green-500 bg-green-50 text-green-700 font-medium'
+                  : selectedStaff !== null && selectedStaff !== ''
+                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
               }`}
             >
               🎯 Training Opportunities
             </button>
           </div>
+
+          {/* Small info text */}
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground italic">* Experts & Instructors can teach</span>
+          </div>
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
 
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
@@ -642,30 +674,43 @@ export default function KnowledgePage() {
 
                   {/* Expanded Content */}
                   {isExpanded && (
-                    <div className="border-t divide-y bg-gray-50">
-                      {group.entries.map((entry) => (
-                        <div key={entry.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="text-sm text-muted-foreground">
-                              {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
-                              {entry.confidenceLevel}
-                            </span>
-                          </div>
-                          {canEditEntry(entry) && (
-                            <div className="flex gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
-                                className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
+                    <div className="border-t bg-gray-50">
+                      {/* Game Gallery Link */}
+                      <div className="px-4 py-2 border-b bg-gray-100">
+                        <Link
+                          href={`/games?search=${encodeURIComponent(group.gameName)}`}
+                          className="text-xs text-primary hover:text-primary/80 underline inline-flex items-center gap-1"
+                        >
+                          View in Game Gallery →
+                        </Link>
+                      </div>
+
+                      {/* Staff Knowledge Entries */}
+                      <div className="divide-y">
+                        {group.entries.map((entry) => (
+                          <div key={entry.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3 flex-1">
+                              <span className="text-sm text-muted-foreground">
+                                {normalizeName(entry.staffMember) === normalizeName(staffName) ? 'Myself' : entry.staffMember}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(entry.confidenceLevel)}`}>
+                                {entry.confidenceLevel}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            {canEditEntry(entry) && (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
+                                  className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
