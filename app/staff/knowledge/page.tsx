@@ -388,7 +388,7 @@ export default function KnowledgePage() {
             <select
               value={gameNameSearch}
               onChange={(e) => setGameNameSearch(e.target.value)}
-              className="flex-1 px-3 py-1.5 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+              className="w-1/2 px-2 py-1.5 rounded-lg text-xs sm:text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <option value="">All Games</option>
               {uniqueGameNames.map(game => (
@@ -398,7 +398,7 @@ export default function KnowledgePage() {
             <select
               value={selectedStaff || ''}
               onChange={(e) => setSelectedStaff(e.target.value || null)}
-              className="flex-1 px-3 py-1.5 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+              className="w-1/2 px-2 py-1.5 rounded-lg text-xs sm:text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <option value="">All Staff</option>
               {uniqueStaff.map(staff => (
@@ -438,12 +438,9 @@ export default function KnowledgePage() {
                   setGameNameSearch('');
                 }
               }}
-              disabled={selectedStaff !== null && selectedStaff !== ''}
               className={`flex-1 px-3 py-1 rounded-lg text-xs border transition-all ${
                 showKnowledgeGaps
                   ? 'border-red-500 bg-red-50 text-red-700 font-medium'
-                  : selectedStaff !== null && selectedStaff !== ''
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
               }`}
             >
@@ -459,12 +456,9 @@ export default function KnowledgePage() {
                   setShowKnowledgeGaps(false);
                 }
               }}
-              disabled={selectedStaff !== null && selectedStaff !== ''}
               className={`flex-1 px-3 py-1 rounded-lg text-xs border transition-all ${
                 showTrainingOpportunities
                   ? 'border-green-500 bg-green-50 text-green-700 font-medium'
-                  : selectedStaff !== null && selectedStaff !== ''
-                  ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
               }`}
             >
