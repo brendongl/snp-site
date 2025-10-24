@@ -1,26 +1,19 @@
 import { NextResponse } from 'next/server';
-import Airtable from 'airtable';
 import { logger } from '@/lib/logger';
-
-const airtable = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY });
-const base = airtable.base(process.env.AIRTABLE_GAMES_BASE_ID || '');
-const tableId = process.env.AIRTABLE_GAMES_TABLE_ID || '';
+import DatabaseService from '@/lib/services/db-service';
 
 export async function GET() {
   try {
-    logger.info('Games List', 'Fetching all games from Airtable');
+    logger.info('Games List', 'Fetching all games from PostgreSQL');
 
-    const records = await base(tableId)
-      .select({
-        fields: ['Game Name', 'Year Released'],
-        sort: [{ field: 'Game Name', direction: 'asc' }],
-      })
-      .all();
+    const db = DatabaseService.getInstance();
+    const allGames = await db.games.getAllGames();
 
-    const games = records.map((record) => ({
-      id: record.id,
-      name: record.get('Game Name') as string,
-      year: record.get('Year Released') as number,
+    // Map to the format expected by AddGameDialog
+    const games = allGames.map((game) => ({
+      id: game.id,
+      name: game.fields['Game Name'] as string,
+      year: game.fields['Year Released'] as number,
     }));
 
     logger.info('Games List', `Successfully fetched ${games.length} games`);

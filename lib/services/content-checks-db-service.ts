@@ -132,20 +132,32 @@ class ContentChecksDbService {
    */
   async createCheck(check: Omit<ContentCheck, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentCheck> {
     try {
+      // Generate a unique ID
+      const id = `cck_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
+      // Status is stored as VARCHAR - use first element of array or empty string
+      const statusValue = Array.isArray(check.status) && check.status.length > 0
+        ? check.status[0]
+        : '';
+
+      // Photos is stored as TEXT[] - pass array directly (node-postgres handles it)
+      const photosValue = Array.isArray(check.photos) ? check.photos : [];
+
       const result = await this.pool.query(
         `INSERT INTO content_checks (
-          game_id, inspector_id, check_date, status, missing_pieces,
+          id, game_id, inspector_id, check_date, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at`,
         [
+          id,
           check.gameId,
           check.inspectorId,
           check.checkDate,
-          JSON.stringify(check.status),
+          statusValue,
           check.missingPieces,
           check.boxCondition,
           check.cardCondition,
@@ -153,7 +165,7 @@ class ContentChecksDbService {
           check.notes,
           check.sleeved,
           check.boxWrapped,
-          JSON.stringify(check.photos),
+          photosValue,
         ]
       );
 
@@ -187,7 +199,11 @@ class ContentChecksDbService {
       }
       if (updates.status !== undefined) {
         setClauses.push(`status = $${paramCount++}`);
-        values.push(JSON.stringify(updates.status));
+        // Status is VARCHAR - store first element of array
+        const statusValue = Array.isArray(updates.status) && updates.status.length > 0
+          ? updates.status[0]
+          : '';
+        values.push(statusValue);
       }
       if (updates.missingPieces !== undefined) {
         setClauses.push(`missing_pieces = $${paramCount++}`);
@@ -219,7 +235,9 @@ class ContentChecksDbService {
       }
       if (updates.photos !== undefined) {
         setClauses.push(`photos = $${paramCount++}`);
-        values.push(JSON.stringify(updates.photos));
+        // Photos is TEXT[] - pass array directly
+        const photosValue = Array.isArray(updates.photos) ? updates.photos : [];
+        values.push(photosValue);
       }
 
       if (setClauses.length === 0) {
@@ -311,21 +329,26 @@ class ContentChecksDbService {
         ORDER BY cc.check_date DESC
       `);
 
-      return result.rows.map((row: any) => ({
-        id: row.id,
-        gameId: row.game_id,
-        gameName: row.game_name || 'Unknown Game',
-        checkDate: row.check_date,
-        inspector: row.inspector_id || 'Unknown Staff',
-        status: row.status || 'Unknown',
-        notes: row.notes || '',
-        boxCondition: row.box_condition,
-        cardCondition: row.card_condition,
-        missingPieces: row.missing_pieces,
-        sleeved: row.sleeved_at_check,
-        boxWrapped: row.box_wrapped_at_check,
-        isFake: row.is_fake,
-      }));
+      return result.rows.map((row: any) => {
+        // Status is stored as VARCHAR (plain string), not JSON
+        const statusString = row.status || 'Unknown';
+
+        return {
+          id: row.id,
+          gameId: row.game_id,
+          gameName: row.game_name || 'Unknown Game',
+          checkDate: row.check_date,
+          inspector: row.inspector_id || 'Unknown Staff',
+          status: statusString,
+          notes: row.notes || '',
+          boxCondition: row.box_condition,
+          cardCondition: row.card_condition,
+          missingPieces: row.missing_pieces,
+          sleeved: row.sleeved_at_check,
+          boxWrapped: row.box_wrapped_at_check,
+          isFake: row.is_fake,
+        };
+      });
     } catch (error) {
       console.error('Error fetching content checks with game names:', error);
       throw error;
@@ -333,20 +356,54 @@ class ContentChecksDbService {
   }
 
   private mapRowToCheck(row: any): ContentCheck {
+    // Helper function to safely parse status field
+    // Handles both plain string (legacy) and JSON array (new format)
+    const parseStatus = (statusValue: any): string[] => {
+      if (!statusValue) return [];
+      if (Array.isArray(statusValue)) return statusValue;
+      if (typeof statusValue === 'string') {
+        // Try to parse as JSON first
+        try {
+          const parsed = JSON.parse(statusValue);
+          return Array.isArray(parsed) ? parsed : [statusValue];
+        } catch {
+          // If not JSON, treat as plain string
+          return [statusValue];
+        }
+      }
+      return [];
+    };
+
+    // Helper function to safely parse photos field
+    // Handles null, array, and JSON string
+    const parsePhotos = (photosValue: any): string[] => {
+      if (!photosValue) return [];
+      if (Array.isArray(photosValue)) return photosValue;
+      if (typeof photosValue === 'string') {
+        try {
+          const parsed = JSON.parse(photosValue);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
     return {
       id: row.id,
       gameId: row.game_id,
       inspectorId: row.inspector_id,
       checkDate: row.check_date,
-      status: JSON.parse(row.status || '[]'),
-      missingPieces: row.missing_pieces,
+      status: parseStatus(row.status),
+      missingPieces: row.missing_pieces || false,
       boxCondition: row.box_condition,
       cardCondition: row.card_condition,
-      isFake: row.is_fake,
+      isFake: row.is_fake || false,
       notes: row.notes,
-      sleeved: row.sleeved_at_check,
-      boxWrapped: row.box_wrapped_at_check,
-      photos: JSON.parse(row.photos || '[]'),
+      sleeved: row.sleeved_at_check || false,
+      boxWrapped: row.box_wrapped_at_check || false,
+      photos: parsePhotos(row.photos),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

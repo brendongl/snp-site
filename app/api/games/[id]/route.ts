@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { gamesService } from '@/lib/airtable/games-service';
 import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
