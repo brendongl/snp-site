@@ -299,6 +299,7 @@ export interface AnalyticsInsights {
     gamesWithKnowledge: number;
     totalGames: number;
     percentage: string;
+    staffFiltered?: boolean; // True if filtered by specific staff member
   };
   teachingCapacity: Array<{
     staffName: string;

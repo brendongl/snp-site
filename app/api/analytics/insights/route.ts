@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
   const pool = new Pool({ connectionString: DATABASE_URL });
 
   try {
+    const { searchParams } = new URL(request.url);
+    const staffId = searchParams.get('staffId'); // Optional staff filter
     // 1. Games Needing Attention (no checks or last check > 6 months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -102,22 +104,40 @@ export async function GET(request: NextRequest) {
     };
 
     // 3. Knowledge Coverage (% of games with at least one staff knowledge entry)
-    const knowledgeCoverageQuery = `
-      SELECT
-        COUNT(DISTINCT g.id) as games_with_knowledge,
-        (SELECT COUNT(*) FROM games WHERE base_game_id IS NULL) as total_games
-      FROM games g
-      INNER JOIN staff_knowledge sk ON g.id = sk.game_id
-      WHERE g.base_game_id IS NULL
-    `;
+    // If staffId provided, show coverage for that specific staff member
+    let knowledgeCoverageQuery;
+    let knowledgeCoverageParams: any[] = [];
 
-    const knowledgeCoverageResult = await pool.query(knowledgeCoverageQuery);
+    if (staffId) {
+      knowledgeCoverageQuery = `
+        SELECT
+          COUNT(DISTINCT g.id) as games_with_knowledge,
+          (SELECT COUNT(*) FROM games WHERE base_game_id IS NULL) as total_games
+        FROM games g
+        INNER JOIN staff_knowledge sk ON g.id = sk.game_id
+        WHERE g.base_game_id IS NULL
+          AND sk.staff_member_id = $1
+      `;
+      knowledgeCoverageParams = [staffId];
+    } else {
+      knowledgeCoverageQuery = `
+        SELECT
+          COUNT(DISTINCT g.id) as games_with_knowledge,
+          (SELECT COUNT(*) FROM games WHERE base_game_id IS NULL) as total_games
+        FROM games g
+        INNER JOIN staff_knowledge sk ON g.id = sk.game_id
+        WHERE g.base_game_id IS NULL
+      `;
+    }
+
+    const knowledgeCoverageResult = await pool.query(knowledgeCoverageQuery, knowledgeCoverageParams);
     const gamesWithKnowledge = parseInt(knowledgeCoverageResult.rows[0].games_with_knowledge || '0');
 
     const knowledgeCoverage = {
       gamesWithKnowledge,
       totalGames,
-      percentage: ((gamesWithKnowledge / totalGames) * 100).toFixed(1)
+      percentage: ((gamesWithKnowledge / totalGames) * 100).toFixed(1),
+      staffFiltered: !!staffId // Indicate if this is filtered by staff
     };
 
     // 4. Teaching Capacity (staff with most "can teach" games)

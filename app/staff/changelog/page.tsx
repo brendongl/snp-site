@@ -56,7 +56,6 @@ export default function ChangelogPage() {
   const [error, setError] = useState<string | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [compareStaff, setCompareStaff] = useState<string[]>([]);
-  const [selectedActivityStaff, setSelectedActivityStaff] = useState<string>(''); // For Staff Activity Over Time chart
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,7 +131,14 @@ export default function ChangelogPage() {
 
     const fetchInsights = async () => {
       try {
-        const response = await fetch('/api/analytics/insights');
+        // Build query params - include staffId if filtering by staff
+        const params = new URLSearchParams();
+        const filterStaffId = filters.myChangesOnly ? staffId : filters.staffId;
+        if (filterStaffId) {
+          params.append('staffId', filterStaffId);
+        }
+
+        const response = await fetch(`/api/analytics/insights?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
           setAnalyticsInsights(data);
@@ -143,7 +149,7 @@ export default function ChangelogPage() {
     };
 
     fetchInsights();
-  }, [staffName, isAdmin]);
+  }, [staffName, isAdmin, filters.staffId, filters.myChangesOnly, staffId]);
 
   // Fetch changelog data
   useEffect(() => {
@@ -454,36 +460,41 @@ export default function ChangelogPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Activity Over Time - Staff Activity */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Staff Activity Over Time</h3>
-                <select
-                  value={selectedActivityStaff}
-                  onChange={(e) => setSelectedActivityStaff(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="">Select a staff member...</option>
-                  {staffMembers.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staff Activity Over Time</h3>
               <div className="h-72">
-                {selectedActivityStaff && chartData.changesByStaffOverTime && chartData.changesByStaffOverTime.length > 0 ? (
-                  (() => {
-                    // Filter data for selected staff member
-                    const staffData = chartData.changesByStaffOverTime.filter(
-                      d => d.staffName === staffMembers.find(m => m.id === selectedActivityStaff)?.name
-                    );
+                {(() => {
+                  // Use main filter's staffId or myChangesOnly
+                  const filterStaffId = filters.myChangesOnly ? staffId : filters.staffId;
 
-                    if (staffData.length === 0) {
-                      return (
-                        <div className="h-full flex items-center justify-center text-gray-500">
-                          No activity data for selected staff member
-                        </div>
-                      );
-                    }
+                  if (!filterStaffId) {
+                    return (
+                      <div className="h-full flex items-center justify-center text-gray-500">
+                        Select a staff member from filters to view activity over time
+                      </div>
+                    );
+                  }
+
+                  if (!chartData.changesByStaffOverTime || chartData.changesByStaffOverTime.length === 0) {
+                    return (
+                      <div className="h-full flex items-center justify-center text-gray-500">
+                        Loading activity data...
+                      </div>
+                    );
+                  }
+
+                  // Filter data for selected staff member from main filters
+                  const selectedStaffName = staffMembers.find(m => m.id === filterStaffId)?.name;
+                  const staffData = chartData.changesByStaffOverTime.filter(
+                    d => d.staffName === selectedStaffName
+                  );
+
+                  if (staffData.length === 0) {
+                    return (
+                      <div className="h-full flex items-center justify-center text-gray-500">
+                        No activity data for selected staff member in this time range
+                      </div>
+                    );
+                  }
 
                     return (
                       <Line
@@ -535,12 +546,7 @@ export default function ChangelogPage() {
                         }}
                       />
                     );
-                  })()
-                ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500">
-                    {!selectedActivityStaff ? 'Select a staff member to view activity' : 'Loading activity data...'}
-                  </div>
-                )}
+                })()}
               </div>
             </div>
 
@@ -728,12 +734,27 @@ export default function ChangelogPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <GraduationCap className="w-6 h-6 text-indigo-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Knowledge Coverage</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Knowledge Coverage
+                  {analyticsInsights.knowledgeCoverage.staffFiltered && (
+                    <span className="ml-2 text-sm font-normal text-gray-600">
+                      ({staffMembers.find(m => m.id === (filters.myChangesOnly ? staffId : filters.staffId))?.name || 'Staff Member'})
+                    </span>
+                  )}
+                </h3>
               </div>
               <div className="text-center">
                 <p className="text-5xl font-bold text-indigo-600">{analyticsInsights.knowledgeCoverage.percentage}%</p>
                 <p className="text-sm text-gray-600 mt-2">
-                  {analyticsInsights.knowledgeCoverage.gamesWithKnowledge} of {analyticsInsights.knowledgeCoverage.totalGames} games have staff knowledge
+                  {analyticsInsights.knowledgeCoverage.staffFiltered ? (
+                    <>
+                      {analyticsInsights.knowledgeCoverage.gamesWithKnowledge} of {analyticsInsights.knowledgeCoverage.totalGames} games known by this staff member
+                    </>
+                  ) : (
+                    <>
+                      {analyticsInsights.knowledgeCoverage.gamesWithKnowledge} of {analyticsInsights.knowledgeCoverage.totalGames} games have staff knowledge
+                    </>
+                  )}
                 </p>
                 <div className="mt-4 bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div
@@ -768,9 +789,17 @@ export default function ChangelogPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            </div>
+            <button
+              onClick={() => handleTimeRangeChange('week')}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              Last 7 Days
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
