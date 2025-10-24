@@ -49,10 +49,10 @@ export async function GET(
     }
 
     if (!imagePath) {
-      console.log(`❌ Image not found: ${hash}`);
-      console.log(`   Hint: Run migration script to populate images`);
+      // Silently return 404 for missing images - don't log errors
+      // This is expected behavior when images haven't been cached yet
       return NextResponse.json(
-        { error: 'Image not found. Run migration script to populate images.' },
+        { error: 'Image not found' },
         { status: 404 }
       );
     }

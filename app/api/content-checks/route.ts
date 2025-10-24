@@ -11,7 +11,6 @@ export async function GET(request: Request) {
 
     // If requesting checks for a specific game
     if (gameId) {
-      console.log(`Fetching content checks for game: ${gameId}`);
       const checks = await db.contentChecks.getChecksByGameId(gameId);
       return NextResponse.json({
         checks,
@@ -20,10 +19,7 @@ export async function GET(request: Request) {
     }
 
     // Get all checks from PostgreSQL
-    console.log('Fetching all content checks from PostgreSQL...');
     const allChecks = await db.contentChecks.getAllChecks();
-
-    console.log(`✅ Fetched ${allChecks.length} content checks from PostgreSQL`);
 
     return NextResponse.json({
       checks: allChecks,
