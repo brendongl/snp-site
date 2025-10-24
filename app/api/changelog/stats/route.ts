@@ -130,35 +130,32 @@ export async function GET(request: NextRequest) {
       contentChecks: changesByCategory.content_check,
     };
 
-    // NEW: Get staff-grouped activity over time
-    let changesByStaffOverTime: any[] = [];
-    if (compareStaff.length > 0) {
-      const staffActivityQuery = `
-        SELECT
-          DATE(created_at) as date,
-          staff_id,
-          staff_member as staff_name,
-          COUNT(*) as total_actions
-        FROM changelog
-        WHERE created_at >= $1 AND created_at < $2
-          AND staff_id = ANY($3)
-        GROUP BY DATE(created_at), staff_id, staff_member
-        ORDER BY DATE(created_at) ASC, staff_name ASC
-      `;
+    // NEW: Get staff-grouped activity over time (for all staff)
+    const staffActivityQuery = `
+      SELECT
+        DATE(created_at) as date,
+        staff_id,
+        staff_member as staff_name,
+        COUNT(*) as total_actions
+      FROM changelog
+      WHERE created_at >= $1 AND created_at < $2
+        AND staff_member IS NOT NULL
+        AND staff_member NOT IN ('system', 'System')
+      GROUP BY DATE(created_at), staff_id, staff_member
+      ORDER BY DATE(created_at) ASC, staff_name ASC
+    `;
 
-      const staffActivityResult = await pool.query(staffActivityQuery, [
-        startDate,
-        endDatePlusOne.toISOString(),
-        compareStaff
-      ]);
+    const staffActivityResult = await pool.query(staffActivityQuery, [
+      startDate,
+      endDatePlusOne.toISOString()
+    ]);
 
-      changesByStaffOverTime = staffActivityResult.rows.map(row => ({
-        date: row.date,
-        staffId: row.staff_id,
-        staffName: row.staff_name,
-        totalActions: parseInt(row.total_actions || '0')
-      }));
-    }
+    const changesByStaffOverTime = staffActivityResult.rows.map(row => ({
+      date: row.date,
+      staffId: row.staff_id,
+      staffName: row.staff_name,
+      totalActions: parseInt(row.total_actions || '0')
+    }));
 
     // NEW: Get staff knowledge counts for pie chart (weighted by complexity)
     const staffKnowledgeQuery = `
