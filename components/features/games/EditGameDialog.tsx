@@ -235,59 +235,14 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           }),
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Failed to update game');
+          throw new Error(responseData.error || 'Failed to update game');
         }
 
-        // Step 4: Verify changes were saved by fetching from database
-        const verifyResponse = await fetch(`/api/games/${game.id}`);
-        if (!verifyResponse.ok) {
-          throw new Error('Failed to verify game update');
-        }
-
-        const verifiedData = await verifyResponse.json();
-        const verifiedGame = verifiedData.game;
-
-        // Debug logging
-        console.log('Verification - Form Data:', {
-          deposit: formData.deposit,
-          costPrice: formData.costPrice,
-          gameSize: formData.gameSize,
-          bestPlayerAmount: formData.bestPlayerAmount,
-        });
-        console.log('Verification - Database Data:', {
-          deposit: verifiedGame?.fields?.['Deposit'],
-          costPrice: verifiedGame?.fields?.['Cost Price'],
-          gameSize: verifiedGame?.fields?.['Game Size'],
-          bestPlayerAmount: verifiedGame?.fields?.['Best Player Amount'],
-        });
-
-        // Check that at least some of the updated fields exist in the database
-        // Handle type conversions carefully (string vs number comparisons)
-        const depositMatches = !formData.deposit ||
-          parseInt(formData.deposit) === verifiedGame?.fields?.['Deposit'];
-        const costPriceMatches = !formData.costPrice ||
-          parseInt(formData.costPrice) === verifiedGame?.fields?.['Cost Price'];
-        const gameSizeMatches = !formData.gameSize ||
-          formData.gameSize === verifiedGame?.fields?.['Game Size'];
-        const bestPlayerMatches = !formData.bestPlayerAmount ||
-          String(formData.bestPlayerAmount) === String(verifiedGame?.fields?.['Best Player Amount']);
-
-        console.log('Verification - Matches:', {
-          depositMatches,
-          costPriceMatches,
-          gameSizeMatches,
-          bestPlayerMatches,
-        });
-
-        const changesVerified = depositMatches && costPriceMatches && gameSizeMatches && bestPlayerMatches;
-
-        if (!changesVerified) {
-          throw new Error('Game update could not be verified in database. Check console for details.');
-        }
-
-        // Show success notification
+        // API returned success, show notification
+        console.log('✅ Game updated successfully:', responseData);
         alert('✅ Game data updated successfully!');
       }
 
