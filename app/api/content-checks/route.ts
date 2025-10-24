@@ -3,6 +3,40 @@ import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Transform database ContentCheck to Airtable-compatible format
+ */
+function transformToAirtableFormat(dbCheck: any) {
+  return {
+    id: dbCheck.id,
+    fields: {
+      'Record ID': dbCheck.id,
+      'Board Game': dbCheck.gameId ? [dbCheck.gameId] : undefined,
+      'Check Date': dbCheck.checkDate,
+      'Inspector': dbCheck.inspectorId ? [dbCheck.inspectorId] : undefined,
+      'Status': Array.isArray(dbCheck.status) && dbCheck.status.length > 0
+        ? dbCheck.status[0]
+        : 'Unknown',
+      'Missing Pieces': dbCheck.missingPieces ? 'Yes' : undefined,
+      'Box Condition': dbCheck.boxCondition,
+      'Card Condition': dbCheck.cardCondition,
+      'Is Fake': dbCheck.isFake,
+      'Notes': dbCheck.notes,
+      'Sleeved At Check': dbCheck.sleeved,
+      'Box Wrapped At Check': dbCheck.boxWrapped,
+      'Photos': Array.isArray(dbCheck.photos) && dbCheck.photos.length > 0
+        ? dbCheck.photos.map((url: string) => ({
+            id: url,
+            url: url,
+            filename: url.split('/').pop() || 'image',
+            size: 0,
+            type: 'image/jpeg',
+          }))
+        : undefined,
+    },
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const db = DatabaseService.initialize();
@@ -11,7 +45,8 @@ export async function GET(request: Request) {
 
     // If requesting checks for a specific game
     if (gameId) {
-      const checks = await db.contentChecks.getChecksByGameId(gameId);
+      const dbChecks = await db.contentChecks.getChecksByGameId(gameId);
+      const checks = dbChecks.map(transformToAirtableFormat);
       return NextResponse.json({
         checks,
         count: checks.length,
@@ -19,14 +54,14 @@ export async function GET(request: Request) {
     }
 
     // Get all checks from PostgreSQL
-    const allChecks = await db.contentChecks.getAllChecks();
+    const dbChecks = await db.contentChecks.getAllChecks();
+    const checks = dbChecks.map(transformToAirtableFormat);
 
     return NextResponse.json({
-      checks: allChecks,
-      count: allChecks.length,
+      checks,
+      count: checks.length,
     });
   } catch (error) {
-    console.error('❌ Error in content checks API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch content checks';
 
     return NextResponse.json(
