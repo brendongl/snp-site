@@ -5,6 +5,7 @@ import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -126,6 +127,9 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
           <DialogTitle className="text-xl font-bold">
             {game.fields['Game Name']}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Game details for {game.fields['Game Name']}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Staff Section - Top (Staff Only) */}

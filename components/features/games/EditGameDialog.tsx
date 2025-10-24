@@ -60,6 +60,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   // Image staging state - track pending uploads and deletions
   const [pendingUploads, setPendingUploads] = useState<File[]>([]);
   const [pendingDeletions, setPendingDeletions] = useState<Set<string>>(new Set());
+  const [customImageUrls, setCustomImageUrls] = useState<string[]>(['']);
+  const [showUrlInput, setShowUrlInput] = useState(false);
 
   // Get current images from the game
   const currentImages = game?.images || [];
@@ -90,6 +92,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     if (open) {
       setPendingUploads([]);
       setPendingDeletions(new Set());
+      setCustomImageUrls(['']);
+      setShowUrlInput(false);
       setError(null);
 
       // Fetch all games to get unique categories and for base game dropdown
@@ -192,10 +196,17 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         }
       }
 
-      // Step 2: Process pending image uploads
+      // Step 2: Process pending image uploads (files)
       if (pendingUploads.length > 0) {
         const imageFormData = new FormData();
         imageFormData.append('gameId', game.id);
+
+        // Add staff info for changelog tracking
+        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffNameValue = localStorage.getItem('staff_name') || 'System';
+        imageFormData.append('staffId', staffIdValue);
+        imageFormData.append('staffName', staffNameValue);
+
         pendingUploads.forEach((file) => {
           imageFormData.append('images', file);
         });
@@ -208,6 +219,28 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         if (!uploadResponse.ok) {
           const data = await uploadResponse.json();
           throw new Error(data.error || 'Failed to upload images');
+        }
+      }
+
+      // Step 2b: Process custom image URLs
+      const validUrls = customImageUrls.filter(url => url.trim() !== '');
+      if (validUrls.length > 0) {
+        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffNameValue = localStorage.getItem('staff_name') || 'System';
+
+        const urlResponse = await fetch(`/api/games/${game.id}/images/from-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            urls: validUrls,
+            staffId: staffIdValue,
+            staffName: staffNameValue,
+          }),
+        });
+
+        if (!urlResponse.ok) {
+          const data = await urlResponse.json();
+          throw new Error(data.error || 'Failed to add images from URLs');
         }
       }
 
@@ -249,6 +282,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
       // Clear pending changes
       setPendingUploads([]);
       setPendingDeletions(new Set());
+      setCustomImageUrls(['']);
+      setShowUrlInput(false);
 
       onSave?.();
       onClose();
@@ -536,35 +571,93 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           <div className={staffMode ? "" : "border-t pt-4 mt-6"}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium">Game Images</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage || isLoading}
-                className="gap-2"
-              >
-                {uploadingImage ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload Images
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  disabled={isLoading}
+                >
+                  {showUrlInput ? 'Hide URL Input' : 'Add from URL'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage || isLoading}
+                  className="gap-2"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Upload Images
+                    </>
+                  )}
+                </Button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
+                capture="environment"
                 onChange={handleImageUpload}
                 className="hidden"
               />
             </div>
+
+            {/* Custom Image URL Input */}
+            {showUrlInput && (
+              <div className="mb-4 space-y-2 p-3 border border-border rounded-lg bg-muted/30">
+                <p className="text-xs text-muted-foreground">Add images from external URLs (e.g., BoardGameGeek, Imgur)</p>
+                {customImageUrls.map((url, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => {
+                        const newUrls = [...customImageUrls];
+                        newUrls[index] = e.target.value;
+                        setCustomImageUrls(newUrls);
+                      }}
+                      placeholder="https://example.com/image.jpg"
+                      disabled={isLoading}
+                      className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                    />
+                    {customImageUrls.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCustomImageUrls(customImageUrls.filter((_, i) => i !== index));
+                        }}
+                        disabled={isLoading}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCustomImageUrls([...customImageUrls, ''])}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  + Add Another URL
+                </Button>
+              </div>
+            )}
 
             {/* Current and Pending Images */}
             {currentImages.length > 0 || pendingUploads.length > 0 ? (

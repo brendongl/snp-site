@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Loader2, Check, AlertCircle, HelpCircle, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Check, AlertCircle, HelpCircle, ChevronsUpDown, Upload, X } from 'lucide-react';
 import { CreateGameInput, BGGGameData } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +70,10 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
   const [customImageUrls, setCustomImageUrls] = useState<string[]>(['']);
   const [useCustomImages, setUseCustomImages] = useState(false);
 
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Base game selection state
   const [games, setGames] = useState<Game[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
@@ -95,6 +99,22 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
     } finally {
       setLoadingGames(false);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setSelectedFiles(Array.from(files));
+
+    // Clear input so same file can be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleFetchPreview = async () => {
@@ -243,6 +263,61 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
 
       const data = await response.json();
       console.log('Game created successfully:', data);
+      const newGameId = data.gameId;
+
+      // Upload selected files if any
+      if (selectedFiles.length > 0 && newGameId) {
+        const imageFormData = new FormData();
+        imageFormData.append('gameId', newGameId);
+
+        // Add staff info for changelog tracking
+        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffNameValue = localStorage.getItem('staff_name') || 'System';
+        imageFormData.append('staffId', staffIdValue);
+        imageFormData.append('staffName', staffNameValue);
+
+        selectedFiles.forEach((file) => {
+          imageFormData.append('images', file);
+        });
+
+        const uploadResponse = await fetch(`/api/games/${newGameId}/images`, {
+          method: 'POST',
+          body: imageFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          console.warn('Failed to upload some images:', uploadData.error);
+        } else {
+          console.log('Successfully uploaded files');
+        }
+      }
+
+      // Upload custom URL images if any
+      if (useCustomImages && newGameId) {
+        const validUrls = customImageUrls.filter(url => url.trim() !== '');
+        if (validUrls.length > 0) {
+          const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+          const staffNameValue = localStorage.getItem('staff_name') || 'System';
+
+          const urlResponse = await fetch(`/api/games/${newGameId}/images/from-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              urls: validUrls,
+              staffId: staffIdValue,
+              staffName: staffNameValue,
+            }),
+          });
+
+          if (!urlResponse.ok) {
+            const urlData = await urlResponse.json();
+            console.warn('Failed to add some URL images:', urlData.error);
+          } else {
+            console.log('Successfully uploaded URL images');
+          }
+        }
+      }
 
       setSuccess(true);
       setError(null);
@@ -276,6 +351,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
     setSelectedGameplayImage(null);
     setCustomImageUrls(['']);
     setUseCustomImages(false);
+    setSelectedFiles([]);
     onClose();
   };
 
@@ -467,6 +543,61 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
                         >
                           + Add Another Image URL
                         </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* File Upload Section */}
+                  <div className="mt-4 pt-4 border-t">
+                    <Label className="text-sm font-semibold mb-2 block">Upload Images from Device</Label>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Upload photos from your device or take a photo (mobile)
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading || success}
+                      className="gap-2 w-full"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {selectedFiles.length > 0
+                        ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`
+                        : 'Choose Files or Take Photo'}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      capture="environment"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+
+                    {/* Preview selected files */}
+                    {selectedFiles.length > 0 && (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {selectedFiles.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <div className="aspect-square rounded-lg overflow-hidden border border-primary bg-muted">
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Upload ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(index)}
+                              className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all shadow-lg"
+                              disabled={loading || success}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
