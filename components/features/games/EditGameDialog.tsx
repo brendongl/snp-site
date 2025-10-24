@@ -230,6 +230,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             deposit: formData.deposit ? parseInt(formData.deposit) : null,
             costPrice: formData.costPrice ? parseInt(formData.costPrice) : null,
             gameSize: formData.gameSize || null,
+            staffId: localStorage.getItem('staff_record_id') || 'system',
+            staffName: localStorage.getItem('staff_name') || 'System',
           }),
         });
 
@@ -237,6 +239,29 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           const data = await response.json();
           throw new Error(data.error || 'Failed to update game');
         }
+
+        // Step 4: Verify changes were saved by fetching from database
+        const verifyResponse = await fetch(`/api/games/${game.id}`);
+        if (!verifyResponse.ok) {
+          throw new Error('Failed to verify game update');
+        }
+
+        const verifiedData = await verifyResponse.json();
+        const verifiedGame = verifiedData.game;
+
+        // Check that at least some of the updated fields exist in the database
+        const changesVerified =
+          (!formData.deposit || verifiedGame?.fields?.['Deposit'] === parseInt(formData.deposit)) &&
+          (!formData.costPrice || verifiedGame?.fields?.['Cost Price'] === parseInt(formData.costPrice)) &&
+          (!formData.gameSize || verifiedGame?.fields?.['Game Size'] === formData.gameSize) &&
+          (!formData.bestPlayerAmount || verifiedGame?.fields?.['Best Player Amount'] === formData.bestPlayerAmount);
+
+        if (!changesVerified) {
+          throw new Error('Game update could not be verified in database');
+        }
+
+        // Show success notification
+        alert('✅ Game data updated successfully!');
       }
 
       // Clear pending changes

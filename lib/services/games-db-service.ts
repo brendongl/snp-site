@@ -511,6 +511,10 @@ class GamesDbService {
       total_checks?: number;
       sleeved?: boolean;
       box_wrapped?: boolean;
+      base_game_id?: string | null;
+      deposit?: number;
+      cost_price?: number;
+      game_size?: string | null;
     }
   ): Promise<void> {
     const client = await this.pool.connect();
@@ -578,6 +582,22 @@ class GamesDbService {
       if (updates.box_wrapped !== undefined) {
         setClauses.push(`box_wrapped = $${paramCount++}`);
         values.push(updates.box_wrapped);
+      }
+      if (updates.base_game_id !== undefined) {
+        setClauses.push(`base_game_id = $${paramCount++}`);
+        values.push(updates.base_game_id);
+      }
+      if (updates.deposit !== undefined) {
+        setClauses.push(`deposit = $${paramCount++}`);
+        values.push(updates.deposit);
+      }
+      if (updates.cost_price !== undefined) {
+        setClauses.push(`cost_price = $${paramCount++}`);
+        values.push(updates.cost_price);
+      }
+      if (updates.game_size !== undefined) {
+        setClauses.push(`game_size = $${paramCount++}`);
+        values.push(updates.game_size);
       }
 
       if (setClauses.length === 0) return;
