@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories, staffId, staffName } = await request.json();
+    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories, baseGameId, deposit, costPrice, gameSize, staffId, staffName } = await request.json();
     const { id: gameId } = await params;
 
     if (!gameId) {
@@ -29,6 +29,10 @@ export async function POST(
       complexity,
       dateAcquired,
       categories,
+      baseGameId,
+      deposit,
+      costPrice,
+      gameSize,
     });
 
     // Build the update object (only include non-empty values)
@@ -42,6 +46,10 @@ export async function POST(
     if (complexity !== undefined) updates.complexity = complexity;
     if (dateAcquired) updates.date_of_acquisition = dateAcquired;
     if (categories) updates.categories = categories; // Array of strings
+    if (baseGameId !== undefined) updates.base_game_id = baseGameId || null;
+    if (deposit !== undefined) updates.deposit = deposit;
+    if (costPrice !== undefined) updates.cost_price = costPrice;
+    if (gameSize !== undefined) updates.game_size = gameSize || null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

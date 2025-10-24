@@ -513,7 +513,7 @@ export default function ChangelogPage() {
 
             {/* Staff Knowledge Distribution */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staff Knowledge Distribution</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staff Knowledge Distribution (Weighted by Complexity)</h3>
               <div className="h-72 flex items-center justify-center">
                 {chartData.staffKnowledgeCounts && chartData.staffKnowledgeCounts.length > 0 ? (
                   <Doughnut
@@ -523,11 +523,18 @@ export default function ChangelogPage() {
                         {
                           data: chartData.staffKnowledgeCounts.map(s => s.knowledgeCount),
                           backgroundColor: [
-                            'rgba(99, 102, 241, 0.8)',
-                            'rgba(251, 191, 36, 0.8)',
-                            'rgba(6, 182, 212, 0.8)',
-                            'rgba(16, 185, 129, 0.8)',
-                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(99, 102, 241, 0.8)',     // Indigo
+                            'rgba(251, 191, 36, 0.8)',     // Amber
+                            'rgba(6, 182, 212, 0.8)',      // Cyan
+                            'rgba(16, 185, 129, 0.8)',     // Emerald
+                            'rgba(239, 68, 68, 0.8)',      // Red
+                            'rgba(168, 85, 247, 0.8)',     // Purple
+                            'rgba(236, 72, 153, 0.8)',     // Pink
+                            'rgba(249, 115, 22, 0.8)',     // Orange
+                            'rgba(20, 184, 166, 0.8)',     // Teal
+                            'rgba(132, 204, 22, 0.8)',     // Lime
+                            'rgba(59, 130, 246, 0.8)',     // Blue
+                            'rgba(245, 158, 11, 0.8)',     // Yellow
                           ],
                           borderColor: [
                             'rgb(99, 102, 241)',
@@ -535,6 +542,13 @@ export default function ChangelogPage() {
                             'rgb(6, 182, 212)',
                             'rgb(16, 185, 129)',
                             'rgb(239, 68, 68)',
+                            'rgb(168, 85, 247)',
+                            'rgb(236, 72, 153)',
+                            'rgb(249, 115, 22)',
+                            'rgb(20, 184, 166)',
+                            'rgb(132, 204, 22)',
+                            'rgb(59, 130, 246)',
+                            'rgb(245, 158, 11)',
                           ],
                           borderWidth: 2,
                         },
@@ -552,7 +566,7 @@ export default function ChangelogPage() {
                               const value = context.parsed || 0;
                               const total = (context.dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
                               const percentage = ((value / total) * 100).toFixed(1);
-                              return `${label}: ${value} games (${percentage}%)`;
+                              return `${label}: ${value.toFixed(1)} complexity points (${percentage}%)`;
                             }
                           }
                         }
@@ -670,68 +684,6 @@ export default function ChangelogPage() {
               </div>
             </div>
 
-            {/* Staff Specialization */}
-            {analyticsInsights.staffSpecialization.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <BarChart3 className="w-6 h-6 text-purple-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Staff Specialization</h3>
-                </div>
-                <div className="space-y-3">
-                  {analyticsInsights.staffSpecialization.slice(0, 5).map((staff) => (
-                    <div key={staff.staffName} className="border-b border-gray-100 pb-2 last:border-0">
-                      <p className="font-medium text-gray-900 mb-1">{staff.staffName}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {staff.topCategories.slice(0, 3).map((cat) => (
-                          <span
-                            key={cat.category}
-                            className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded"
-                          >
-                            {cat.category} ({cat.count})
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Acquisition Trends */}
-            {analyticsInsights.acquisitionTrends.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <Package className="w-6 h-6 text-emerald-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Acquisition Trends (12 Months)</h3>
-                </div>
-                <div className="h-48">
-                  <Bar
-                    data={{
-                      labels: analyticsInsights.acquisitionTrends.map(t => t.period),
-                      datasets: [
-                        {
-                          label: 'Games Acquired',
-                          data: analyticsInsights.acquisitionTrends.map(t => t.count),
-                          backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                          borderColor: 'rgb(16, 185, 129)',
-                          borderWidth: 1,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { display: false },
-                      },
-                      scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                      },
-                    }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
         )}
 

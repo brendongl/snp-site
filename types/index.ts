@@ -44,7 +44,12 @@ export interface BoardGame {
     // Expansion fields
     'Expansion'?: boolean;
     'Base Game'?: string[]; // Link to base game record
+    'Base Game ID'?: string; // Direct ID reference to base game (for expansions)
     'Game Expansions Link'?: string[]; // Link to expansion records (for base games)
+    // Financial and rental fields
+    'Deposit'?: number;
+    'Cost Price'?: number;
+    'Game Size'?: string; // Size category: "1", "2", "3", "4", "5"
   };
 }
 

@@ -63,6 +63,19 @@ export async function GET(request: NextRequest) {
     };
 
     // 2. Underutilized Games (never played)
+    // First get the actual count
+    const underutilizedCountQuery = `
+      SELECT COUNT(*) as total
+      FROM games g
+      LEFT JOIN play_logs pl ON g.id = pl.game_id
+      WHERE g.base_game_id IS NULL
+        AND pl.id IS NULL
+    `;
+
+    const underutilizedCountResult = await pool.query(underutilizedCountQuery);
+    const underutilizedCount = parseInt(underutilizedCountResult.rows[0].total);
+
+    // Then get the top 20 for display
     const underutilizedGamesQuery = `
       SELECT
         g.id,
@@ -79,8 +92,8 @@ export async function GET(request: NextRequest) {
     const underutilizedGamesResult = await pool.query(underutilizedGamesQuery);
 
     const underutilizedGames = {
-      count: underutilizedGamesResult.rows.length,
-      percentage: ((underutilizedGamesResult.rows.length / totalGames) * 100).toFixed(1),
+      count: underutilizedCount,
+      percentage: ((underutilizedCount / totalGames) * 100).toFixed(1),
       games: underutilizedGamesResult.rows.map(row => ({
         id: row.id,
         name: row.name,
@@ -113,8 +126,9 @@ export async function GET(request: NextRequest) {
         sl.staff_name as staff_name,
         COUNT(*) as can_teach_count
       FROM staff_knowledge sk
+      INNER JOIN games g ON sk.game_id = g.id
       INNER JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
-      WHERE sk.can_teach = true
+      WHERE sk.can_teach = true AND g.base_game_id IS NULL
       GROUP BY sl.staff_name
       ORDER BY can_teach_count DESC
       LIMIT 10

@@ -105,6 +105,7 @@ export async function GET(request: NextRequest) {
       FROM changelog
       WHERE created_at >= $1 AND created_at < $2
         AND staff_member IS NOT NULL
+        AND staff_member NOT IN ('system', 'System')
       GROUP BY staff_member
       ORDER BY total_changes DESC
       LIMIT 10
@@ -159,21 +160,24 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    // NEW: Get staff knowledge counts for pie chart
+    // NEW: Get staff knowledge counts for pie chart (weighted by complexity)
     const staffKnowledgeQuery = `
       SELECT
         sl.staff_name,
-        COUNT(*) as knowledge_count
+        SUM(COALESCE(g.complexity, 0)) as complexity_sum,
+        COUNT(*) as game_count
       FROM staff_knowledge sk
+      INNER JOIN games g ON sk.game_id = g.id
       INNER JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
       GROUP BY sl.staff_name
-      ORDER BY knowledge_count DESC
+      ORDER BY complexity_sum DESC
     `;
 
     const staffKnowledgeResult = await pool.query(staffKnowledgeQuery);
     const staffKnowledgeCounts = staffKnowledgeResult.rows.map(row => ({
       staffName: row.staff_name,
-      knowledgeCount: parseInt(row.knowledge_count || '0')
+      knowledgeCount: parseFloat(row.complexity_sum || '0'),
+      gameCount: parseInt(row.game_count || '0')
     }));
 
     // NEW: Get weighted contributions (content checks * 3, photos * 2, play logs * 1)
@@ -189,6 +193,7 @@ export async function GET(request: NextRequest) {
       FROM changelog
       WHERE created_at >= $1 AND created_at < $2
         AND staff_member IS NOT NULL
+        AND staff_member NOT IN ('system', 'System')
       GROUP BY staff_member
       HAVING (
         COUNT(*) FILTER (WHERE category = 'content_check' AND event_type = 'created') +

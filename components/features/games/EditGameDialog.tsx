@@ -26,6 +26,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableGames, setAvailableGames] = useState<{ id: string; name: string }[]>([]);
 
   // Helper function to format date for input[type="date"]
   const formatDateForInput = (dateString: string | null | undefined): string => {
@@ -49,6 +50,10 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     complexity: game?.fields['Complexity'] || 0,
     dateAcquired: formatDateForInput(game?.fields['Date of Aquisition']),
     categories: game?.fields.Categories || [],
+    baseGameId: game?.fields['Base Game ID'] || '',
+    deposit: game?.fields['Deposit']?.toString() || '',
+    costPrice: game?.fields['Cost Price']?.toString() || '',
+    gameSize: game?.fields['Game Size']?.toString() || '',
   });
 
   // Image staging state - track pending uploads and deletions
@@ -70,6 +75,10 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         complexity: game.fields['Complexity'] || 0,
         dateAcquired: formatDateForInput(game.fields['Date of Aquisition']),
         categories: game.fields.Categories || [],
+        baseGameId: game.fields['Base Game ID'] || '',
+        deposit: game.fields['Deposit']?.toString() || '',
+        costPrice: game.fields['Cost Price']?.toString() || '',
+        gameSize: game.fields['Game Size']?.toString() || '',
       });
     }
   }, [game]);
@@ -81,20 +90,28 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
       setPendingDeletions(new Set());
       setError(null);
 
-      // Fetch all games to get unique categories
+      // Fetch all games to get unique categories and for base game dropdown
       fetch('/api/games')
         .then(res => res.json())
         .then(data => {
           const games = data.games || [];
           const categoriesSet = new Set<string>();
+          const gamesList: { id: string; name: string }[] = [];
+
           games.forEach((g: BoardGame) => {
             if (g.fields.Categories) {
               g.fields.Categories.forEach((cat: string) => categoriesSet.add(cat));
             }
+            // Add to games list (exclude current game to avoid circular reference)
+            if (g.id !== game?.id) {
+              gamesList.push({ id: g.id, name: g.fields['Game Name'] });
+            }
           });
+
           setAvailableCategories(Array.from(categoriesSet).sort());
+          setAvailableGames(gamesList.sort((a, b) => a.name.localeCompare(b.name)));
         })
-        .catch(err => console.error('Failed to fetch categories:', err));
+        .catch(err => console.error('Failed to fetch categories and games:', err));
     }
   }, [open]);
 
@@ -206,6 +223,10 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
             dateAcquired: formData.dateAcquired,
             categories: formData.categories,
+            baseGameId: formData.baseGameId || null,
+            deposit: formData.deposit ? parseFloat(formData.deposit) : null,
+            costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
+            gameSize: formData.gameSize || null,
           }),
         });
 
@@ -420,6 +441,72 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
               />
+            </div>
+          </div>
+
+          {/* Base Game (for expansions) */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Base Game (if expansion)</label>
+            <select
+              name="baseGameId"
+              value={formData.baseGameId}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              disabled={isLoading}
+            >
+              <option value="">Not an expansion</option>
+              {availableGames.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Financial & Size Fields */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Deposit</label>
+              <input
+                type="number"
+                step="0.01"
+                name="deposit"
+                value={formData.deposit}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Cost Price</label>
+              <input
+                type="number"
+                step="0.01"
+                name="costPrice"
+                value={formData.costPrice}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Game Size</label>
+              <select
+                name="gameSize"
+                value={formData.gameSize}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+              >
+                <option value="">Select size</option>
+                <option value="1">1 - Very Small</option>
+                <option value="2">2 - Small</option>
+                <option value="3">3 - Medium</option>
+                <option value="4">4 - Large</option>
+                <option value="5">5 - Very Large</option>
+              </select>
             </div>
           </div>
           </>
