@@ -56,6 +56,7 @@ export default function ChangelogPage() {
   const [error, setError] = useState<string | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [compareStaff, setCompareStaff] = useState<string[]>([]);
+  const [selectedActivityStaff, setSelectedActivityStaff] = useState<string>(''); // For Staff Activity Over Time chart
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,6 +72,9 @@ export default function ChangelogPage() {
     category: null,
     myChangesOnly: false,
   });
+
+  // Time range filter for Top Contributors
+  const [timeRange, setTimeRange] = useState<'custom' | 'yesterday' | 'today' | 'week'>('custom');
 
   // Check authentication and admin access
   useEffect(() => {
@@ -276,6 +280,40 @@ export default function ChangelogPage() {
     setCurrentPage(1);
   };
 
+  const handleTimeRangeChange = (range: 'custom' | 'yesterday' | 'today' | 'week') => {
+    setTimeRange(range);
+
+    const now = new Date();
+    let startDate: Date;
+    let endDate = new Date(); // Always today
+
+    switch (range) {
+      case 'yesterday':
+        // Yesterday: 24 hours ago to now
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'today':
+        // Today: Since midnight
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        // This Week: Last 7 days
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'custom':
+      default:
+        // Keep existing custom range
+        return;
+    }
+
+    setFilters(prev => ({
+      ...prev,
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    }));
+  };
+
   const calculateChange = (current: number, previous: number): { value: number; isIncrease: boolean } => {
     if (previous === 0) return { value: current > 0 ? 100 : 0, isIncrease: current > 0 };
     const change = ((current - previous) / previous) * 100;
@@ -418,94 +456,89 @@ export default function ChangelogPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Staff Activity Over Time</h3>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={compareStaff[0] || ''}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setCompareStaff(prev => [e.target.value, prev[1]].filter(Boolean));
-                      } else {
-                        setCompareStaff(prev => [prev[1]].filter(Boolean));
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  >
-                    <option value="">Select first staff member...</option>
-                    {staffMembers.map((member) => (
-                      <option key={member.id} value={member.id} disabled={compareStaff[1] === member.id}>
-                        {member.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={compareStaff[1] || ''}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setCompareStaff(prev => [prev[0], e.target.value].filter(Boolean));
-                      } else {
-                        setCompareStaff(prev => [prev[0]].filter(Boolean));
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  >
-                    <option value="">Select second staff member (optional)...</option>
-                    {staffMembers.map((member) => (
-                      <option key={member.id} value={member.id} disabled={compareStaff[0] === member.id}>
-                        {member.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={selectedActivityStaff}
+                  onChange={(e) => setSelectedActivityStaff(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Select a staff member...</option>
+                  {staffMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="h-72">
-                {chartData.changesByStaffOverTime && chartData.changesByStaffOverTime.length > 0 ? (
-                  <Line
-                    data={{
-                      labels: Array.from(
-                        new Set(chartData.changesByStaffOverTime.map(d => d.date))
-                      ).map(date =>
-                        new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                      ),
-                      datasets: Array.from(
-                        new Set(chartData.changesByStaffOverTime.map(d => d.staffName))
-                      ).map((staffName, index) => {
-                        const colors = [
-                          { border: 'rgb(99, 102, 241)', bg: 'rgba(99, 102, 241, 0.1)' },
-                          { border: 'rgb(34, 197, 94)', bg: 'rgba(34, 197, 94, 0.1)' }
-                        ];
-                        const color = colors[index] || colors[0];
-                        return {
-                          label: staffName,
-                          data: Array.from(
-                            new Set(chartData.changesByStaffOverTime?.map(d => d.date))
-                          ).map(date => {
-                            const entry = chartData.changesByStaffOverTime?.find(
-                              d => d.date === date && d.staffName === staffName
-                            );
-                            return entry?.totalActions || 0;
-                          }),
-                          borderColor: color.border,
-                          backgroundColor: color.bg,
-                          fill: true,
-                          tension: 0.4,
-                        };
-                      })
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: { mode: 'index', intersect: false },
-                      },
-                      scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                      },
-                    }}
-                  />
+                {selectedActivityStaff && chartData.changesByStaffOverTime && chartData.changesByStaffOverTime.length > 0 ? (
+                  (() => {
+                    // Filter data for selected staff member
+                    const staffData = chartData.changesByStaffOverTime.filter(
+                      d => d.staffName === staffMembers.find(m => m.id === selectedActivityStaff)?.name
+                    );
+
+                    if (staffData.length === 0) {
+                      return (
+                        <div className="h-full flex items-center justify-center text-gray-500">
+                          No activity data for selected staff member
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Line
+                        data={{
+                          labels: staffData.map(d =>
+                            new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          ),
+                          datasets: [
+                            {
+                              label: 'Activity Count',
+                              data: staffData.map(d => d.totalActions),
+                              borderColor: 'rgb(99, 102, 241)',
+                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              fill: true,
+                              tension: 0.4,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              callbacks: {
+                                title: (context) => {
+                                  const dateStr = staffData[context[0].dataIndex].date;
+                                  return new Date(dateStr).toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  });
+                                },
+                                label: (context) => `Activities: ${context.parsed.y}`
+                              }
+                            },
+                          },
+                          scales: {
+                            x: {
+                              title: { display: true, text: 'Date' }
+                            },
+                            y: {
+                              beginAtZero: true,
+                              ticks: { stepSize: 1 },
+                              title: { display: true, text: 'Activity Count' }
+                            },
+                          },
+                        }}
+                      />
+                    );
+                  })()
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-500">
-                    Select at least one staff member to view activity
+                    {!selectedActivityStaff ? 'Select a staff member to view activity' : 'Loading activity data...'}
                   </div>
                 )}
               </div>
@@ -582,19 +615,65 @@ export default function ChangelogPage() {
             {/* Weighted Top Contributors */}
             {chartData.weightedContributions && chartData.weightedContributions.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Top Contributors</h3>
-                  <div className="group relative">
-                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                    <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                      <p className="font-semibold mb-1">Weighted Scoring:</p>
-                      <ul className="space-y-1">
-                        <li>• Content Checks: ×3 points</li>
-                        <li>• Photo Uploads: ×2 points</li>
-                        <li>• Play Logs: ×1 point</li>
-                      </ul>
-                      <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Top Contributors</h3>
+                    <div className="group relative">
+                      <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                      <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                        <p className="font-semibold mb-1">Weighted Scoring:</p>
+                        <ul className="space-y-1">
+                          <li>• Content Checks: ×3 points</li>
+                          <li>• Photo Uploads: ×2 points</li>
+                          <li>• Play Logs: ×1 point</li>
+                        </ul>
+                        <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Time Range Filter */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleTimeRangeChange('yesterday')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        timeRange === 'yesterday'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Yesterday
+                    </button>
+                    <button
+                      onClick={() => handleTimeRangeChange('today')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        timeRange === 'today'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => handleTimeRangeChange('week')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        timeRange === 'week'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      This Week
+                    </button>
+                    <button
+                      onClick={() => handleTimeRangeChange('custom')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        timeRange === 'custom'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Custom
+                    </button>
                   </div>
                 </div>
                 <div className="h-72">

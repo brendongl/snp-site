@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
+import { logBulkKnowledgeCreated } from '@/lib/services/changelog-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +102,22 @@ export async function POST(req: Request) {
           error: errorMsg,
         });
         console.error(`❌ Failed to create knowledge entry for game ${gameId}:`, errorMsg);
+      }
+    }
+
+    // Log bulk creation to changelog (only if at least one record was created)
+    if (createdRecords.length > 0) {
+      try {
+        await logBulkKnowledgeCreated(
+          createdRecords.length,
+          staffName,
+          staffMemberId,
+          confidenceLevel
+        );
+        console.log(`📊 Logged bulk knowledge creation: ${createdRecords.length} games - ${confidenceLevel}`);
+      } catch (changelogError) {
+        console.error('Failed to log bulk knowledge creation to changelog:', changelogError);
+        // Don't fail the request if changelog logging fails
       }
     }
 

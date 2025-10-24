@@ -228,3 +228,21 @@ export async function logContentCheckCreated(
     metadata: { status, notes },
   });
 }
+
+export async function logBulkKnowledgeCreated(
+  gameCount: number,
+  staffMember: string,
+  staffId: string,
+  confidenceLevel: string
+): Promise<void> {
+  await logChange({
+    eventType: 'created',
+    category: 'staff_knowledge',
+    entityId: `bulk_${Date.now()}`,
+    entityName: `${gameCount} games`,
+    description: `Added knowledge for ${gameCount} game${gameCount > 1 ? 's' : ''} - ${confidenceLevel} level`,
+    staffMember,
+    staffId,
+    metadata: { gameCount, confidenceLevel, isBulk: true },
+  });
+}
