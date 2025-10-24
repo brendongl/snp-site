@@ -267,11 +267,27 @@ function GamesPageContent() {
         const maxPlayersStr = game.fields['Max. Players'];
         const bestPlayerAmount = game.fields['Best Player Amount'];
 
+        // Normalize values by trimming whitespace and converting to string
+        const minPlayers = minPlayersStr?.toString().trim();
+        const maxPlayers = maxPlayersStr?.toString().trim();
+        const bestPlayers = bestPlayerAmount?.toString().trim();
+
         // Check if it's exactly a 2-player game
-        const isExactlyTwoPlayers = minPlayersStr === '2' && maxPlayersStr === '2';
+        const isExactlyTwoPlayers = minPlayers === '2' && maxPlayers === '2';
 
         // Check if best player count is 2
-        const isBestForTwo = bestPlayerAmount === '2';
+        const isBestForTwo = bestPlayers === '2';
+
+        // Log for debugging (only first 3 matches)
+        if (isExactlyTwoPlayers || isBestForTwo) {
+          console.log('[Couples Filter Match]', game.fields['Game Name'], {
+            minPlayers,
+            maxPlayers,
+            bestPlayers,
+            isExactlyTwoPlayers,
+            isBestForTwo
+          });
+        }
 
         return isExactlyTwoPlayers || isBestForTwo;
       });

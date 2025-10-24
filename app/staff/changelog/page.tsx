@@ -369,6 +369,104 @@ export default function ChangelogPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filters */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            </div>
+            <button
+              onClick={() => handleTimeRangeChange('week')}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              Last 7 Days
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+              <select
+                value={filters.eventType || ''}
+                onChange={(e) => handleFilterChange('eventType', e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">All Events</option>
+                <option value="created">Created</option>
+                <option value="updated">Updated</option>
+                <option value="deleted">Deleted</option>
+                <option value="photo_added">Photo Added</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select
+                value={filters.category || ''}
+                onChange={(e) => handleFilterChange('category', e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">All Categories</option>
+                <option value="board_game">Board Games</option>
+                <option value="play_log">Play Logs</option>
+                <option value="staff_knowledge">Staff Knowledge</option>
+                <option value="content_check">Content Checks</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Staff Member</label>
+              <select
+                value={filters.staffId || ''}
+                onChange={(e) => {
+                  const selectedId = e.target.value || null;
+                  const selectedMember = staffMembers.find(m => m.id === selectedId);
+                  console.log('[Staff Filter] Selected:', { id: selectedId, member: selectedMember });
+                  handleFilterChange('staffId', selectedId);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">All Staff</option>
+                {staffMembers.length === 0 && (
+                  <option disabled>Loading staff...</option>
+                )}
+                {staffMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.myChangesOnly}
+                  onChange={(e) => handleFilterChange('myChangesOnly', e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">My Changes Only</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -786,104 +884,6 @@ export default function ChangelogPage() {
 
           </div>
         )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-            </div>
-            <button
-              onClick={() => handleTimeRangeChange('week')}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-            >
-              Last 7 Days
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
-              <select
-                value={filters.eventType || ''}
-                onChange={(e) => handleFilterChange('eventType', e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="">All Events</option>
-                <option value="created">Created</option>
-                <option value="updated">Updated</option>
-                <option value="deleted">Deleted</option>
-                <option value="photo_added">Photo Added</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={filters.category || ''}
-                onChange={(e) => handleFilterChange('category', e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                <option value="board_game">Board Games</option>
-                <option value="play_log">Play Logs</option>
-                <option value="staff_knowledge">Staff Knowledge</option>
-                <option value="content_check">Content Checks</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Staff Member</label>
-              <select
-                value={filters.staffId || ''}
-                onChange={(e) => {
-                  const selectedId = e.target.value || null;
-                  const selectedMember = staffMembers.find(m => m.id === selectedId);
-                  console.log('[Staff Filter] Selected:', { id: selectedId, member: selectedMember });
-                  handleFilterChange('staffId', selectedId);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="">All Staff</option>
-                {staffMembers.length === 0 && (
-                  <option disabled>Loading staff...</option>
-                )}
-                {staffMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.myChangesOnly}
-                  onChange={(e) => handleFilterChange('myChangesOnly', e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
-                />
-                <span className="text-sm font-medium text-gray-700">My Changes Only</span>
-              </label>
-            </div>
-          </div>
-        </div>
 
         {/* Activity Log Table */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

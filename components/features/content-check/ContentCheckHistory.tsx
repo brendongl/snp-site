@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { ContentCheck } from '@/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image, Trash2 } from 'lucide-react';
+import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image, Trash2, Pencil } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import { EditContentCheckDialog } from './EditContentCheckDialog';
 
 interface ContentCheckHistoryProps {
   open: boolean;
@@ -26,6 +27,8 @@ export function ContentCheckHistory({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingCheck, setEditingCheck] = useState<ContentCheck | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     if (open && gameId) {
@@ -51,6 +54,17 @@ export function ContentCheckHistory({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (check: ContentCheck) => {
+    setEditingCheck(check);
+    setShowEditDialog(true);
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditDialog(false);
+    setEditingCheck(null);
+    fetchChecks(); // Refresh the list
   };
 
   const handleDelete = async (checkId: string) => {
@@ -161,16 +175,27 @@ export function ContentCheckHistory({
                         </span>
                       )}
                       {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(check.id)}
-                          disabled={deletingId === check.id}
-                          className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
-                          title="Delete this check"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(check)}
+                            className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-600"
+                            title="Edit this check"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(check.id)}
+                            disabled={deletingId === check.id}
+                            className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                            title="Delete this check"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -274,6 +299,20 @@ export function ContentCheckHistory({
           )}
         </div>
       </SheetContent>
+
+      {/* Edit Content Check Dialog */}
+      {editingCheck && (
+        <EditContentCheckDialog
+          open={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false);
+            setEditingCheck(null);
+          }}
+          check={editingCheck}
+          gameName={gameName}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </Sheet>
   );
 }
