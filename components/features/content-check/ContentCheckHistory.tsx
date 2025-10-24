@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ContentCheck } from '@/types';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Shield, AlertTriangle, XCircle, Calendar, User, Package, Box, Image, Trash2, Pencil } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { Button } from '@/components/ui/button';
@@ -127,7 +127,9 @@ export function ContentCheckHistory({
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-xl">Content Check History</SheetTitle>
-          <p className="text-sm text-muted-foreground">{gameName}</p>
+          <SheetDescription>
+            View all content check records for {gameName}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6">
