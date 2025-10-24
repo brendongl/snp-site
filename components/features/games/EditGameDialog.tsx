@@ -249,15 +249,42 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         const verifiedData = await verifyResponse.json();
         const verifiedGame = verifiedData.game;
 
+        // Debug logging
+        console.log('Verification - Form Data:', {
+          deposit: formData.deposit,
+          costPrice: formData.costPrice,
+          gameSize: formData.gameSize,
+          bestPlayerAmount: formData.bestPlayerAmount,
+        });
+        console.log('Verification - Database Data:', {
+          deposit: verifiedGame?.fields?.['Deposit'],
+          costPrice: verifiedGame?.fields?.['Cost Price'],
+          gameSize: verifiedGame?.fields?.['Game Size'],
+          bestPlayerAmount: verifiedGame?.fields?.['Best Player Amount'],
+        });
+
         // Check that at least some of the updated fields exist in the database
-        const changesVerified =
-          (!formData.deposit || verifiedGame?.fields?.['Deposit'] === parseInt(formData.deposit)) &&
-          (!formData.costPrice || verifiedGame?.fields?.['Cost Price'] === parseInt(formData.costPrice)) &&
-          (!formData.gameSize || verifiedGame?.fields?.['Game Size'] === formData.gameSize) &&
-          (!formData.bestPlayerAmount || verifiedGame?.fields?.['Best Player Amount'] === formData.bestPlayerAmount);
+        // Handle type conversions carefully (string vs number comparisons)
+        const depositMatches = !formData.deposit ||
+          parseInt(formData.deposit) === verifiedGame?.fields?.['Deposit'];
+        const costPriceMatches = !formData.costPrice ||
+          parseInt(formData.costPrice) === verifiedGame?.fields?.['Cost Price'];
+        const gameSizeMatches = !formData.gameSize ||
+          formData.gameSize === verifiedGame?.fields?.['Game Size'];
+        const bestPlayerMatches = !formData.bestPlayerAmount ||
+          String(formData.bestPlayerAmount) === String(verifiedGame?.fields?.['Best Player Amount']);
+
+        console.log('Verification - Matches:', {
+          depositMatches,
+          costPriceMatches,
+          gameSizeMatches,
+          bestPlayerMatches,
+        });
+
+        const changesVerified = depositMatches && costPriceMatches && gameSizeMatches && bestPlayerMatches;
 
         if (!changesVerified) {
-          throw new Error('Game update could not be verified in database');
+          throw new Error('Game update could not be verified in database. Check console for details.');
         }
 
         // Show success notification
