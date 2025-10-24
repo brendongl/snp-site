@@ -6,7 +6,7 @@
  */
 
 export const VERSION = '1.5.0';
-export const BUILD_DATE = '2025-10-23';
+export const BUILD_DATE = '2025-10-24';
 export const CHANGELOG_URL = '/docs/CHANGELOG.md';
 
 export const FEATURES = {
