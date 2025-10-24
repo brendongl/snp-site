@@ -77,8 +77,13 @@ export default function KnowledgePage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch knowledge data
-        const knowledgeResponse = await fetch('/api/staff-knowledge');
+        // Fetch knowledge data (force refresh if coming from add page)
+        const timestamp = new Date().getTime();
+        const cacheParam = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fromAdd') === 'true'
+          ? `?t=${timestamp}`
+          : '';
+
+        const knowledgeResponse = await fetch(`/api/staff-knowledge${cacheParam}`);
         if (!knowledgeResponse.ok) {
           throw new Error(`Failed to fetch knowledge: ${knowledgeResponse.statusText}`);
         }
@@ -90,6 +95,23 @@ export default function KnowledgePage() {
         if (gamesResponse.ok) {
           const gamesData = await gamesResponse.json();
           setAllGames(gamesData.games || []);
+        }
+
+        // Restore scroll position if returning from add page
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          const fromAdd = urlParams.get('fromAdd');
+          if (fromAdd === 'true') {
+            const savedScrollY = sessionStorage.getItem('knowledgeScrollPosition');
+            if (savedScrollY) {
+              setTimeout(() => {
+                window.scrollTo({ top: parseInt(savedScrollY, 10), behavior: 'smooth' });
+                sessionStorage.removeItem('knowledgeScrollPosition');
+              }, 100);
+            }
+            // Clean up URL parameter
+            window.history.replaceState({}, '', '/staff/knowledge');
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');

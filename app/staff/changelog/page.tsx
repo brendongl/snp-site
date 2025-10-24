@@ -75,7 +75,7 @@ export default function ChangelogPage() {
   // Check authentication and admin access
   useEffect(() => {
     const name = localStorage.getItem('staff_name');
-    const id = localStorage.getItem('staff_id');
+    const id = localStorage.getItem('staff_record_id'); // Use staff_record_id (StaffList ID) not staff_id (Airtable ID)
     const staffType = localStorage.getItem('staff_type');
 
     if (!name || !id) {

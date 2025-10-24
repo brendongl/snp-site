@@ -47,12 +47,13 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     yearReleased: game?.fields['Year Released'] || '',
     minPlayers: game?.fields['Min Players'] || '',
     maxPlayers: game?.fields['Max. Players'] || '',
+    bestPlayerAmount: game?.fields['Best Player Amount'] || '',
     complexity: game?.fields['Complexity'] || 0,
     dateAcquired: formatDateForInput(game?.fields['Date of Aquisition']),
     categories: game?.fields.Categories || [],
     baseGameId: game?.fields['Base Game ID'] || '',
-    deposit: game?.fields['Deposit']?.toString() || '',
-    costPrice: game?.fields['Cost Price']?.toString() || '',
+    deposit: game?.fields['Deposit'] ? Math.round(game.fields['Deposit']).toString() : '',
+    costPrice: game?.fields['Cost Price'] ? Math.round(game.fields['Cost Price']).toString() : '',
     gameSize: game?.fields['Game Size']?.toString() || '',
   });
 
@@ -72,12 +73,13 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         yearReleased: game.fields['Year Released'] || '',
         minPlayers: game.fields['Min Players'] || '',
         maxPlayers: game.fields['Max. Players'] || '',
+        bestPlayerAmount: game.fields['Best Player Amount'] || '',
         complexity: game.fields['Complexity'] || 0,
         dateAcquired: formatDateForInput(game.fields['Date of Aquisition']),
         categories: game.fields.Categories || [],
         baseGameId: game.fields['Base Game ID'] || '',
-        deposit: game.fields['Deposit']?.toString() || '',
-        costPrice: game.fields['Cost Price']?.toString() || '',
+        deposit: game.fields['Deposit'] ? Math.round(game.fields['Deposit']).toString() : '',
+        costPrice: game.fields['Cost Price'] ? Math.round(game.fields['Cost Price']).toString() : '',
         gameSize: game.fields['Game Size']?.toString() || '',
       });
     }
@@ -220,12 +222,13 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             yearReleased: formData.yearReleased ? parseInt(formData.yearReleased as string) : null,
             minPlayers: formData.minPlayers,
             maxPlayers: formData.maxPlayers,
+            bestPlayerAmount: formData.bestPlayerAmount,
             complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
             dateAcquired: formData.dateAcquired,
             categories: formData.categories,
             baseGameId: formData.baseGameId || null,
-            deposit: formData.deposit ? parseFloat(formData.deposit) : null,
-            costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
+            deposit: formData.deposit ? parseInt(formData.deposit) : null,
+            costPrice: formData.costPrice ? parseInt(formData.costPrice) : null,
             gameSize: formData.gameSize || null,
           }),
         });
@@ -418,7 +421,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           </div>
 
           {/* Player counts */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Min Players</label>
               <input
@@ -437,6 +440,18 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 type="text"
                 name="maxPlayers"
                 value={formData.maxPlayers}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Best Player Count</label>
+              <input
+                type="text"
+                name="bestPlayerAmount"
+                value={formData.bestPlayerAmount}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
@@ -464,30 +479,28 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
           {/* Financial & Size Fields */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Deposit</label>
+              <label className="block text-sm font-medium mb-2">Deposit (VND)</label>
               <input
                 type="number"
-                step="0.01"
                 name="deposit"
                 value={formData.deposit}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
-                placeholder="0.00"
+                placeholder="1000000"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Cost Price</label>
+              <label className="block text-sm font-medium mb-2">Cost Price (VND)</label>
               <input
                 type="number"
-                step="0.01"
                 name="costPrice"
                 value={formData.costPrice}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
-                placeholder="0.00"
+                placeholder="1000000"
               />
             </div>
 

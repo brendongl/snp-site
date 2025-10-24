@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { gameName, description, yearReleased, minPlayers, maxPlayers, complexity, dateAcquired, categories, baseGameId, deposit, costPrice, gameSize, staffId, staffName } = await request.json();
+    const { gameName, description, yearReleased, minPlayers, maxPlayers, bestPlayerAmount, complexity, dateAcquired, categories, baseGameId, deposit, costPrice, gameSize, staffId, staffName } = await request.json();
     const { id: gameId } = await params;
 
     if (!gameId) {
@@ -26,6 +26,7 @@ export async function POST(
       yearReleased,
       minPlayers,
       maxPlayers,
+      bestPlayerAmount,
       complexity,
       dateAcquired,
       categories,
@@ -43,6 +44,7 @@ export async function POST(
     if (yearReleased !== undefined) updates.year_released = yearReleased;
     if (minPlayers) updates.min_players = String(minPlayers);  // Store as string
     if (maxPlayers) updates.max_players = String(maxPlayers);  // Store as string
+    if (bestPlayerAmount !== undefined) updates.best_player_amount = String(bestPlayerAmount); // Store as string
     if (complexity !== undefined) updates.complexity = complexity;
     if (dateAcquired) updates.date_of_acquisition = dateAcquired;
     if (categories) updates.categories = categories; // Array of strings

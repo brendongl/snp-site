@@ -151,7 +151,8 @@ class GamesDbService {
           id, name, description, categories, year_released, complexity,
           min_players, max_players, best_player_amount, date_of_acquisition,
           latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, base_game_id, game_expansions_link
+          sleeved, box_wrapped, base_game_id, game_expansions_link,
+          deposit, cost_price, game_size
         FROM games WHERE id = $1`,
         [id]
       );
@@ -180,6 +181,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       };
     } catch (error) {

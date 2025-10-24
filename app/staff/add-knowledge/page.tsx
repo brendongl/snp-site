@@ -254,7 +254,7 @@ Click OK to confirm or Cancel to go back.`;
 
       const data = await response.json();
       alert(`Successfully created ${data.created} knowledge records!`);
-      router.push('/staff/knowledge');
+      router.push('/staff/knowledge?fromAdd=true');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit');
     } finally {
