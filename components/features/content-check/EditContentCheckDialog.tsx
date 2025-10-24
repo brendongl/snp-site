@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -122,6 +123,9 @@ export function EditContentCheckDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Content Check: {gameName}</DialogTitle>
+          <DialogDescription>
+            Update the content check details below. All fields marked with * are required.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

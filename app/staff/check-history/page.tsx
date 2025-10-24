@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import { EditContentCheckDialog } from '@/components/features/content-check/EditContentCheckDialog';
+import { Button } from '@/components/ui/button';
+import type { ContentCheck } from '@/types';
 
 interface ContentCheckEntry {
   id: string;
@@ -20,6 +24,7 @@ const STATUSES = ['Perfect Condition', 'Minor Issues', 'Major Issues', 'Unplayab
 
 export default function CheckHistoryPage() {
   const router = useRouter();
+  const isAdmin = useAdminMode();
   const [staffName, setStaffName] = useState<string | null>(null);
   const [allChecks, setAllChecks] = useState<ContentCheckEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +34,9 @@ export default function CheckHistoryPage() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [showMyChecksOnly, setShowMyChecksOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingCheck, setEditingCheck] = useState<ContentCheck | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Check authentication
   useEffect(() => {
@@ -134,6 +142,71 @@ export default function CheckHistoryPage() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const handleEdit = (check: ContentCheckEntry) => {
+    // Convert ContentCheckEntry to ContentCheck format for the dialog
+    const contentCheck: ContentCheck = {
+      id: check.id,
+      fields: {
+        'Record ID': check.id,
+        'Board Game': [check.gameId],
+        'Inspector': [check.inspector],
+        'Check Date': check.checkDate,
+        'Status': check.status as 'Perfect Condition' | 'Minor Issues' | 'Major Issues' | 'Unplayable',
+        'Notes': check.notes,
+        // Initialize with undefined for fields not in ContentCheckEntry
+        'Box Condition': undefined,
+        'Card Condition': undefined,
+        'Missing Pieces': undefined,
+        'Sleeved At Check': false,
+        'Box Wrapped At Check': false,
+      },
+    };
+    setEditingCheck(contentCheck);
+    setShowEditDialog(true);
+  };
+
+  const handleDelete = async (checkId: string) => {
+    if (!confirm('Are you sure you want to delete this content check? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingId(checkId);
+    try {
+      const response = await fetch(`/api/content-checks/${checkId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete content check');
+      }
+
+      // Refresh the checks list
+      const refreshResponse = await fetch('/api/content-checks-detailed');
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json();
+        setAllChecks(data.checks || []);
+      }
+    } catch (error) {
+      console.error('Error deleting content check:', error);
+      alert('Failed to delete content check. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleEditSuccess = async () => {
+    // Refresh the checks list after successful edit
+    try {
+      const response = await fetch('/api/content-checks-detailed');
+      if (response.ok) {
+        const data = await response.json();
+        setAllChecks(data.checks || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing checks:', error);
+    }
   };
 
   return (
@@ -269,7 +342,8 @@ export default function CheckHistoryPage() {
               <div className="col-span-1.5">Date</div>
               <div className="col-span-2">Inspector</div>
               <div className="col-span-1.5">Status</div>
-              <div className="col-span-4">Notes</div>
+              <div className={isAdmin ? "col-span-3" : "col-span-4"}>Notes</div>
+              {isAdmin && <div className="col-span-1">Actions</div>}
             </div>
 
             {/* Table Rows */}
@@ -295,9 +369,32 @@ export default function CheckHistoryPage() {
                       {check.status}
                     </span>
                   </div>
-                  <div className="col-span-4 text-muted-foreground truncate" title={check.notes}>
+                  <div className={`${isAdmin ? 'col-span-3' : 'col-span-4'} text-muted-foreground truncate`} title={check.notes}>
                     {check.notes || '—'}
                   </div>
+                  {isAdmin && (
+                    <div className="col-span-1 flex gap-1 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(check)}
+                        className="h-8 w-8 p-0"
+                        title="Edit check"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(check.id)}
+                        disabled={deletingId === check.id}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        title="Delete check"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -329,6 +426,20 @@ export default function CheckHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      {editingCheck && (
+        <EditContentCheckDialog
+          open={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false);
+            setEditingCheck(null);
+          }}
+          check={editingCheck}
+          gameName={allChecks.find(c => c.id === editingCheck.id)?.gameName || 'Unknown Game'}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 }
