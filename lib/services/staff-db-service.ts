@@ -47,9 +47,9 @@ export interface StaffStats {
 class StaffDbService {
   private pool: Pool;
 
-  constructor(connectionString?: string) {
+  constructor(connectionString: string) {
     this.pool = new Pool({
-      connectionString: connectionString || process.env.DATABASE_URL || 'postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway',
+      connectionString,
       max: 10,
       min: 2,
       idleTimeoutMillis: 30000,
@@ -61,6 +61,10 @@ class StaffDbService {
    * Get staff member by ID
    */
   async getStaffById(staffId: string): Promise<StaffMember | null> {
+    if (!staffId || staffId.trim() === '') {
+      throw new Error('Staff ID is required');
+    }
+
     const client = await this.pool.connect();
 
     try {
@@ -93,6 +97,9 @@ class StaffDbService {
       }
 
       return result.rows[0];
+    } catch (error) {
+      console.error('Error fetching staff by ID from PostgreSQL:', error);
+      throw error;
     } finally {
       client.release();
     }
@@ -102,6 +109,10 @@ class StaffDbService {
    * Get staff member by email
    */
   async getStaffByEmail(email: string): Promise<StaffMember | null> {
+    if (!email || email.trim() === '') {
+      throw new Error('Email is required');
+    }
+
     const client = await this.pool.connect();
 
     try {
@@ -134,6 +145,9 @@ class StaffDbService {
       }
 
       return result.rows[0];
+    } catch (error) {
+      console.error('Error fetching staff by email from PostgreSQL:', error);
+      throw error;
     } finally {
       client.release();
     }
@@ -188,7 +202,7 @@ class StaffDbService {
       }
 
       if (fields.length === 0) {
-        return false; // Nothing to update
+        throw new Error('No fields to update');
       }
 
       // Always update profile_updated_at and updated_at
@@ -205,6 +219,9 @@ class StaffDbService {
 
       const result = await client.query(query, values);
       return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error('Error updating staff profile in PostgreSQL:', error);
+      throw error;
     } finally {
       client.release();
     }
@@ -241,6 +258,9 @@ class StaffDbService {
       );
 
       return result.rows;
+    } catch (error) {
+      console.error('Error fetching all staff from PostgreSQL:', error);
+      throw error;
     } finally {
       client.release();
     }
@@ -297,12 +317,20 @@ class StaffDbService {
         totalPlayLogs: parseInt(playLogsResult.rows[0].total) || 0,
         totalContentChecks: parseInt(contentChecksResult.rows[0].total) || 0,
       };
+    } catch (error) {
+      console.error('Error fetching staff stats from PostgreSQL:', error);
+      throw error;
     } finally {
       client.release();
     }
   }
+
+  /**
+   * Close the connection pool
+   */
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
 }
 
-export const staffDbService = new StaffDbService(
-  process.env.DATABASE_URL || 'postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway'
-);
+export default StaffDbService;
