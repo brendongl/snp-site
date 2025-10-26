@@ -142,7 +142,7 @@ export default function PlayLogsPage() {
       return {
         date,
         dateFormatted: `${dayNum} ${dayName} ${monthName}`,
-        logs: logs.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime()),
+        logs: logs.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()),
         gameCount: logs.length,
         staffCount: uniqueStaff.size,
       };

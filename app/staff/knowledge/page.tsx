@@ -500,12 +500,26 @@ export default function KnowledgePage() {
 
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {isListView
-              ? `${(paginatedData as StaffKnowledgeEntry[]).length} record${(paginatedData as StaffKnowledgeEntry[]).length !== 1 ? 's' : ''}`
-              : `${(paginatedData as GroupedGame[]).length} game${(paginatedData as GroupedGame[]).length !== 1 ? 's' : ''}`
-            } — Page {currentPage} of {totalPages || 1}
-          </p>
+          <div className="text-sm text-muted-foreground">
+            {isListView ? (
+              <p>
+                {(paginatedData as StaffKnowledgeEntry[]).length} record{(paginatedData as StaffKnowledgeEntry[]).length !== 1 ? 's' : ''} — Page {currentPage} of {totalPages || 1}
+              </p>
+            ) : (
+              <div>
+                <p>
+                  {(paginatedData as GroupedGame[]).length} game{(paginatedData as GroupedGame[]).length !== 1 ? 's' : ''} — Page {currentPage} of {totalPages || 1}
+                </p>
+                {!gameNameSearch && !showKnowledgeGaps && !showTrainingOpportunities && selectedConfidenceLevels.size === 0 && (
+                  <p className="text-xs mt-1">
+                    📊 Known: {new Set(allKnowledge.map(k => k.gameName)).size} out of {allGames.length} games
+                    {' • '}
+                    Can teach: {new Set(allKnowledge.filter(k => k.confidenceLevel === 'Expert' || k.confidenceLevel === 'Instructor').map(k => k.gameName)).size} games
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Loading State */}

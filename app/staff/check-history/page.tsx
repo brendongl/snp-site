@@ -17,6 +17,12 @@ interface ContentCheckEntry {
   inspector: string;
   status: string;
   notes: string;
+  boxCondition?: string | null;
+  cardCondition?: string | null;
+  missingPieces?: boolean;
+  sleeved?: boolean;
+  boxWrapped?: boolean;
+  isFake?: boolean;
 }
 
 const RECORDS_PER_PAGE = 20;
@@ -155,12 +161,11 @@ export default function CheckHistoryPage() {
         'Check Date': check.checkDate,
         'Status': check.status as 'Perfect Condition' | 'Minor Issues' | 'Major Issues' | 'Unplayable',
         'Notes': check.notes,
-        // Initialize with undefined for fields not in ContentCheckEntry
-        'Box Condition': undefined,
-        'Card Condition': undefined,
-        'Missing Pieces': undefined,
-        'Sleeved At Check': false,
-        'Box Wrapped At Check': false,
+        'Box Condition': (check.boxCondition as 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Damaged' | undefined) || undefined,
+        'Card Condition': (check.cardCondition as 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Damaged' | undefined) || undefined,
+        'Missing Pieces': check.missingPieces ? 'Yes' : undefined,
+        'Sleeved At Check': check.sleeved || false,
+        'Box Wrapped At Check': check.boxWrapped || false,
       },
     };
     setEditingCheck(contentCheck);

@@ -534,12 +534,34 @@ function GamesPageContent() {
           {/* Search and Filters Row - Part of unified header */}
           <div className="mt-2">
         {isHeaderCollapsed ? (
-          // Collapsed view - slim bar with active filters
-          <div className="flex items-center justify-between gap-2 py-2 flex-wrap">
-            <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
-              </p>
+          // Collapsed view - search bar + slim bar with active filters
+          <div className="space-y-2">
+            {/* Search Bar */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchBar
+                  value={filters.search || ''}
+                  onChange={handleSearch}
+                  placeholder="Search by game title"
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleHeaderCollapse}
+                title="Expand filters"
+                className="h-9 w-9 p-0 flex-shrink-0"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Filter badges and results count */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
+                </p>
               {hasAnyFilters && (
                 <div className="flex items-center gap-1 flex-wrap">
                   {filters.search && (
@@ -581,16 +603,8 @@ function GamesPageContent() {
                   )}
                 </div>
               )}
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleHeaderCollapse}
-              title="Expand filters"
-              className="h-7 w-7 p-0 flex-shrink-0"
-            >
-              <ChevronDown className="h-3 w-3" />
-            </Button>
           </div>
         ) : (
           // Expanded view - full header
@@ -722,6 +736,11 @@ function GamesPageContent() {
               : originalImageUrl
                 ? `/api/images/proxy?url=${encodeURIComponent(originalImageUrl)}`
                 : undefined;
+
+            // Log missing hashes for debugging
+            if (!imageHash && originalImageUrl) {
+              console.warn(`[Gallery] Game "${game.fields['Game Name']}" missing image hash, falling back to proxy:`, originalImageUrl);
+            }
 
             return (
               <div

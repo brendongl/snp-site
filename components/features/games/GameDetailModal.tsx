@@ -17,6 +17,7 @@ import { ContentCheckBadge } from '@/components/features/content-check/ContentCh
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
 import { AddGameKnowledgeDialog } from '@/components/features/staff/AddGameKnowledgeDialog';
+import { PlayLogDialog } from '@/components/features/staff/PlayLogDialog';
 import { EditGameDialog } from '@/components/features/games/EditGameDialog';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
@@ -34,6 +35,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
   const [showHistory, setShowHistory] = useState(false);
   const [showContentCheck, setShowContentCheck] = useState(false);
   const [showAddKnowledge, setShowAddKnowledge] = useState(false);
+  const [showPlayLog, setShowPlayLog] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
@@ -177,6 +179,14 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                 >
                   <ClipboardCheck className="w-4 h-4" />
                   Do Content Check
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowPlayLog(true)}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  📊 Log Play Session
                 </Button>
                 <Button
                   variant="outline"
@@ -471,6 +481,20 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
             onClose={() => setShowEditGame(false)}
             onSave={onRefresh}
             staffMode={!isAdmin}
+          />
+        )}
+
+        {/* Play Log Dialog */}
+        {isStaff && (
+          <PlayLogDialog
+            isOpen={showPlayLog}
+            onClose={() => setShowPlayLog(false)}
+            gameId={game.id}
+            gameName={game.fields['Game Name']}
+            onSuccess={() => {
+              setShowPlayLog(false);
+              // Optionally refresh or show toast
+            }}
           />
         )}
       </DialogContent>

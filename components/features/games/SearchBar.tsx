@@ -19,6 +19,11 @@ export function SearchBar({ value, onChange, placeholder = 'Search games...' }: 
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
         className="pl-10 pr-10"
       />
       {value && (
