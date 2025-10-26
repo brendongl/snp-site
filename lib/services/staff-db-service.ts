@@ -326,6 +326,88 @@ class StaffDbService {
   }
 
   /**
+   * Get all staff members with their statistics in a single optimized query
+   * Uses JOINs and GROUP BY to avoid N+1 query problem
+   */
+  async getAllStaffWithStats(): Promise<Array<StaffMember & { stats: StaffStats }>> {
+    const client = await this.pool.connect();
+
+    try {
+      const result = await client.query(`
+        SELECT
+          sl.staff_id,
+          sl.stafflist_id,
+          sl.staff_name,
+          sl.nickname,
+          sl.staff_email,
+          sl.staff_type,
+          sl.contact_ph,
+          sl.bank_account_number,
+          sl.bank_name,
+          sl.national_id_hash,
+          sl.home_address,
+          sl.emergency_contact_name,
+          sl.emergency_contact_ph,
+          sl.date_of_hire,
+          sl.created_at,
+          sl.updated_at,
+          sl.profile_updated_at,
+          COUNT(DISTINCT sk.id) as total_knowledge,
+          SUM(CASE WHEN sk.confidence_level = 0 THEN 1 ELSE 0 END) as missing_knowledge,
+          SUM(CASE WHEN sk.confidence_level = 1 THEN 1 ELSE 0 END) as beginner_knowledge,
+          SUM(CASE WHEN sk.confidence_level = 2 THEN 1 ELSE 0 END) as intermediate_knowledge,
+          SUM(CASE WHEN sk.confidence_level = 3 THEN 1 ELSE 0 END) as expert_knowledge,
+          SUM(CASE WHEN sk.can_teach = true THEN 1 ELSE 0 END) as can_teach_count,
+          COUNT(DISTINCT pl.id) as total_play_logs,
+          COUNT(DISTINCT cc.id) as total_content_checks
+        FROM staff_list sl
+        LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.staff_id
+        LEFT JOIN play_logs pl ON pl.staff_list_id = sl.staff_id
+        LEFT JOIN content_checks cc ON cc.inspector_staff_id = sl.staff_id
+        GROUP BY sl.staff_id
+        ORDER BY sl.staff_name ASC
+      `);
+
+      return result.rows.map(row => ({
+        staffId: row.staff_id,
+        stafflistId: row.stafflist_id,
+        name: row.staff_name,
+        nickname: row.nickname,
+        email: row.staff_email,
+        type: row.staff_type,
+        contactPh: row.contact_ph,
+        bankAccountNumber: row.bank_account_number,
+        bankName: row.bank_name,
+        nationalIdHash: row.national_id_hash,
+        homeAddress: row.home_address,
+        emergencyContactName: row.emergency_contact_name,
+        emergencyContactPh: row.emergency_contact_ph,
+        dateOfHire: row.date_of_hire,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        profileUpdatedAt: row.profile_updated_at,
+        stats: {
+          totalKnowledge: parseInt(row.total_knowledge) || 0,
+          knowledgeByLevel: {
+            missing: parseInt(row.missing_knowledge) || 0,
+            beginner: parseInt(row.beginner_knowledge) || 0,
+            intermediate: parseInt(row.intermediate_knowledge) || 0,
+            expert: parseInt(row.expert_knowledge) || 0,
+          },
+          canTeachCount: parseInt(row.can_teach_count) || 0,
+          totalPlayLogs: parseInt(row.total_play_logs) || 0,
+          totalContentChecks: parseInt(row.total_content_checks) || 0,
+        },
+      }));
+    } catch (error) {
+      console.error('Error fetching staff with stats:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Close the connection pool
    */
   async close(): Promise<void> {

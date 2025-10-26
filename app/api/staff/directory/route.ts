@@ -16,33 +16,25 @@ export async function GET(request: Request) {
       );
     }
 
-    // Use DatabaseService singleton
+    // Use efficient single-query method
     const db = DatabaseService.initialize();
-
-    // Get all staff members
-    const allStaff = await db.staff.getAllStaff();
+    const allStaffWithStats = await db.staff.getAllStaffWithStats();
 
     // Map to public directory format (exclude sensitive fields)
-    const directory = await Promise.all(
-      allStaff.map(async (staff) => {
-        const stats = await db.staff.getStaffStats(staff.staffId);
-
-        return {
-          staffId: staff.staffId,
-          name: staff.name,
-          nickname: staff.nickname || staff.name.split(' ').pop(), // Default to last name
-          contactPh: staff.contactPh,
-          emergencyContactName: staff.emergencyContactName,
-          emergencyContactPh: staff.emergencyContactPh,
-          dateOfHire: staff.dateOfHire,
-          stats: {
-            totalKnowledge: stats.totalKnowledge,
-            totalPlayLogs: stats.totalPlayLogs,
-            totalContentChecks: stats.totalContentChecks,
-          },
-        };
-      })
-    );
+    const directory = allStaffWithStats.map((staff) => ({
+      staffId: staff.staffId,
+      name: staff.name,
+      nickname: staff.nickname || staff.name.split(' ').pop(), // Default to last name
+      contactPh: staff.contactPh,
+      emergencyContactName: staff.emergencyContactName,
+      emergencyContactPh: staff.emergencyContactPh,
+      dateOfHire: staff.dateOfHire,
+      stats: {
+        totalKnowledge: staff.stats.totalKnowledge,
+        totalPlayLogs: staff.stats.totalPlayLogs,
+        totalContentChecks: staff.stats.totalContentChecks,
+      },
+    }));
 
     return NextResponse.json({ staff: directory });
   } catch (error) {
