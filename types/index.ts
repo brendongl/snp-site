@@ -28,6 +28,8 @@ export interface BoardGame {
     'Complexity'?: number;
     'Min Players'?: string;  // Changed from number to string (singleSelect in Airtable)
     'Max. Players'?: string;  // Changed from number to string (singleSelect in Airtable)
+    'Min Playtime'?: number;  // Playtime in minutes
+    'Max Playtime'?: number;  // Playtime in minutes
     Description?: string;
     'Date of Aquisition'?: string;
     'Best Player Amount'?: string;
@@ -153,6 +155,7 @@ export interface GameFilters {
   yearRange?: { min?: number; max?: number };
   playerCount?: { min?: number; max?: number };
   complexity?: { min?: number; max?: number };
+  playtime?: number; // Filter by single playtime value (shows games that fit within this time)
   quickFilter?: 'sixPlus' | 'couples' | 'social' | 'noChecks';
   bestPlayerCount?: number;
 }

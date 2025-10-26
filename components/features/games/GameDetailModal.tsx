@@ -347,9 +347,24 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                 </div>
               )}
 
-              {game.fields['Date of Aquisition'] && (
+              {(game.fields['Min Playtime'] || game.fields['Max Playtime']) && (
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Playtime</p>
+                    <p className="font-medium">
+                      {game.fields['Min Playtime'] === game.fields['Max Playtime']
+                        ? `${game.fields['Min Playtime']} min`
+                        : `${game.fields['Min Playtime'] || '?'} - ${game.fields['Max Playtime'] || '?'} min`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {game.fields['Date of Aquisition'] && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Acquired</p>
                     <p className="font-medium">

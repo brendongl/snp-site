@@ -240,6 +240,22 @@ function GamesPageContent() {
       );
     }
 
+    // Playtime filter - show games that can be played within the selected time
+    if (filters.playtime) {
+      filtered = filtered.filter(game => {
+        const minPlaytime = game.fields['Min Playtime'];
+        const maxPlaytime = game.fields['Max Playtime'];
+
+        // Skip games without playtime data
+        if (!minPlaytime && !maxPlaytime) return false;
+
+        // Show games where the selected time falls within the game's playtime range
+        // e.g., if user selects 60 minutes, show games with min<=60 AND max>=60
+        const selectedTime = filters.playtime!;
+        return (minPlaytime || 0) <= selectedTime && (maxPlaytime || 999) >= selectedTime;
+      });
+    }
+
     // Best Player Count filter
     if (filters.bestPlayerCount) {
       filtered = filtered.filter(game => {
@@ -361,6 +377,7 @@ function GamesPageContent() {
     if (filters.playerCount?.min || filters.playerCount?.max) count++;
     if (filters.yearRange?.min || filters.yearRange?.max) count++;
     if (filters.complexity?.min || filters.complexity?.max) count++;
+    if (filters.playtime) count++;
     if (filters.bestPlayerCount) count++;
     return count;
   }, [filters]);
@@ -386,6 +403,7 @@ function GamesPageContent() {
       playerCount: newFilters.playerCount,
       yearRange: newFilters.yearRange,
       complexity: newFilters.complexity,
+      playtime: newFilters.playtime,
       bestPlayerCount: newFilters.bestPlayerCount,
       categoryMatchMode: newFilters.categoryMatchMode,
     });
@@ -594,6 +612,11 @@ function GamesPageContent() {
                   {(filters.complexity?.min || filters.complexity?.max) && (
                     <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
                       🧠 {filters.complexity?.min || '?'}-{filters.complexity?.max || '?'}
+                    </span>
+                  )}
+                  {filters.playtime && (
+                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                      ⏱️ {filters.playtime}m
                     </span>
                   )}
                   {filters.bestPlayerCount && (

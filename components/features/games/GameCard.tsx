@@ -168,6 +168,18 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
                 </div>
               </div>
             )}
+
+            {(game.fields['Min Playtime'] || game.fields['Max Playtime']) && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>
+                  {game.fields['Min Playtime'] === game.fields['Max Playtime']
+                    ? `${game.fields['Min Playtime']}m`
+                    : `${game.fields['Min Playtime'] || '?'}-${game.fields['Max Playtime'] || '?'}m`
+                  }
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Staff-only check info */}

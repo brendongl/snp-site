@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Last Updated**: October 23, 2025
+**Last Updated**: October 26, 2025
 **Current Version**: 1.4.7
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
@@ -272,6 +272,11 @@ N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/xxx
 N8N_API_KEY=xxxxxxxxxxxxx
 GOOGLE_MAPS_API_KEY=xxxxxxxxxxxxx
 
+# iPOS/Fabi POS Integration (See docs/IPOS_API_ENDPOINTS.md)
+IPOS_API_BASE_URL=https://fabi.ipos.vn/api
+IPOS_API_TOKEN=your_jwt_token_here
+IPOS_STORE_ID=your_store_id
+
 # Performance (Optional)
 REDIS_URL=redis://localhost:6379
 ```
@@ -453,6 +458,7 @@ Request for /api/games:
 | [STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) | Staging environment |
 | [RAILWAY_PERSISTENT_VOLUME_SETUP.md](docs/RAILWAY_PERSISTENT_VOLUME_SETUP.md) | Persistent volume config |
 | [CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md) | Changelog feature details |
+| [IPOS_API_ENDPOINTS.md](docs/IPOS_API_ENDPOINTS.md) | **iPOS/Fabi POS API reference** - Real-time data (sales, tables, customers) |
 | [AIRTABLE_POSTGRES_MIGRATION.md](docs/AIRTABLE_POSTGRES_MIGRATION.md) | Migration troubleshooting |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues & fixes |
 | [DOCKER.md](docs/DOCKER.md) | Build process reference |

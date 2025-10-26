@@ -224,6 +224,45 @@ export function AdvancedFilters({
             />
           </div>
 
+          {/* Playtime */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Playtime</Label>
+              <span className="text-sm text-muted-foreground">
+                {localFilters.playtime
+                  ? `${localFilters.playtime} min`
+                  : 'Any'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Show games that can be played in this time
+            </p>
+            <Slider
+              min={15}
+              max={300}
+              step={15}
+              value={[localFilters.playtime || 150]}
+              onValueChange={(values) => setLocalFilters({
+                ...localFilters,
+                playtime: values[0]
+              })}
+              className="py-4"
+            />
+            {localFilters.playtime && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocalFilters({
+                  ...localFilters,
+                  playtime: undefined
+                })}
+                className="text-xs"
+              >
+                Clear playtime filter
+              </Button>
+            )}
+          </div>
+
           {/* Categories */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
