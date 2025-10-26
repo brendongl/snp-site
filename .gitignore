@@ -60,3 +60,6 @@ next-env.d.ts
 
 # Claude settings with secrets
 .claude/settings.local.json
+
+# Git worktrees
+.worktrees/
