@@ -13,11 +13,11 @@ function transformToAirtableFormat(dbCheck: any) {
       'Record ID': dbCheck.id,
       'Board Game': dbCheck.gameId ? [dbCheck.gameId] : undefined,
       'Check Date': dbCheck.checkDate,
-      'Inspector': dbCheck.inspectorId ? [dbCheck.inspectorId] : undefined,
+      'Inspector': dbCheck.inspectorName || dbCheck.inspectorId || 'Unknown Staff', // Use staff name if available
       'Status': Array.isArray(dbCheck.status) && dbCheck.status.length > 0
         ? dbCheck.status[0]
         : 'Unknown',
-      'Missing Pieces': dbCheck.missingPieces ? 'Yes' : undefined,
+      'Missing Pieces': dbCheck.missingPieces || undefined, // Show actual text, not "Yes"
       'Box Condition': dbCheck.boxCondition,
       'Card Condition': dbCheck.cardCondition,
       'Is Fake': dbCheck.isFake,

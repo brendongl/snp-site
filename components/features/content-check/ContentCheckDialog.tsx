@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { BoardGame } from '@/types';
+import { useToast } from '@/lib/context/toast-context';
 
 interface ContentCheckDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface Inspector {
 }
 
 export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCheckDialogProps) {
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [loadingInspectors, setLoadingInspectors] = useState(true);
@@ -139,13 +141,34 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         throw new Error('Failed to create content check');
       }
 
-      // Success
+      const data = await response.json();
+
+      // Verify the record was actually created by checking for ID
+      if (!data.contentCheckId || !data.record) {
+        throw new Error('Content check creation failed - no record ID returned');
+      }
+
+      // Verify record exists in database
+      const verifyResponse = await fetch(`/api/content-checks?gameId=${game.id}`);
+      if (!verifyResponse.ok) {
+        console.warn('Failed to verify content check creation, but record was created');
+      } else {
+        const verifyData = await verifyResponse.json();
+        const recordExists = verifyData.checks?.some((check: any) => check.id === data.contentCheckId);
+        if (!recordExists) {
+          console.warn('Content check ID not found in verification query');
+        }
+      }
+
+      // Success - show toast notification
+      addToast('Content check created successfully!', 'success');
+
       onSuccess();
       resetForm();
       onClose();
     } catch (error) {
       console.error('Error creating content check:', error);
-      alert('Failed to create content check. Please try again.');
+      addToast('Failed to create content check. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

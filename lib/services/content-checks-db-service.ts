@@ -6,7 +6,7 @@ export interface ContentCheck {
   inspectorId: string;
   checkDate: string | null;
   status: string[];
-  missingPieces: boolean;
+  missingPieces: string | null; // TEXT field in database
   boxCondition: string | null;
   cardCondition: string | null;
   isFake: boolean;
@@ -54,22 +54,39 @@ class ContentChecksDbService {
   }
 
   /**
-   * Get content checks for a specific game
+   * Get content checks for a specific game (with staff names)
    */
-  async getChecksByGameId(gameId: string): Promise<ContentCheck[]> {
+  async getChecksByGameId(gameId: string): Promise<any[]> {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, game_id, inspector_id, check_date, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at
-        FROM content_checks
-        WHERE game_id = $1
-        ORDER BY check_date DESC`,
+          cc.id,
+          cc.game_id,
+          cc.inspector_id,
+          sl.staff_name AS inspector_name,
+          cc.check_date,
+          cc.status,
+          cc.missing_pieces,
+          cc.box_condition,
+          cc.card_condition,
+          cc.is_fake,
+          cc.notes,
+          cc.sleeved_at_check,
+          cc.box_wrapped_at_check,
+          cc.photos,
+          cc.created_at,
+          cc.updated_at
+        FROM content_checks cc
+        LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
+        WHERE cc.game_id = $1
+        ORDER BY cc.check_date DESC, cc.created_at DESC`,
         [gameId]
       );
 
-      return result.rows.map(this.mapRowToCheck);
+      return result.rows.map((row: any) => ({
+        ...this.mapRowToCheck(row),
+        inspectorName: row.inspector_name || 'Unknown Staff',
+      }));
     } catch (error) {
       console.error('Error fetching content checks for game:', error);
       throw error;
@@ -396,7 +413,7 @@ class ContentChecksDbService {
       inspectorId: row.inspector_id,
       checkDate: row.check_date,
       status: parseStatus(row.status),
-      missingPieces: row.missing_pieces || false,
+      missingPieces: row.missing_pieces || null, // TEXT field, not boolean
       boxCondition: row.box_condition,
       cardCondition: row.card_condition,
       isFake: row.is_fake || false,

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       status: Array.isArray(status) ? status : [status],
       boxCondition,
       cardCondition,
-      missingPieces: missingPieces === 'Yes',
+      missingPieces: missingPieces || null, // TEXT field, not boolean
       isFake: false,
       notes: notes || null,
       sleeved: sleevedAtCheck || false,
