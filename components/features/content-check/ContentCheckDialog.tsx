@@ -60,24 +60,24 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   // Auto-select current staff member from localStorage
   useEffect(() => {
     if (open && inspectors.length > 0 && !inspector) {
-      const staffEmail = localStorage.getItem('staff_email');
+      // Get staff_record_id (staffListRecordId) directly from localStorage
+      const staffRecordId = localStorage.getItem('staff_record_id');
       const staffName = localStorage.getItem('staff_name');
 
-      if (staffName) {
-        // Find matching inspector by name (case-insensitive)
-        const matchingInspector = inspectors.find(
-          (insp) => insp.name.toLowerCase().trim() === staffName.toLowerCase().trim()
-        );
+      if (staffRecordId) {
+        // Verify the ID exists in the inspectors list
+        const matchingInspector = inspectors.find((insp) => insp.id === staffRecordId);
 
         if (matchingInspector) {
           setInspector(matchingInspector.id);
-          console.log('Auto-selected inspector:', matchingInspector.name);
+          console.log('Auto-selected inspector by ID:', matchingInspector.name, `(${staffRecordId})`);
         } else {
-          console.warn('No matching inspector found for staff name:', staffName);
-          console.log('Available inspectors:', inspectors.map(i => i.name));
+          console.warn('staff_record_id from localStorage not found in inspectors:', staffRecordId);
+          console.log('Available inspectors:', inspectors.map(i => `${i.name} (${i.id})`));
         }
       } else {
-        console.warn('No staff name found in localStorage');
+        console.warn('No staff_record_id found in localStorage. Staff member not logged in?');
+        console.log('localStorage keys:', Object.keys(localStorage));
       }
     }
   }, [open, inspectors, inspector]);
