@@ -3,6 +3,7 @@ import GamesDbService from './games-db-service';
 import ContentChecksDbService from './content-checks-db-service';
 import StaffKnowledgeDbService from './staff-knowledge-db-service';
 import PlayLogsDbService from './play-logs-db-service';
+import StaffDbService from './staff-db-service';
 
 /**
  * Master database service coordinator
@@ -17,6 +18,7 @@ class DatabaseService {
   public contentChecks: ContentChecksDbService;
   public staffKnowledge: StaffKnowledgeDbService;
   public playLogs: PlayLogsDbService;
+  public staff: StaffDbService;
 
   private constructor(connectionString: string) {
     this.connectionString = connectionString;
@@ -31,6 +33,7 @@ class DatabaseService {
     this.contentChecks = new ContentChecksDbService(connectionString);
     this.staffKnowledge = new StaffKnowledgeDbService(connectionString);
     this.playLogs = new PlayLogsDbService(connectionString);
+    this.staff = new StaffDbService(connectionString);
   }
 
   /**
@@ -66,6 +69,7 @@ class DatabaseService {
       await this.contentChecks.close();
       await this.staffKnowledge.close();
       await this.playLogs.close();
+      await this.staff.close();
       await this.pool.end();
       console.log('✅ All database connections closed');
     } catch (error) {

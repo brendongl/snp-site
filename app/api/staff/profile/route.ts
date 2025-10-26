@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import StaffDbService from '@/lib/services/staff-db-service';
+import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +16,11 @@ export async function GET(request: Request) {
       );
     }
 
-    // Initialize service with database connection
-    const staffDbService = new StaffDbService(process.env.DATABASE_URL!);
+    // Use DatabaseService singleton
+    const db = DatabaseService.initialize();
 
     // Get staff member by email
-    const staff = await staffDbService.getStaffByEmail(session.user.email);
+    const staff = await db.staff.getStaffByEmail(session.user.email);
 
     if (!staff) {
       return NextResponse.json(
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     }
 
     // Get staff stats
-    const stats = await staffDbService.getStaffStats(staff.staffId);
+    const stats = await db.staff.getStaffStats(staff.staffId);
 
     return NextResponse.json({
       profile: staff,
