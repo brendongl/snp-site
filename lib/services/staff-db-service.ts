@@ -278,7 +278,20 @@ class StaffDbService {
     const client = await this.pool.connect();
 
     try {
-      // Get knowledge stats
+      // Get knowledge stats - staff_knowledge uses stafflist_id, not staff_id
+      // First get the stafflist_id for this staff member
+      const staffInfoResult = await client.query(
+        `SELECT stafflist_id FROM staff_list WHERE staff_id = $1`,
+        [staffId]
+      );
+
+      if (staffInfoResult.rows.length === 0) {
+        throw new Error('Staff member not found');
+      }
+
+      const stafflistId = staffInfoResult.rows[0].stafflist_id;
+
+      // Get knowledge stats using stafflist_id
       const knowledgeResult = await client.query(
         `SELECT
           COUNT(*) as total,
@@ -289,7 +302,7 @@ class StaffDbService {
           SUM(CASE WHEN can_teach = true THEN 1 ELSE 0 END) as can_teach
         FROM staff_knowledge
         WHERE staff_member_id = $1`,
-        [staffId]
+        [stafflistId]
       );
 
       // Get play logs count
@@ -366,7 +379,7 @@ class StaffDbService {
           COUNT(DISTINCT pl.id) as total_play_logs,
           COUNT(DISTINCT cc.id) as total_content_checks
         FROM staff_list sl
-        LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.staff_id
+        LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.stafflist_id
         LEFT JOIN play_logs pl ON pl.staff_list_id = sl.staff_id
         LEFT JOIN content_checks cc ON cc.staff_list_id = sl.staff_id
         GROUP BY sl.staff_id
