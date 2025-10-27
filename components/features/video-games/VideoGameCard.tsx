@@ -9,7 +9,8 @@ interface VideoGameCardProps {
 }
 
 export default function VideoGameCard({ game, onClick }: VideoGameCardProps) {
-  const imageUrl = game.image_landscape_url || '/placeholder-game.jpg';
+  const imageUrl = game.image_landscape_url;
+  const hasImage = imageUrl && imageUrl !== '/placeholder-game.jpg';
 
   // Format release date from YYYYMMDD to readable format
   const formatDate = (date: number | undefined) => {
@@ -28,26 +29,41 @@ export default function VideoGameCard({ game, onClick }: VideoGameCardProps) {
     >
       {/* 16:9 Aspect Ratio Container */}
       <div className="relative w-full pb-[56.25%]"> {/* 56.25% = 9/16 for 16:9 ratio */}
-        <Image
-          src={imageUrl}
-          alt={game.name}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        />
+        {hasImage ? (
+          <Image
+            src={imageUrl}
+            alt={game.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 flex items-center justify-center">
+            <div className="text-center p-6">
+              <div className="text-6xl mb-4">🎮</div>
+              <h3 className="text-white font-bold text-lg line-clamp-2">
+                {game.name}
+              </h3>
+            </div>
+          </div>
+        )}
 
-        {/* Bottom Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        {/* Bottom Gradient Overlay (only for images) */}
+        {hasImage && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        )}
 
-        {/* Game Name */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h3 className="text-white font-bold text-lg line-clamp-2">
-            {game.name}
-          </h3>
-          <p className="text-gray-300 text-sm mt-1">
-            {game.publisher || 'Unknown Publisher'}
-          </p>
-        </div>
+        {/* Game Info Overlay (only for images) */}
+        {hasImage && (
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h3 className="text-white font-bold text-lg line-clamp-2">
+              {game.name}
+            </h3>
+            <p className="text-gray-300 text-sm mt-1">
+              {game.publisher || 'Unknown Publisher'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Genre Badges */}
