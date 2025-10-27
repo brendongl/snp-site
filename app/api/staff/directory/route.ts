@@ -12,6 +12,10 @@ export async function GET(request: Request) {
     const db = DatabaseService.initialize();
     const allStaffWithStats = await db.staff.getAllStaffWithStats();
 
+    // Get total games count for knowledge ratio
+    const totalGamesResult = await db.games.getAllGames();
+    const totalGames = totalGamesResult.length;
+
     // Map to public directory format (exclude sensitive fields)
     const directory = allStaffWithStats.map((staff) => ({
       staffId: staff.staffId,
@@ -28,7 +32,7 @@ export async function GET(request: Request) {
       },
     }));
 
-    return NextResponse.json({ staff: directory });
+    return NextResponse.json({ staff: directory, totalGames });
   } catch (error) {
     console.error('Error fetching staff directory:', error);
     return NextResponse.json(

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import DatabaseService from '@/lib/services/db-service';
 import crypto from 'crypto';
 import * as fs from 'fs/promises';
@@ -16,22 +15,26 @@ const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 /**
  * POST /api/staff/national-id/upload
  * Upload National ID image for authenticated staff member
+ * Uses form data with email parameter for localStorage authentication
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate user
-    const session = await auth();
+    // 1. Parse form data
+    const formData = await request.formData();
+    const email = formData.get('email') as string | null;
+    const file = formData.get('file') as File | null;
 
-    if (!session?.user?.email) {
+    // 2. Validate email (from localStorage authentication)
+    if (!email) {
       return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
+        { error: 'Email parameter required' },
+        { status: 400 }
       );
     }
 
-    // 2. Get staff member by email
+    // 3. Get staff member by email
     const db = DatabaseService.initialize();
-    const staff = await db.staff.getStaffByEmail(session.user.email);
+    const staff = await db.staff.getStaffByEmail(email);
 
     if (!staff) {
       return NextResponse.json(
@@ -40,10 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Parse form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-
+    // 4. Validate file
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Validate file type
+    // 5. Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: 'Invalid file type. Only JPG, JPEG, and PNG are allowed.' },

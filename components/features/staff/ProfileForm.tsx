@@ -95,12 +95,13 @@ export function ProfileForm({ profile, onUpdate }: ProfileFormProps) {
       setUploadingImage(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', selectedFile);
+      uploadFormData.append('email', profile.email);
 
       const response = await fetch('/api/staff/national-id/upload', {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       });
 
       if (!response.ok) {

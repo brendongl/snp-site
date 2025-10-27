@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, User, Phone, AlertTriangle, Calendar, Zap, Search } from 'lucide-react';
+import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
 interface DirectoryStats {
   totalKnowledge: number;
@@ -24,8 +25,10 @@ interface DirectoryEntry {
 
 export default function StaffDirectoryPage() {
   const router = useRouter();
+  const isAdmin = useAdminMode();
   const [staffName, setStaffName] = useState<string | null>(null);
   const [directory, setDirectory] = useState<DirectoryEntry[]>([]);
+  const [totalGames, setTotalGames] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +63,7 @@ export default function StaffDirectoryPage() {
 
         const data = await response.json();
         setDirectory(Array.isArray(data.staff) ? data.staff : []);
+        setTotalGames(data.totalGames || 0);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load staff directory');
         setDirectory([]);
@@ -264,16 +268,21 @@ export default function StaffDirectoryPage() {
                       <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-foreground">{staff.contactPh || 'N/A'}</span>
                     </div>
-                    <div className="flex items-start gap-2 text-sm">
-                      <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-muted-foreground text-xs">Emergency Contact</div>
-                        <div className="text-foreground font-medium">
-                          {staff.emergencyContactName || 'N/A'}
+
+                    {/* Emergency Contact - Admin only */}
+                    {isAdmin && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-muted-foreground text-xs">Emergency Contact</div>
+                          <div className="text-foreground font-medium">
+                            {staff.emergencyContactName || 'N/A'}
+                          </div>
+                          <div className="text-foreground">{staff.emergencyContactPh || 'N/A'}</div>
                         </div>
-                        <div className="text-foreground">{staff.emergencyContactPh || 'N/A'}</div>
                       </div>
-                    </div>
+                    )}
+
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div>
@@ -288,10 +297,10 @@ export default function StaffDirectoryPage() {
                     <div className="text-xs text-muted-foreground mb-2">Activity Stats</div>
                     <div className="flex flex-wrap gap-2">
                       <div className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                        {staff.stats.totalKnowledge} games
+                        {staff.stats.totalKnowledge}/{totalGames} known
                       </div>
                       <div className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-medium">
-                        {staff.stats.totalPlayLogs} plays
+                        {staff.stats.totalPlayLogs} logs
                       </div>
                       <div className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-medium">
                         {staff.stats.totalContentChecks} checks

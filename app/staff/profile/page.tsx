@@ -33,14 +33,15 @@ interface StaffMember {
 interface StaffStats {
   totalKnowledge: number;
   knowledgeByLevel: {
-    missing: number;
     beginner: number;
     intermediate: number;
     expert: number;
+    instructor: number;
   };
   canTeachCount: number;
   totalPlayLogs: number;
   totalContentChecks: number;
+  lastContentCheckDate: string | null;
 }
 
 interface ProfileData {

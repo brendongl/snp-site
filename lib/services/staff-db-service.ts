@@ -35,14 +35,15 @@ export interface StaffProfileUpdate {
 export interface StaffStats {
   totalKnowledge: number;
   knowledgeByLevel: {
-    missing: number;
     beginner: number;
     intermediate: number;
     expert: number;
+    instructor: number;
   };
   canTeachCount: number;
   totalPlayLogs: number;
   totalContentChecks: number;
+  lastContentCheckDate: string | null;
 }
 
 class StaffDbService {
@@ -295,10 +296,10 @@ class StaffDbService {
       const knowledgeResult = await client.query(
         `SELECT
           COUNT(*) as total,
-          SUM(CASE WHEN confidence_level = 0 THEN 1 ELSE 0 END) as missing,
           SUM(CASE WHEN confidence_level = 1 THEN 1 ELSE 0 END) as beginner,
           SUM(CASE WHEN confidence_level = 2 THEN 1 ELSE 0 END) as intermediate,
           SUM(CASE WHEN confidence_level = 3 THEN 1 ELSE 0 END) as expert,
+          SUM(CASE WHEN confidence_level = 4 THEN 1 ELSE 0 END) as instructor,
           SUM(CASE WHEN can_teach = true THEN 1 ELSE 0 END) as can_teach
         FROM staff_knowledge
         WHERE staff_member_id = $1`,
@@ -313,27 +314,31 @@ class StaffDbService {
         [staffId]
       );
 
-      // Get content checks count
+      // Get content checks count and last check date
       const contentChecksResult = await client.query(
-        `SELECT COUNT(*) as total
+        `SELECT
+          COUNT(*) as total,
+          MAX(check_date) as last_check_date
         FROM content_checks
         WHERE staff_list_id = $1`,
         [staffId]
       );
 
       const knowledge = knowledgeResult.rows[0];
+      const contentChecks = contentChecksResult.rows[0];
 
       return {
         totalKnowledge: parseInt(knowledge.total) || 0,
         knowledgeByLevel: {
-          missing: parseInt(knowledge.missing) || 0,
           beginner: parseInt(knowledge.beginner) || 0,
           intermediate: parseInt(knowledge.intermediate) || 0,
           expert: parseInt(knowledge.expert) || 0,
+          instructor: parseInt(knowledge.instructor) || 0,
         },
         canTeachCount: parseInt(knowledge.can_teach) || 0,
         totalPlayLogs: parseInt(playLogsResult.rows[0].total) || 0,
-        totalContentChecks: parseInt(contentChecksResult.rows[0].total) || 0,
+        totalContentChecks: parseInt(contentChecks.total) || 0,
+        lastContentCheckDate: contentChecks.last_check_date || null,
       };
     } catch (error) {
       console.error('Error fetching staff stats from PostgreSQL:', error);
@@ -371,13 +376,14 @@ class StaffDbService {
           sl.updated_at,
           sl.profile_updated_at,
           COUNT(DISTINCT sk.id) as total_knowledge,
-          SUM(CASE WHEN sk.confidence_level = 0 THEN 1 ELSE 0 END) as missing_knowledge,
           SUM(CASE WHEN sk.confidence_level = 1 THEN 1 ELSE 0 END) as beginner_knowledge,
           SUM(CASE WHEN sk.confidence_level = 2 THEN 1 ELSE 0 END) as intermediate_knowledge,
           SUM(CASE WHEN sk.confidence_level = 3 THEN 1 ELSE 0 END) as expert_knowledge,
+          SUM(CASE WHEN sk.confidence_level = 4 THEN 1 ELSE 0 END) as instructor_knowledge,
           SUM(CASE WHEN sk.can_teach = true THEN 1 ELSE 0 END) as can_teach_count,
           COUNT(DISTINCT pl.id) as total_play_logs,
-          COUNT(DISTINCT cc.id) as total_content_checks
+          COUNT(DISTINCT cc.id) as total_content_checks,
+          MAX(cc.check_date) as last_content_check_date
         FROM staff_list sl
         LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.stafflist_id
         LEFT JOIN play_logs pl ON pl.staff_list_id = sl.staff_id
@@ -407,14 +413,15 @@ class StaffDbService {
         stats: {
           totalKnowledge: parseInt(row.total_knowledge) || 0,
           knowledgeByLevel: {
-            missing: parseInt(row.missing_knowledge) || 0,
             beginner: parseInt(row.beginner_knowledge) || 0,
             intermediate: parseInt(row.intermediate_knowledge) || 0,
             expert: parseInt(row.expert_knowledge) || 0,
+            instructor: parseInt(row.instructor_knowledge) || 0,
           },
           canTeachCount: parseInt(row.can_teach_count) || 0,
           totalPlayLogs: parseInt(row.total_play_logs) || 0,
           totalContentChecks: parseInt(row.total_content_checks) || 0,
+          lastContentCheckDate: row.last_content_check_date || null,
         },
       }));
     } catch (error) {

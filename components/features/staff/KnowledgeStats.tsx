@@ -8,14 +8,15 @@ import { Badge } from '@/components/ui/badge';
 interface StaffStats {
   totalKnowledge: number;
   knowledgeByLevel: {
-    missing: number;
     beginner: number;
     intermediate: number;
     expert: number;
+    instructor: number;
   };
   canTeachCount: number;
   totalPlayLogs: number;
   totalContentChecks: number;
+  lastContentCheckDate: string | null;
 }
 
 interface KnowledgeEntry {
@@ -37,6 +38,7 @@ interface KnowledgeStatsProps {
 
 export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeEntry[]>([]);
+  const [totalGames, setTotalGames] = useState<number>(0);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDetailedList, setShowDetailedList] = useState(false);
@@ -52,22 +54,29 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
         setIsLoadingList(true);
         setError(null);
 
-        const response = await fetch(`/api/staff-knowledge`);
+        // Fetch knowledge and total games count in parallel
+        const [knowledgeResponse, gamesResponse] = await Promise.all([
+          fetch(`/api/staff-knowledge`),
+          fetch(`/api/games`)
+        ]);
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch knowledge: ${response.statusText}`);
+        if (!knowledgeResponse.ok) {
+          throw new Error(`Failed to fetch knowledge: ${knowledgeResponse.statusText}`);
         }
 
-        const data = await response.json();
+        const knowledgeData = await knowledgeResponse.json();
+        const gamesData = await gamesResponse.json();
+
+        setTotalGames(gamesData.games?.length || 0);
 
         // Filter by current staff member
-        const filtered = (data.knowledge || []).filter(
+        const filtered = (knowledgeData.knowledge || []).filter(
           (entry: KnowledgeEntry) => entry.staffMember === staffId
         );
 
         // Sort by confidence level (highest first), then by game name
         const sorted = filtered.sort((a: KnowledgeEntry, b: KnowledgeEntry) => {
-          const levelOrder = { 'Expert': 4, 'Intermediate': 3, 'Beginner': 2, 'Instructor': 5 };
+          const levelOrder = { 'Instructor': 5, 'Expert': 4, 'Intermediate': 3, 'Beginner': 2 };
           const aLevel = levelOrder[a.confidenceLevel as keyof typeof levelOrder] || 0;
           const bLevel = levelOrder[b.confidenceLevel as keyof typeof levelOrder] || 0;
 
@@ -89,6 +98,21 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
 
     fetchKnowledgeList();
   }, [showDetailedList, staffId]);
+
+  // Format date to readable format
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return 'Never';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return 'Never';
+    }
+  };
 
   // Get badge color for confidence level
   const getConfidenceBadgeVariant = (level: string): 'default' | 'secondary' | 'outline' => {
@@ -157,13 +181,16 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
         <Card className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Play Sessions</p>
+              <p className="text-sm text-muted-foreground mb-1">Play Logs</p>
               <p className="text-3xl font-bold">{stats.totalPlayLogs}</p>
             </div>
             <div className="p-3 bg-blue-500/10 rounded-lg">
               <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Total play sessions logged
+          </p>
         </Card>
 
         {/* Content Checks Card */}
@@ -177,6 +204,9 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
               <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Last check: {formatDate(stats.lastContentCheckDate)}
+          </p>
         </Card>
 
         {/* Knowledge by Level Card */}
@@ -203,9 +233,9 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
               <span className="text-sm font-medium">Expert</span>
               <span className="text-lg font-bold">{stats.knowledgeByLevel.expert}</span>
             </div>
-            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-              <span className="text-sm font-medium">Missing</span>
-              <span className="text-lg font-bold">{stats.knowledgeByLevel.missing}</span>
+            <div className="flex items-center justify-between p-2 bg-purple-50 dark:bg-purple-950 rounded-lg">
+              <span className="text-sm font-medium">Instructor</span>
+              <span className="text-lg font-bold">{stats.knowledgeByLevel.instructor}</span>
             </div>
           </div>
         </Card>
@@ -220,7 +250,7 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
           <div>
             <h3 className="font-semibold text-lg">My Game Knowledge</h3>
             <p className="text-sm text-muted-foreground">
-              {stats.totalKnowledge} games tracked
+              {totalGames > 0 ? `${stats.totalKnowledge} out of ${totalGames} games known` : `${stats.totalKnowledge} games tracked`}
             </p>
           </div>
           {showDetailedList ? (
