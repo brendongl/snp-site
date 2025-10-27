@@ -135,7 +135,7 @@ async function migrate() {
           g.name as entity_name,
           'Content check: ' || g.name || ' - ' || cc.status as description,
           sl.staff_name as staff_member,
-          cc.staff_list_id,
+          cc.inspector_id,
           jsonb_build_object(
             'status', cc.status,
             'notes', cc.notes
@@ -143,7 +143,7 @@ async function migrate() {
           COALESCE(cc.check_date, cc.created_at) as created_at
         FROM content_checks cc
         LEFT JOIN games g ON cc.game_id = g.id
-        LEFT JOIN staff_list sl ON cc.staff_list_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
         WHERE (cc.check_date IS NOT NULL OR cc.created_at IS NOT NULL)
         ORDER BY COALESCE(cc.check_date, cc.created_at) ASC
       `);

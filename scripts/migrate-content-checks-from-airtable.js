@@ -132,7 +132,7 @@ async function migrateContentChecks() {
         // Insert content check into PostgreSQL
         await client.query(
           `INSERT INTO content_checks (
-            id, game_id, staff_list_id, check_date, status, notes, created_at, updated_at
+            id, game_id, inspector_id, check_date, status, notes, created_at, updated_at
           ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
           ON CONFLICT (game_id, check_date) DO NOTHING`,
           [
