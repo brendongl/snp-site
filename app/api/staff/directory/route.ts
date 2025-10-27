@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // Require authentication (staff only)
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // No authentication required - any staff can view directory
+    // (Authentication is handled by localStorage on the frontend)
 
     // Use efficient single-query method
     const db = DatabaseService.initialize();

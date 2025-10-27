@@ -141,7 +141,7 @@ export function ProfileForm({ profile, onUpdate }: ProfileFormProps) {
     try {
       setIsLoading(true);
 
-      const response = await fetch('/api/staff/profile', {
+      const response = await fetch(`/api/staff/profile?email=${encodeURIComponent(profile.email)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

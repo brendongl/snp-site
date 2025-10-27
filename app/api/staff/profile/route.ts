@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import DatabaseService from '@/lib/services/db-service';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // Get session to identify current staff member
-    const session = await auth();
+    // Get email from query parameter
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
 
-    if (!session?.user?.email) {
+    if (!email) {
       return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
+        { error: 'Email parameter required' },
+        { status: 400 }
       );
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const db = DatabaseService.initialize();
 
     // Get staff member by email
-    const staff = await db.staff.getStaffByEmail(session.user.email);
+    const staff = await db.staff.getStaffByEmail(email);
 
     if (!staff) {
       return NextResponse.json(
@@ -47,13 +47,14 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    // Get session to identify current staff member
-    const session = await auth();
+    // Get email from query parameter
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
 
-    if (!session?.user?.email) {
+    if (!email) {
       return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
+        { error: 'Email parameter required' },
+        { status: 400 }
       );
     }
 
@@ -61,7 +62,7 @@ export async function PATCH(request: Request) {
     const db = DatabaseService.initialize();
 
     // Get staff member by email
-    const staff = await db.staff.getStaffByEmail(session.user.email);
+    const staff = await db.staff.getStaffByEmail(email);
 
     if (!staff) {
       return NextResponse.json(

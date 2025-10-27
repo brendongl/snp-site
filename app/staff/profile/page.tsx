@@ -53,16 +53,27 @@ export default function StaffProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [staffEmail, setStaffEmail] = useState<string | null>(null);
 
-  const fetchProfile = async () => {
+  // Check authentication
+  useEffect(() => {
+    const email = localStorage.getItem('staff_email');
+    if (!email) {
+      router.push('/auth/signin');
+      return;
+    }
+    setStaffEmail(email);
+  }, [router]);
+
+  const fetchProfile = async (email: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/staff/profile');
+      const response = await fetch(`/api/staff/profile?email=${encodeURIComponent(email)}`);
 
-      if (response.status === 401) {
-        // Not authenticated, redirect to sign in
+      if (response.status === 401 || response.status === 404) {
+        // Not authenticated or not found, redirect to sign in
         router.push('/auth/signin');
         return;
       }
@@ -81,8 +92,10 @@ export default function StaffProfilePage() {
   };
 
   useEffect(() => {
-    fetchProfile();
-  }, [router]);
+    if (staffEmail) {
+      fetchProfile(staffEmail);
+    }
+  }, [staffEmail]);
 
   // Loading state
   if (isLoading) {
@@ -204,7 +217,7 @@ export default function StaffProfilePage() {
               <TabsContent value="account" className="space-y-4">
                 <ProfileForm
                   profile={profileData.profile}
-                  onUpdate={fetchProfile}
+                  onUpdate={() => staffEmail && fetchProfile(staffEmail)}
                 />
               </TabsContent>
 
