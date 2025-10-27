@@ -333,6 +333,7 @@ class ContentChecksDbService {
           g.name AS game_name,
           cc.check_date,
           cc.inspector_id,
+          sl.staff_name AS inspector_name,
           cc.status,
           cc.notes,
           cc.box_condition,
@@ -343,6 +344,7 @@ class ContentChecksDbService {
           cc.is_fake
         FROM content_checks cc
         LEFT JOIN games g ON cc.game_id = g.id
+        LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
         ORDER BY cc.check_date DESC
       `);
 
@@ -355,7 +357,7 @@ class ContentChecksDbService {
           gameId: row.game_id,
           gameName: row.game_name || 'Unknown Game',
           checkDate: row.check_date,
-          inspector: row.inspector_id || 'Unknown Staff',
+          inspector: row.inspector_name || 'Unknown Staff',
           status: statusString,
           notes: row.notes || '',
           boxCondition: row.box_condition,
