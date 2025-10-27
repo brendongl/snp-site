@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, LogOut } from 'lucide-react';
+import { Menu, LogOut, User, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
@@ -69,6 +69,29 @@ export function StaffMenu() {
           </div>
 
           <nav className="py-2">
+            {/* My Profile */}
+            <Link
+              href="/staff/profile"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+              onClick={() => setIsOpen(false)}
+            >
+              <User className="w-4 h-4" />
+              <span>My Profile</span>
+            </Link>
+
+            {/* Staff Directory */}
+            <Link
+              href="/staff/directory"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+              onClick={() => setIsOpen(false)}
+            >
+              <Users className="w-4 h-4" />
+              <span>Staff Directory</span>
+            </Link>
+
+            {/* Divider */}
+            <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
+
             {/* Play Logs */}
             <Link
               href="/staff/play-logs"

@@ -29,6 +29,7 @@ export interface StaffProfileUpdate {
   homeAddress?: string;
   emergencyContactName?: string;
   emergencyContactPh?: string;
+  nationalIdHash?: string;
 }
 
 export interface StaffStats {
@@ -199,6 +200,10 @@ class StaffDbService {
       if (updates.emergencyContactPh !== undefined) {
         fields.push(`emergency_contact_ph = $${paramIndex++}`);
         values.push(updates.emergencyContactPh);
+      }
+      if (updates.nationalIdHash !== undefined) {
+        fields.push(`national_id_hash = $${paramIndex++}`);
+        values.push(updates.nationalIdHash);
       }
 
       if (fields.length === 0) {
