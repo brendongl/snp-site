@@ -86,6 +86,48 @@ export interface ContentCheck {
   };
 }
 
+// Video Game Types
+export type VideogamePlatform = 'switch' | 'ps5' | 'xbox' | 'wii' | 'wiiu' | 'ps4' | 'xboxone';
+
+export interface VideoGame {
+  id: string; // Platform-specific ID (e.g., TitleID for Switch)
+  platform: VideogamePlatform;
+  name: string;
+  publisher?: string;
+  developer?: string;
+  release_date?: number; // YYYYMMDD format
+  description?: string;
+  category?: string[]; // Genres
+  languages?: string[];
+  number_of_players?: number;
+  rating_content?: string[]; // ESRB/PEGI ratings
+  platform_specific_data?: Record<string, any>; // Flexible field for platform-unique data
+  located_on?: string[]; // Physical console locations (e.g., ["Samus", "Toad"])
+  image_url?: string; // Deprecated, kept for compatibility
+  image_landscape_url?: string; // 16:9 landscape cover
+  image_portrait_url?: string; // Portrait box art
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Video Game Filter Types
+export interface VideoGameFilters {
+  search?: string;
+  platform?: VideogamePlatform[];
+  locatedOn?: string[]; // Filter by console location
+  category?: string[]; // Filter by genre
+  players?: { min?: number; max?: number };
+  yearRange?: { min?: number; max?: number };
+  ratingContent?: string[]; // Filter by rating content
+}
+
+export type VideoGameSortOption =
+  | 'alphabetical'
+  | 'alphabeticalDesc'
+  | 'releaseDate'
+  | 'releaseDateDesc'
+  | 'players';
+
 // User/Customer Types
 export interface Customer {
   id: string;
