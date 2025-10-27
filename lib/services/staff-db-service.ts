@@ -304,7 +304,7 @@ class StaffDbService {
       const contentChecksResult = await client.query(
         `SELECT COUNT(*) as total
         FROM content_checks
-        WHERE inspector_staff_id = $1`,
+        WHERE staff_list_id = $1`,
         [staffId]
       );
 
@@ -368,7 +368,7 @@ class StaffDbService {
         FROM staff_list sl
         LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.staff_id
         LEFT JOIN play_logs pl ON pl.staff_list_id = sl.staff_id
-        LEFT JOIN content_checks cc ON cc.inspector_staff_id = sl.staff_id
+        LEFT JOIN content_checks cc ON cc.staff_list_id = sl.staff_id
         GROUP BY sl.staff_id
         ORDER BY sl.staff_name ASC
       `);
