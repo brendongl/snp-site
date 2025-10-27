@@ -2,19 +2,16 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import videoGamesDbService from '@/lib/services/video-games-db-service';
 
 async function getGame(id: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const response = await fetch(`${baseUrl}/api/video-games/${id}`, {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
+  try {
+    const game = await videoGamesDbService.getGameById(id, 'switch');
+    return game;
+  } catch (error) {
+    console.error('Error fetching game:', error);
     return null;
   }
-
-  const data = await response.json();
-  return data.game;
 }
 
 export default async function VideoGameDetailPage({
