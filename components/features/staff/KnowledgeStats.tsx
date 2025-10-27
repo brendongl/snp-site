@@ -21,7 +21,8 @@ interface StaffStats {
 
 interface KnowledgeEntry {
   id: string;
-  staffMember: string;
+  staffMemberId: string; // For filtering by ID
+  staffMember: string; // For display
   gameName: string;
   confidenceLevel: string;
   canTeach: boolean;
@@ -69,9 +70,9 @@ export function KnowledgeStats({ staffId, stats }: KnowledgeStatsProps) {
 
         setTotalGames(gamesData.games?.length || 0);
 
-        // Filter by current staff member
+        // Filter by current staff member ID
         const filtered = (knowledgeData.knowledge || []).filter(
-          (entry: KnowledgeEntry) => entry.staffMember === staffId
+          (entry: KnowledgeEntry) => entry.staffMemberId === staffId
         );
 
         // Sort by confidence level (highest first), then by game name

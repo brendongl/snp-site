@@ -306,22 +306,22 @@ class StaffDbService {
         [stafflistId]
       );
 
-      // Get play logs count
+      // Get play logs count - play_logs.staff_list_id contains stafflist_id values
       const playLogsResult = await client.query(
         `SELECT COUNT(*) as total
         FROM play_logs
         WHERE staff_list_id = $1`,
-        [staffId]
+        [stafflistId]
       );
 
-      // Get content checks count and last check date
+      // Get content checks count and last check date - content_checks uses inspector_id with stafflist_id values
       const contentChecksResult = await client.query(
         `SELECT
           COUNT(*) as total,
           MAX(check_date) as last_check_date
         FROM content_checks
-        WHERE staff_list_id = $1`,
-        [staffId]
+        WHERE inspector_id = $1`,
+        [stafflistId]
       );
 
       const knowledge = knowledgeResult.rows[0];
@@ -386,8 +386,8 @@ class StaffDbService {
           MAX(cc.check_date) as last_content_check_date
         FROM staff_list sl
         LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.stafflist_id
-        LEFT JOIN play_logs pl ON pl.staff_list_id = sl.staff_id
-        LEFT JOIN content_checks cc ON cc.staff_list_id = sl.staff_id
+        LEFT JOIN play_logs pl ON pl.staff_list_id = sl.stafflist_id
+        LEFT JOIN content_checks cc ON cc.inspector_id = sl.stafflist_id
         GROUP BY sl.staff_id
         ORDER BY sl.staff_name ASC
       `);

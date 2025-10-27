@@ -54,7 +54,8 @@ export async function GET(request: Request) {
 
     const knowledge = result.rows.map((row) => ({
       id: row.id,
-      staffMember: row.staff_name || 'Unknown Staff',
+      staffMemberId: row.staff_member_id, // For filtering by ID
+      staffMember: row.staff_name || 'Unknown Staff', // For display
       gameName: row.game_name || 'Unknown Game',
       confidenceLevel: confidenceLevelMap[row.confidence_level] || 'Beginner',
       canTeach: row.can_teach || false,
