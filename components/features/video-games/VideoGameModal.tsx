@@ -29,6 +29,17 @@ export default function VideoGameModal({ game, isOpen, onClose }: VideoGameModal
     });
   };
 
+  const getRatingLabel = (rating: number | undefined) => {
+    if (!rating) return null;
+    const labels: { [key: number]: string } = {
+      6: 'E (Everyone 6+)',
+      10: 'E10+ (Everyone 10+)',
+      13: 'T (Teen 13+)',
+      17: 'M (Mature 17+)'
+    };
+    return labels[rating];
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
@@ -81,10 +92,25 @@ export default function VideoGameModal({ game, isOpen, onClose }: VideoGameModal
               <p className="font-semibold capitalize">{game.platform}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Languages</p>
-              <p className="font-semibold">{game.languages?.length || 0} languages</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Age Rating</p>
+              <p className="font-semibold">{getRatingLabel(game.age_rating) || 'Not Rated'}</p>
             </div>
           </div>
+
+          {/* Screenshot Image */}
+          {game.image_screenshot_url && (
+            <div className="mb-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Gameplay Screenshot</p>
+              <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden">
+                <Image
+                  src={game.image_screenshot_url}
+                  alt={`${game.name} gameplay`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Genres */}
           {game.category && game.category.length > 0 && (

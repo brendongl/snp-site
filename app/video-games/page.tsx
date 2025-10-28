@@ -94,9 +94,9 @@ export default function VideoGamesPage() {
 
       // Age Rating filter (OR logic - game has ANY selected age rating)
       if (filters.ageRating.length > 0) {
-        if (!game.age_rating || !filters.ageRating.includes(game.age_rating)) {
-          return false;
-        }
+        // Only include games that have a rating AND it matches one of the selected ratings
+        if (!game.age_rating) return false; // Exclude games without ratings
+        if (!filters.ageRating.includes(game.age_rating)) return false; // Exclude games with non-matching ratings
       }
 
       return true;
