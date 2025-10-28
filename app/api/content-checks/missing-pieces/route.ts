@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
     const missingPieces: MissingPieceEntry[] = [];
 
     result.rows.forEach((row) => {
+      // Skip if missing_pieces is null or not a string
+      if (!row.missing_pieces || typeof row.missing_pieces !== 'string') {
+        return;
+      }
+
       // Parse missing pieces (assuming comma-separated or newline-separated)
       const pieces = row.missing_pieces
         .split(/[,\n]/)
@@ -51,10 +56,10 @@ export async function GET(request: NextRequest) {
         missingPieces.push({
           piece_description: piece,
           game_id: row.game_id,
-          game_name: row.game_name,
+          game_name: row.game_name || 'Unknown Game',
           check_id: row.check_id,
           reported_by: row.inspector_name || 'Unknown',
-          reported_date: row.check_date,
+          reported_date: row.check_date || new Date().toISOString(),
           notes: row.notes,
         });
       });

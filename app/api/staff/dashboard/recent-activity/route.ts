@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Combine and sort by timestamp
     const activities = [...checksResult.rows, ...logsResult.rows]
+      .filter((row) => row.timestamp && row.game_name) // Filter out invalid entries
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit)
       .map((row) => ({
