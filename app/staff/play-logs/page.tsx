@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, User, Play, Zap, Trash2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import PlayLogStats from '@/components/features/staff/PlayLogStats';
 
 interface PlayLogEntry {
   id: string;
@@ -270,6 +271,11 @@ export default function PlayLogsPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Statistics */}
+        <div className="mb-8">
+          <PlayLogStats />
+        </div>
+
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-3 items-center">
           {/* Game Search */}

@@ -8,6 +8,7 @@ interface VideoGameFiltersProps {
     locatedOn: string[];
     category: string[];
     ageRating: number[];
+    playerCount: number[];
   }) => void;
   availableLocations: string[];
   availableCategories: string[];
@@ -20,6 +21,15 @@ const AGE_RATINGS = [
   { value: 17, label: 'M (Mature)', description: 'Ages 17+' },
 ];
 
+const PLAYER_COUNTS = [
+  { value: 1, label: '1 Player', description: 'Single player only' },
+  { value: 2, label: '2 Players', description: '2 players' },
+  { value: 3, label: '3 Players', description: '3 players' },
+  { value: 4, label: '4 Players', description: '4 players' },
+  { value: 5, label: '5-6 Players', description: '5-6 players' },
+  { value: 7, label: '7-8 Players', description: '7-8 players' },
+];
+
 export default function VideoGameFilters({
   onFilterChange,
   availableLocations,
@@ -29,6 +39,7 @@ export default function VideoGameFilters({
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAgeRatings, setSelectedAgeRatings] = useState<number[]>([]);
+  const [selectedPlayerCounts, setSelectedPlayerCounts] = useState<number[]>([]);
 
   const handleLocationToggle = (location: string) => {
     const updated = selectedLocations.includes(location)
@@ -36,7 +47,7 @@ export default function VideoGameFilters({
       : [...selectedLocations, location];
 
     setSelectedLocations(updated);
-    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings });
+    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts });
   };
 
   const handleCategoryToggle = (category: string) => {
@@ -45,7 +56,7 @@ export default function VideoGameFilters({
       : [...selectedCategories, category];
 
     setSelectedCategories(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings });
+    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts });
   };
 
   const handleAgeRatingToggle = (rating: number) => {
@@ -54,17 +65,27 @@ export default function VideoGameFilters({
       : [...selectedAgeRatings, rating];
 
     setSelectedAgeRatings(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated, playerCount: selectedPlayerCounts });
+  };
+
+  const handlePlayerCountToggle = (count: number) => {
+    const updated = selectedPlayerCounts.includes(count)
+      ? selectedPlayerCounts.filter((c) => c !== count)
+      : [...selectedPlayerCounts, count];
+
+    setSelectedPlayerCounts(updated);
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: updated });
   };
 
   const handleClearFilters = () => {
     setSelectedLocations([]);
     setSelectedCategories([]);
     setSelectedAgeRatings([]);
-    onFilterChange({ locatedOn: [], category: [], ageRating: [] });
+    setSelectedPlayerCounts([]);
+    onFilterChange({ locatedOn: [], category: [], ageRating: [], playerCount: [] });
   };
 
-  const hasActiveFilters = selectedLocations.length > 0 || selectedCategories.length > 0 || selectedAgeRatings.length > 0;
+  const hasActiveFilters = selectedLocations.length > 0 || selectedCategories.length > 0 || selectedAgeRatings.length > 0 || selectedPlayerCounts.length > 0;
 
   return (
     <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -77,7 +98,7 @@ export default function VideoGameFilters({
           <span className="font-semibold">Filters</span>
           {hasActiveFilters && (
             <span className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full">
-              {selectedLocations.length + selectedCategories.length + selectedAgeRatings.length}
+              {selectedLocations.length + selectedCategories.length + selectedAgeRatings.length + selectedPlayerCounts.length}
             </span>
           )}
         </div>

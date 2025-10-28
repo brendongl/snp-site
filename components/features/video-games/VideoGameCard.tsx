@@ -50,14 +50,7 @@ export default function VideoGameCard({ game, onClick, viewMode = 'grid' }: Vide
             </div>
           )}
 
-          {/* Age Rating Badge (top-left) */}
-          {ratingLabel && (
-            <div className="absolute top-1 left-1">
-              <div className="px-2 py-0.5 text-xs font-bold bg-black/80 text-white rounded">
-                {ratingLabel}
-              </div>
-            </div>
-          )}
+          {/* Age Rating Badge - removed per user request */}
         </div>
       </div>
     );
@@ -90,14 +83,7 @@ export default function VideoGameCard({ game, onClick, viewMode = 'grid' }: Vide
           </div>
         )}
 
-        {/* Age Rating Badge (top-left, only on images) */}
-        {hasImage && ratingLabel && (
-          <div className="absolute top-2 left-2">
-            <div className="px-3 py-1 text-sm font-bold bg-black/80 text-white rounded">
-              {ratingLabel}
-            </div>
-          </div>
-        )}
+        {/* Age Rating Badge - removed per user request */}
       </div>
     </div>
   );
