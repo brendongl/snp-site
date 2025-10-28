@@ -38,11 +38,24 @@ class ContentChecksDbService {
    */
   async getAllChecks(): Promise<ContentCheck[]> {
     try {
+      // Check if check_type column exists first (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      const selectClause = hasCheckType
+        ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`
+        : `id, game_id, inspector_id, check_date, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`;
+
       const result = await this.pool.query(`
-        SELECT
-          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at
+        SELECT ${selectClause}
         FROM content_checks
         ORDER BY check_date DESC
       `);
