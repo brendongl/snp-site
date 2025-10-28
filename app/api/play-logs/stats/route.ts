@@ -18,13 +18,14 @@ export async function GET(request: NextRequest) {
 
     const dateThreshold = new Date();
     dateThreshold.setDate(dateThreshold.getDate() - timePeriod);
-    const thresholdString = dateThreshold.toISOString().split('T')[0];
 
     // Get all logs with names in time period
     const allLogs = await playLogsService.getAllLogsWithNames();
-    const filteredLogs = allLogs.filter(
-      (log) => log.sessionDate && log.sessionDate >= thresholdString
-    );
+    const filteredLogs = allLogs.filter((log) => {
+      if (!log.sessionDate) return false;
+      const logDate = new Date(log.sessionDate);
+      return logDate >= dateThreshold;
+    });
 
     // Calculate statistics
     const uniqueGames = new Set(filteredLogs.map((log) => log.gameId)).size;

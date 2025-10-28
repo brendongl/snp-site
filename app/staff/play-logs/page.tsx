@@ -39,8 +39,6 @@ export default function PlayLogsPage() {
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
   // Filter state
-  const [gameSearch, setGameSearch] = useState<string>('');
-  const [staffFilter, setStaffFilter] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<string>('');
 
   // Check authentication
@@ -98,14 +96,6 @@ export default function PlayLogsPage() {
   // Filter logs
   const filteredLogs = useMemo(() => {
     return playLogs.filter(log => {
-      // Game search filter
-      if (gameSearch && !log.gameName.toLowerCase().includes(gameSearch.toLowerCase())) {
-        return false;
-      }
-      // Staff filter
-      if (staffFilter && log.staffName !== staffFilter) {
-        return false;
-      }
       // Date filter
       if (dateFilter) {
         const logDate = new Date(log.sessionDate).toISOString().split('T')[0];
@@ -115,7 +105,7 @@ export default function PlayLogsPage() {
       }
       return true;
     });
-  }, [playLogs, gameSearch, staffFilter, dateFilter]);
+  }, [playLogs, dateFilter]);
 
   // Group logs by date
   const groupedLogs = useMemo(() => {
@@ -278,27 +268,6 @@ export default function PlayLogsPage() {
 
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-3 items-center">
-          {/* Game Search */}
-          <input
-            type="text"
-            value={gameSearch}
-            onChange={(e) => setGameSearch(e.target.value)}
-            placeholder="Search games..."
-            className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-          />
-
-          {/* Staff Filter */}
-          <select
-            value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-          >
-            <option value="">All Staff</option>
-            {uniqueStaff.map(staff => (
-              <option key={staff} value={staff}>{staff}</option>
-            ))}
-          </select>
-
           {/* Date Filter */}
           <input
             type="date"
@@ -308,16 +277,14 @@ export default function PlayLogsPage() {
           />
 
           {/* Clear Filters */}
-          {(gameSearch || staffFilter || dateFilter) && (
+          {dateFilter && (
             <button
               onClick={() => {
-                setGameSearch('');
-                setStaffFilter('');
                 setDateFilter('');
               }}
               className="px-3 py-2 rounded-lg text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
             >
-              Clear Filters
+              Clear Filter
             </button>
           )}
         </div>
@@ -326,7 +293,7 @@ export default function PlayLogsPage() {
         <div className="mb-6">
           <p className="text-sm text-muted-foreground">
             {groupedLogs.length} day{groupedLogs.length !== 1 ? 's' : ''} • {filteredLogs.length} play log{filteredLogs.length !== 1 ? 's' : ''}
-            {(gameSearch || staffFilter || dateFilter) && ` (filtered from ${playLogs.length} total)`}
+            {dateFilter && ` (filtered from ${playLogs.length} total)`}
           </p>
         </div>
 
