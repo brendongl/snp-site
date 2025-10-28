@@ -22,19 +22,24 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   # Expected minimum: ~1300 images (511 games × 3 images, with some deduplication)
   if [ "$FILE_COUNT" -lt 1000 ]; then
-    echo "⚠️  Video game images need to be downloaded"
-    echo "   Starting automatic image download..."
+    echo "⚠️  Video game images need to be seeded to volume"
 
-    # Run download script as nextjs user
-    gosu nextjs node /app/scripts/download-all-video-game-images.js || true
+    # Check if seed data exists in Docker image
+    if [ -d "/app/data-seed/video-game-images" ]; then
+      SEED_COUNT=$(find "/app/data-seed/video-game-images" -type f 2>/dev/null | wc -l)
+      echo "   Found $SEED_COUNT images in Docker image seed data"
+      echo "   Copying images to persistent volume..."
 
-    # Retry any failures
-    echo "   Retrying failed downloads..."
-    gosu nextjs node /app/scripts/retry-failed-nintendo-images.js || true
+      mkdir -p "$DATA_PATH/video-game-images"
+      cp -r /app/data-seed/video-game-images/* "$DATA_PATH/video-game-images/" || true
 
-    # Recount files
-    FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
-    echo "✅ Video game images downloaded: $FILE_COUNT files"
+      # Recount files
+      FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
+      echo "✅ Video game images seeded: $FILE_COUNT files copied to volume"
+    else
+      echo "   No seed data found in Docker image"
+      echo "   Images will need to be downloaded manually via admin API"
+    fi
   else
     echo "✅ Video game images ready: $FILE_COUNT files"
   fi
