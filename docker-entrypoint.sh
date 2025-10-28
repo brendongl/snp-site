@@ -30,8 +30,8 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
       # Remove empty directory if it exists
       rm -rf "$DATA_PATH/video-game-images"
 
-      # Copy all files from seed
-      cp -rv /app/data-seed/video-game-images "$DATA_PATH/" 2>&1 | head -20
+      # Copy all files from seed (without verbose to avoid blocking)
+      cp -r /app/data-seed/video-game-images "$DATA_PATH/" 2>&1
 
       if [ -d "$DATA_PATH/video-game-images" ]; then
         NEW_FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
