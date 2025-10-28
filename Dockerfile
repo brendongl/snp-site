@@ -70,6 +70,11 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy data directory (includes video-game-images from git)
+# This ensures images from git are available in the container
+# The entrypoint will merge these with the persistent volume
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
