@@ -54,7 +54,7 @@ export class VideoGameImagesService {
   /**
    * Get the full path to a video game image file
    */
-  getImagePath(titleId: string, platform: string, type: 'landscape' | 'portrait'): string {
+  getImagePath(titleId: string, platform: string, type: 'landscape' | 'portrait' | 'screenshot'): string {
     const platformPath = this.ensurePlatformDirectory(platform);
     return path.join(platformPath, `${titleId}_${type}.jpg`);
   }
@@ -62,7 +62,7 @@ export class VideoGameImagesService {
   /**
    * Check if image exists in cache
    */
-  imageExists(titleId: string, platform: string, type: 'landscape' | 'portrait'): boolean {
+  imageExists(titleId: string, platform: string, type: 'landscape' | 'portrait' | 'screenshot'): boolean {
     const imagePath = this.getImagePath(titleId, platform, type);
     return fs.existsSync(imagePath);
   }
@@ -70,7 +70,7 @@ export class VideoGameImagesService {
   /**
    * Download image from Nintendo CDN
    */
-  async downloadFromNintendoCDN(nsuid: number, type: 'landscape' | 'portrait'): Promise<Buffer> {
+  async downloadFromNintendoCDN(nsuid: number, type: 'landscape' | 'portrait' | 'screenshot'): Promise<Buffer> {
     const urls = {
       landscape: [
         `https://assets.nintendo.com/image/upload/ncom/en_US/games/switch/${nsuid}/hero`,
@@ -79,6 +79,10 @@ export class VideoGameImagesService {
       portrait: [
         `https://assets.nintendo.com/image/upload/ncom/en_US/games/switch/${nsuid}/box-emart`,
         `https://assets.nintendo.com/image/upload/f_auto,q_auto,w_512/ncom/en_US/games/switch/${nsuid}/box-emart`,
+      ],
+      screenshot: [
+        `https://assets.nintendo.com/image/upload/ncom/en_US/games/switch/${nsuid}/screenshot-gallery/screenshot01`,
+        `https://assets.nintendo.com/image/upload/f_auto,q_auto,w_960/ncom/en_US/games/switch/${nsuid}/screenshot-gallery/screenshot01`,
       ],
     };
 
@@ -119,7 +123,7 @@ export class VideoGameImagesService {
     titleId: string,
     platform: string,
     imageBuffer: Buffer,
-    type: 'landscape' | 'portrait'
+    type: 'landscape' | 'portrait' | 'screenshot'
   ): Promise<string> {
     try {
       const imagePath = this.getImagePath(titleId, platform, type);
@@ -144,7 +148,7 @@ export class VideoGameImagesService {
   /**
    * Load image from persistent volume
    */
-  async loadImage(titleId: string, platform: string, type: 'landscape' | 'portrait'): Promise<Buffer | null> {
+  async loadImage(titleId: string, platform: string, type: 'landscape' | 'portrait' | 'screenshot'): Promise<Buffer | null> {
     try {
       const imagePath = this.getImagePath(titleId, platform, type);
 
@@ -165,7 +169,7 @@ export class VideoGameImagesService {
   async downloadAndCacheNintendoImage(
     titleId: string,
     nsuid: number,
-    type: 'landscape' | 'portrait'
+    type: 'landscape' | 'portrait' | 'screenshot'
   ): Promise<string> {
     try {
       // Check if already cached
@@ -193,7 +197,7 @@ export class VideoGameImagesService {
   async getOrDownloadImage(
     titleId: string,
     platform: string,
-    type: 'landscape' | 'portrait',
+    type: 'landscape' | 'portrait' | 'screenshot',
     nsuid?: number
   ): Promise<Buffer | null> {
     try {
@@ -219,7 +223,7 @@ export class VideoGameImagesService {
   /**
    * Delete image from cache
    */
-  async deleteImage(titleId: string, platform: string, type: 'landscape' | 'portrait'): Promise<boolean> {
+  async deleteImage(titleId: string, platform: string, type: 'landscape' | 'portrait' | 'screenshot'): Promise<boolean> {
     try {
       const imagePath = this.getImagePath(titleId, platform, type);
 

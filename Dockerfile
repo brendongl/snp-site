@@ -70,6 +70,10 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy data directory to a temporary location (not /app/data which gets mounted over)
+# The entrypoint will copy from here to the persistent volume
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

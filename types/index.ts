@@ -104,8 +104,9 @@ export interface VideoGame {
   platform_specific_data?: Record<string, any>; // Flexible field for platform-unique data
   located_on?: string[]; // Physical console locations (e.g., ["Samus", "Toad"])
   image_url?: string; // Deprecated, kept for compatibility
-  image_landscape_url?: string; // 16:9 landscape cover
+  image_landscape_url?: string; // 16:9 landscape cover (hero image)
   image_portrait_url?: string; // Portrait box art
+  image_screenshot_url?: string; // In-game screenshot
   created_at?: string;
   updated_at?: string;
 }

@@ -15,7 +15,7 @@ export async function GET(
   try {
     const { titleId } = await params;
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') as 'landscape' | 'portrait' || 'landscape';
+    const type = searchParams.get('type') as 'landscape' | 'portrait' | 'screenshot' || 'landscape';
     const platform = (searchParams.get('platform') as VideogamePlatform) || 'switch';
 
     // Try to load image from cache
