@@ -76,8 +76,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching missing pieces:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch missing pieces' },
+      {
+        error: 'Failed to fetch missing pieces',
+        details: errorMessage,
+        hint: 'Check if content_checks table exists and has required columns'
+      },
       { status: 500 }
     );
   }

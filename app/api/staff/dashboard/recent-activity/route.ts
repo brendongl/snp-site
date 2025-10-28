@@ -57,8 +57,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ activities });
   } catch (error) {
     console.error('Error fetching recent activity:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch recent activity' },
+      {
+        error: 'Failed to fetch recent activity',
+        details: errorMessage,
+        hint: 'Check database tables and columns'
+      },
       { status: 500 }
     );
   }
