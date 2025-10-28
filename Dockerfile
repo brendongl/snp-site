@@ -74,6 +74,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # The entrypoint will copy from here to the persistent volume
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
 
+# Copy scripts directory for admin operations (image downloads, migrations, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
