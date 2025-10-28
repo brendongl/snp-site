@@ -7,25 +7,49 @@ echo "🔧 Setting up persistent volume..."
 if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
   echo "📦 Railway volume detected: $RAILWAY_VOLUME_MOUNT_PATH"
 
-  # If volume is empty or missing video-game-images, copy from git
-  if [ ! -d "$RAILWAY_VOLUME_MOUNT_PATH/video-game-images" ]; then
-    echo "📥 Copying video-game-images from git to persistent volume..."
-    if [ -d "/app/data/video-game-images" ]; then
-      cp -r /app/data/video-game-images "$RAILWAY_VOLUME_MOUNT_PATH/"
-      echo "✅ Video game images copied to volume"
+  # Ensure the volume mount path becomes /app/data (Railway convention)
+  DATA_PATH="/app/data"
+
+  echo "📂 Using data path: $DATA_PATH"
+
+  # If volume is empty or missing video-game-images, copy from seed
+  if [ ! -d "$DATA_PATH/video-game-images" ]; then
+    echo "📥 Copying video-game-images from seed to persistent volume..."
+    if [ -d "/app/data-seed/video-game-images" ]; then
+      echo "   Source: /app/data-seed/video-game-images"
+      echo "   Target: $DATA_PATH/video-game-images"
+
+      cp -rv /app/data-seed/video-game-images "$DATA_PATH/" 2>&1 | head -20
+
+      if [ -d "$DATA_PATH/video-game-images" ]; then
+        FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
+        echo "✅ Video game images copied: $FILE_COUNT files"
+      else
+        echo "❌ Failed to copy video game images"
+      fi
     else
-      echo "⚠️  No video-game-images found in git data/"
+      echo "⚠️  No video-game-images found in /app/data-seed/"
+      echo "   Listing /app/data-seed contents:"
+      ls -la /app/data-seed/ || echo "   Directory doesn't exist"
     fi
   else
-    echo "✅ Video game images already exist on volume"
+    FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
+    echo "✅ Video game images already exist on volume: $FILE_COUNT files"
   fi
 
   # Create standard directories on volume
-  mkdir -p "$RAILWAY_VOLUME_MOUNT_PATH/images" "$RAILWAY_VOLUME_MOUNT_PATH/logs"
-  chown -R nextjs:nodejs "$RAILWAY_VOLUME_MOUNT_PATH"
+  mkdir -p "$DATA_PATH/images" "$DATA_PATH/logs"
+  chown -R nextjs:nodejs "$DATA_PATH"
 else
-  echo "📁 No volume mount, using local data directory"
-  mkdir -p /app/data/images /app/data/video-game-images /app/logs
+  echo "📁 No volume mount, copying seed data to /app/data"
+  mkdir -p /app/data
+
+  if [ -d "/app/data-seed" ]; then
+    cp -r /app/data-seed/* /app/data/
+    echo "✅ Seed data copied"
+  fi
+
+  mkdir -p /app/data/images /app/data/logs
   chown -R nextjs:nodejs /app/data /app/logs
 fi
 
