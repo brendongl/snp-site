@@ -123,7 +123,7 @@ async function processGameImages(game) {
       const filename = await saveImage(buffer, hash);
 
       // Store local path
-      results[key] = `/api/video-games/images/${filename}`;
+      results[key] = `/api/video-games/cached-images/${filename}`;
 
     } catch (error) {
       results.errors.push(`${key}: ${error.message}`);
