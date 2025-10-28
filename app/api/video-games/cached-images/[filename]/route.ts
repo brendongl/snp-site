@@ -32,11 +32,21 @@ export async function GET(
     try {
       await fs.access(filepath);
       buffer = await fs.readFile(filepath);
-    } catch {
+    } catch (error) {
       // File not found locally - this is expected during initial deployment
       // Return a 404 so Next.js Image can fall back to original URL
+      console.error(`[Video Game Images] File not found: ${filepath}`, error);
+      console.error(`[Video Game Images] VOLUME_PATH: ${VOLUME_PATH}`);
+      console.error(`[Video Game Images] Requested filename: ${filename}`);
       return NextResponse.json(
-        { error: 'Image not cached yet' },
+        {
+          error: 'Image not cached yet',
+          debug: {
+            filepath,
+            volumePath: VOLUME_PATH,
+            filename
+          }
+        },
         { status: 404 }
       );
     }
