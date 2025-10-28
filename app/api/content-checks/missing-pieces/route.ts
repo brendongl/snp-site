@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
       LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
       WHERE cc.missing_pieces IS NOT NULL
         AND cc.missing_pieces != ''
-        AND COALESCE(cc.check_type, 'regular') != 'piece_recovery'
       ORDER BY cc.check_date DESC
       `
     );

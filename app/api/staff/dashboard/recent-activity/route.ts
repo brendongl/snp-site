@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
         'check' as type,
         cc.created_at as timestamp,
         sl.staff_name as staff_name,
-        g.name as game_name,
-        COALESCE(cc.check_type, 'regular') as check_type
+        g.name as game_name
       FROM content_checks cc
       LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
       LEFT JOIN games g ON cc.game_id = g.id
@@ -52,12 +51,7 @@ export async function GET(request: NextRequest) {
         timestamp: row.timestamp,
         staff_name: row.staff_name || 'Unknown',
         game_name: row.game_name || 'Unknown Game',
-        action:
-          row.type === 'check'
-            ? row.check_type === 'piece_recovery'
-              ? 'recovered pieces for'
-              : 'checked'
-            : 'logged play',
+        action: row.type === 'check' ? 'checked' : 'logged play',
       }));
 
     return NextResponse.json({ activities });
