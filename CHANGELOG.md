@@ -12,6 +12,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.12.0] - 2025-10-28
+
+### Fixed
+- **Play Logs Statistics Bug** - Fixed date comparison causing statistics to show 0
+  - Changed from comparing Date object to string in `/api/play-logs/stats`
+  - Now properly converts sessionDate to Date object for comparison
+  - Statistics now correctly count play logs within time period (7/30/90 days)
+  - Affects: Unique Games, Total Plays, Most Played, Top Logger metrics
+
+### Changed
+- **Play Logs Page Simplified** - Removed search and staff filter
+  - Removed game search input box
+  - Removed staff filter dropdown
+  - Kept only date filter for focused date-based filtering
+  - Improved page clarity and reduced filter complexity
+
+### Added
+- **Missing Pieces Inventory on Check History** - Added to check history page
+  - Shows scannable collapsed list of all missing pieces across games
+  - Helps staff quickly match found pieces with missing piece reports
+  - Located above the content checks table for easy access
+
+- **Staff Dashboard Link in Menu** - Added to hamburger menu
+  - New link to `/staff/dashboard` in staff navigation menu
+  - Positioned after Staff Directory, before divider
+  - Uses LayoutDashboard icon for visual consistency
+
 ## [1.11.0] - 2025-10-28
 
 ### Added
