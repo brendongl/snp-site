@@ -20,32 +20,11 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   echo "📊 Current video game images on volume: $FILE_COUNT files"
 
-  # If volume has fewer than 100 files, copy from seed (should have 1111)
   if [ "$FILE_COUNT" -lt 100 ]; then
-    echo "📥 Copying video-game-images from seed to persistent volume..."
-    if [ -d "/app/data-seed/video-game-images" ]; then
-      echo "   Source: /app/data-seed/video-game-images"
-      echo "   Target: $DATA_PATH/video-game-images"
-
-      # Remove empty directory if it exists
-      rm -rf "$DATA_PATH/video-game-images"
-
-      # Copy all files from seed (without verbose to avoid blocking)
-      cp -r /app/data-seed/video-game-images "$DATA_PATH/" 2>&1
-
-      if [ -d "$DATA_PATH/video-game-images" ]; then
-        NEW_FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
-        echo "✅ Video game images copied: $NEW_FILE_COUNT files"
-      else
-        echo "❌ Failed to copy video game images"
-      fi
-    else
-      echo "⚠️  No video-game-images found in /app/data-seed/"
-      echo "   Listing /app/data-seed contents:"
-      ls -la /app/data-seed/ || echo "   Directory doesn't exist"
-    fi
+    echo "⚠️  Video game images need to be seeded"
+    echo "   Run: POST /api/admin/seed-video-game-images"
   else
-    echo "✅ Video game images already exist on volume: $FILE_COUNT files (skipping copy)"
+    echo "✅ Video game images ready: $FILE_COUNT files"
   fi
 
   # Create standard directories on volume
