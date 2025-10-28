@@ -23,23 +23,11 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
   # Expected minimum: ~1300 images (511 games × 3 images, with some deduplication)
   if [ "$FILE_COUNT" -lt 1000 ]; then
     echo "⚠️  Video game images need to be seeded to volume"
-
-    # Check if seed data exists in Docker image
-    if [ -d "/app/data-seed/video-game-images" ]; then
-      SEED_COUNT=$(find "/app/data-seed/video-game-images" -type f 2>/dev/null | wc -l)
-      echo "   Found $SEED_COUNT images in Docker image seed data"
-      echo "   Copying images to persistent volume..."
-
-      mkdir -p "$DATA_PATH/video-game-images"
-      cp -r /app/data-seed/video-game-images/* "$DATA_PATH/video-game-images/" || true
-
-      # Recount files
-      FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
-      echo "✅ Video game images seeded: $FILE_COUNT files copied to volume"
-    else
-      echo "   No seed data found in Docker image"
-      echo "   Images will need to be downloaded manually via admin API"
-    fi
+    echo "   Images must be uploaded separately via Railway CLI or admin endpoint"
+    echo "   Run: railway run --service <service> 'mkdir -p /app/data/video-game-images'"
+    echo "   Then use: railway shell to upload images"
+    echo ""
+    echo "   For now, application will start without images (images will show as broken)"
   else
     echo "✅ Video game images ready: $FILE_COUNT files"
   fi
