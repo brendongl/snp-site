@@ -20,9 +20,21 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   echo "📊 Current video game images on volume: $FILE_COUNT files"
 
-  if [ "$FILE_COUNT" -lt 100 ]; then
-    echo "⚠️  Video game images need to be seeded"
-    echo "   Run: POST /api/admin/seed-video-game-images"
+  # Expected minimum: ~1300 images (511 games × 3 images, with some deduplication)
+  if [ "$FILE_COUNT" -lt 1000 ]; then
+    echo "⚠️  Video game images need to be downloaded"
+    echo "   Starting automatic image download..."
+
+    # Run download script as nextjs user
+    gosu nextjs node /app/scripts/download-all-video-game-images.js || true
+
+    # Retry any failures
+    echo "   Retrying failed downloads..."
+    gosu nextjs node /app/scripts/retry-failed-nintendo-images.js || true
+
+    # Recount files
+    FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
+    echo "✅ Video game images downloaded: $FILE_COUNT files"
   else
     echo "✅ Video game images ready: $FILE_COUNT files"
   fi

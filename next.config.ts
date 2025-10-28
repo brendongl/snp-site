@@ -24,8 +24,13 @@ const nextConfig: NextConfig = {
         hostname: 'img-eshop.cdn.nintendo.net',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.nintendo.com',
+        pathname: '/eu/media/**',
+      },
     ],
-    // Allow unoptimized images from our API proxy
+    // Disable optimization for local API paths
     unoptimized: false,
   },
 };
