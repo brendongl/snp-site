@@ -12,6 +12,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.11.0] - 2025-10-28
+
+### Added
+- **Staff Dashboard** - New mission control page at `/staff/dashboard`
+  - Quick stats cards (games needing check, play logs today/week, learning gaps)
+  - Priority actions list showing top 5 games needing checks
+  - Recent activity stream (last 10 checks and plays)
+  - Links to all staff detail pages
+
+- **Play Logs Statistics** - Enhanced play logs page with analytics
+  - 4-card statistics display: unique games, total plays, most played, top logger
+  - Time period selector (7/30/90 days) with responsive grid layout
+  - Auto-refreshes when time period changes
+  - Mobile-optimized single-row layout
+
+- **Missing Pieces Inventory** - Scannable list for quick piece matching
+  - Collapsed view of all missing pieces across games
+  - Search/filter by piece description
+  - Expandable details showing game, reporter, date, notes
+  - "Mark Found" workflow to record piece recovery
+
+- **Content Check Types** - Distinguish check types in database
+  - Added `check_type` field to `content_checks` table (values: 'regular', 'piece_recovery')
+  - Migration script sets existing checks to 'regular' type
+  - Enables piece recovery audit trail
+
+- **7 New API Endpoints**:
+  - `GET /api/play-logs/stats` - Play log statistics by time period
+  - `GET /api/content-checks/needs-checking` - Games needing checks by days threshold
+  - `GET /api/content-checks/missing-pieces` - Flattened missing pieces inventory
+  - `POST /api/content-checks/mark-piece-found` - Record piece recovery
+  - `GET /api/staff/dashboard/stats` - Dashboard overview statistics
+  - `GET /api/staff/dashboard/priority-actions` - Top N games needing checks
+  - `GET /api/staff/dashboard/recent-activity` - Combined check/play activity stream
+
+### Enhanced
+- **Play Logs Page** - Added statistics section at top with responsive design
+- **Content Checks Service** - Updated all queries to include `check_type` field
+- **Database Schema** - Added migration for `check_type` column with defaults
+
+### Technical
+- Created 5 new React components: PlayLogStats, MissingPiecesInventory, StaffDashboard
+- Updated TypeScript interfaces for ContentCheck with checkType field
+- All stat cards use CSS Grid with `auto-fit` for mobile responsiveness
+- Skeleton loading states for all async components
+- Empty state handling with user-friendly messages
+
 ## [1.3.7] - 2025-10-21
 
 ### Fixed
