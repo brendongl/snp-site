@@ -5,6 +5,7 @@ export interface ContentCheck {
   gameId: string;
   inspectorId: string;
   checkDate: string | null;
+  checkType?: string; // 'regular' or 'piece_recovery'
   status: string[];
   missingPieces: string | null; // TEXT field in database
   boxCondition: string | null;
@@ -39,7 +40,7 @@ class ContentChecksDbService {
     try {
       const result = await this.pool.query(`
         SELECT
-          id, game_id, inspector_id, check_date, status, missing_pieces,
+          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
@@ -65,6 +66,7 @@ class ContentChecksDbService {
           cc.inspector_id,
           sl.staff_name AS inspector_name,
           cc.check_date,
+          cc.check_type,
           cc.status,
           cc.missing_pieces,
           cc.box_condition,
@@ -100,7 +102,7 @@ class ContentChecksDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, game_id, inspector_id, check_date, status, missing_pieces,
+          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
@@ -123,7 +125,7 @@ class ContentChecksDbService {
     try {
       const result = await this.pool.query(
         `SELECT
-          id, game_id, inspector_id, check_date, status, missing_pieces,
+          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
         FROM content_checks
@@ -162,11 +164,11 @@ class ContentChecksDbService {
 
       const result = await this.pool.query(
         `INSERT INTO content_checks (
-          id, game_id, inspector_id, check_date, status, missing_pieces,
+          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
-        RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+        RETURNING id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
           photos, created_at, updated_at`,
         [
@@ -174,6 +176,7 @@ class ContentChecksDbService {
           check.gameId,
           check.inspectorId,
           check.checkDate,
+          check.checkType || 'regular',
           statusValue,
           check.missingPieces,
           check.boxCondition,
@@ -414,6 +417,7 @@ class ContentChecksDbService {
       gameId: row.game_id,
       inspectorId: row.inspector_id,
       checkDate: row.check_date,
+      checkType: row.check_type || 'regular',
       status: parseStatus(row.status),
       missingPieces: row.missing_pieces || null, // TEXT field, not boolean
       boxCondition: row.box_condition,
