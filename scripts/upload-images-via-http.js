@@ -10,7 +10,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { FormData } = require('undici');
 
 // Configuration
 const LOCAL_IMAGES_DIR = path.join(__dirname, '..', 'data', 'video-game-images');
@@ -53,6 +52,8 @@ async function uploadImage(filename) {
   const filePath = path.join(LOCAL_IMAGES_DIR, filename);
   const fileBuffer = fs.readFileSync(filePath);
 
+  // Use native FormData (Node 18+)
+  const { FormData, Blob } = globalThis;
   const formData = new FormData();
   formData.append('file', new Blob([fileBuffer]), filename);
   formData.append('filename', filename);
