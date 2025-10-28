@@ -12,18 +12,30 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   echo "📂 Using data path: $DATA_PATH"
 
-  # If volume is empty or missing video-game-images, copy from seed
-  if [ ! -d "$DATA_PATH/video-game-images" ]; then
+  # Check if video-game-images directory has any files
+  FILE_COUNT=0
+  if [ -d "$DATA_PATH/video-game-images" ]; then
+    FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
+  fi
+
+  echo "📊 Current video game images on volume: $FILE_COUNT files"
+
+  # If volume has fewer than 100 files, copy from seed (should have 1111)
+  if [ "$FILE_COUNT" -lt 100 ]; then
     echo "📥 Copying video-game-images from seed to persistent volume..."
     if [ -d "/app/data-seed/video-game-images" ]; then
       echo "   Source: /app/data-seed/video-game-images"
       echo "   Target: $DATA_PATH/video-game-images"
 
-      cp -rv /app/data-seed/video-game-images "$DATA_PATH/" 2>&1 | head -20
+      # Remove empty directory if it exists
+      rm -rf "$DATA_PATH/video-game-images"
+
+      # Copy all files from seed (without verbose to avoid blocking)
+      cp -r /app/data-seed/video-game-images "$DATA_PATH/" 2>&1
 
       if [ -d "$DATA_PATH/video-game-images" ]; then
-        FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
-        echo "✅ Video game images copied: $FILE_COUNT files"
+        NEW_FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
+        echo "✅ Video game images copied: $NEW_FILE_COUNT files"
       else
         echo "❌ Failed to copy video game images"
       fi
@@ -33,8 +45,7 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
       ls -la /app/data-seed/ || echo "   Directory doesn't exist"
     fi
   else
-    FILE_COUNT=$(find "$DATA_PATH/video-game-images" -type f | wc -l)
-    echo "✅ Video game images already exist on volume: $FILE_COUNT files"
+    echo "✅ Video game images already exist on volume: $FILE_COUNT files (skipping copy)"
   fi
 
   # Create standard directories on volume
