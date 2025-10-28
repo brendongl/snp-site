@@ -27,18 +27,19 @@ export async function GET(
     // Construct full path
     const filepath = path.join(VOLUME_PATH, filename);
 
-    // Check if file exists
+    // Check if file exists locally
+    let buffer: Buffer;
     try {
       await fs.access(filepath);
+      buffer = await fs.readFile(filepath);
     } catch {
+      // File not found locally - this is expected during initial deployment
+      // Return a 404 so Next.js Image can fall back to original URL
       return NextResponse.json(
-        { error: 'Image not found' },
+        { error: 'Image not cached yet' },
         { status: 404 }
       );
     }
-
-    // Read file
-    const buffer = await fs.readFile(filepath);
 
     // Determine content type
     const ext = path.extname(filename).toLowerCase();
