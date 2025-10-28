@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
         hostname: 'graph.facebook.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'img-eshop.cdn.nintendo.net',
+        pathname: '/**',
+      },
     ],
     // Allow unoptimized images from our API proxy
     unoptimized: false,

@@ -100,7 +100,8 @@ export interface VideoGame {
   category?: string[]; // Genres
   languages?: string[];
   number_of_players?: number;
-  rating_content?: string[]; // ESRB/PEGI ratings
+  age_rating?: number; // ESRB age rating (6=E, 10=E10+, 13=T, 17=M)
+  rating_content?: string[]; // ESRB/PEGI content descriptors
   platform_specific_data?: Record<string, any>; // Flexible field for platform-unique data
   located_on?: string[]; // Physical console locations (e.g., ["Samus", "Toad"])
   image_url?: string; // Deprecated, kept for compatibility
@@ -117,6 +118,7 @@ export interface VideoGameFilters {
   platform?: VideogamePlatform[];
   locatedOn?: string[]; // Filter by console location
   category?: string[]; // Filter by genre
+  ageRating?: number[]; // Filter by ESRB age rating (6, 10, 13, 17)
   players?: { min?: number; max?: number };
   yearRange?: { min?: number; max?: number };
   ratingContent?: string[]; // Filter by rating content
