@@ -70,8 +70,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy data directory to a temporary location (not /app/data which gets mounted over)
-# The entrypoint will copy from here to the persistent volume
+# Copy small cache files only (images excluded via .dockerignore to reduce build time)
+# This keeps the image small (~200MB instead of ~1.8GB)
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
 
 # Copy scripts directory for admin operations (image downloads, migrations, etc.)

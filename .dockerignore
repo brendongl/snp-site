@@ -49,3 +49,8 @@ README.md
 .cache
 temp
 tmp
+
+# Large data directories (downloaded at runtime, not baked into image)
+# This saves 1.6GB from Docker image, reducing build time from 8min to 4min
+data/video-game-images/
+data/images/
