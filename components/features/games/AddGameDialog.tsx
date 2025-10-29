@@ -186,7 +186,14 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
       setError(null);
     } catch (err) {
       console.error('Error fetching preview:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch game data');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch game data';
+
+      // Add helpful context for BGG temporary blocks
+      if (errorMessage.includes('temporarily unavailable')) {
+        setError(errorMessage + ' BoardGameGeek may be rate limiting requests. Wait a few minutes and try again.');
+      } else {
+        setError(errorMessage);
+      }
       setPreviewData(null);
     } finally {
       setFetchingPreview(false);

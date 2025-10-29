@@ -4,6 +4,8 @@ import { logger } from '@/lib/logger';
 
 const BGG_API_BASE = 'https://boardgamegeek.com/xmlapi2';
 const RATE_LIMIT_MS = 5000; // 5 seconds between requests as per BGG guidelines
+const MAX_RETRIES = 3;
+const RETRY_DELAY_BASE = 10000; // 10 seconds base delay for retries
 
 let lastRequestTime = 0;
 
@@ -16,11 +18,51 @@ async function rateLimit() {
 
   if (timeSinceLastRequest < RATE_LIMIT_MS) {
     const waitTime = RATE_LIMIT_MS - timeSinceLastRequest;
-    console.log(`Rate limiting: waiting ${waitTime}ms before next BGG API request`);
+    logger.info('BGG API', `Rate limiting: waiting ${waitTime}ms before next request`);
     await new Promise(resolve => setTimeout(resolve, waitTime));
   }
 
   lastRequestTime = Date.now();
+}
+
+/**
+ * Fetch with retry logic for BGG API
+ * Handles 401, 429, 503 errors with exponential backoff
+ */
+async function fetchWithRetry(url: string, retryCount = 0): Promise<Response> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/xml, text/xml, */*'
+      }
+    });
+
+    // Handle rate limiting or temporary blocks
+    if ([401, 429, 503].includes(response.status)) {
+      if (retryCount < MAX_RETRIES) {
+        const retryDelay = RETRY_DELAY_BASE * Math.pow(2, retryCount); // Exponential backoff
+        logger.warn('BGG API', `Received ${response.status}, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`, { url });
+
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchWithRetry(url, retryCount + 1);
+      } else {
+        logger.error('BGG API', `Max retries reached after ${response.status} error`, new Error(`BGG API ${response.status}`), { url });
+        throw new Error(`BGG API temporarily unavailable (${response.status}). Please try again in a few minutes.`);
+      }
+    }
+
+    return response;
+  } catch (error) {
+    if (retryCount < MAX_RETRIES) {
+      const retryDelay = RETRY_DELAY_BASE * Math.pow(2, retryCount);
+      logger.warn('BGG API', `Network error, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`, { error });
+
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return fetchWithRetry(url, retryCount + 1);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -155,12 +197,7 @@ export async function fetchBGGGame(gameId: number): Promise<BGGGameData> {
   logger.info('BGG API', `Fetching game data for ID: ${gameId}`, { url });
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*'
-      }
-    });
+    const response = await fetchWithRetry(url);
 
     logger.api('BGG API', 'API Response received',
       { url, method: 'GET' },
@@ -322,12 +359,7 @@ export async function searchBGGGames(query: string): Promise<Array<{ id: number;
   console.log(`Searching BGG for: ${query}`);
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*'
-      }
-    });
+    const response = await fetchWithRetry(url);
 
     if (!response.ok) {
       throw new Error(`BGG API returned status ${response.status}`);
