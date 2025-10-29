@@ -20,20 +20,25 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   echo "📊 Current video game images on volume: $FILE_COUNT files"
 
-  # If no video game images on volume, copy from seed data
-  if [ "$FILE_COUNT" -lt 1000 ]; then
-    echo "📦 Seeding video game images to volume..."
-    if [ -d "/app/data-seed/video-game-images" ]; then
-      mkdir -p "$DATA_PATH/video-game-images"
-      cp -r /app/data-seed/video-game-images/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
-      NEW_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
-      echo "✅ Seeded $NEW_COUNT video game images to volume"
-    else
-      echo "⚠️  No video game images in seed data"
-      echo "   Images will show as broken until uploaded"
-    fi
+  # Count how many images are in seed data
+  SEED_COUNT=0
+  if [ -d "/app/data-seed/video-game-images" ]; then
+    SEED_COUNT=$(find "/app/data-seed/video-game-images" -type f 2>/dev/null | wc -l)
+  fi
+
+  echo "📦 Video game images in Docker image: $SEED_COUNT files"
+
+  # Always copy images from seed to volume to ensure all images are available
+  # This handles both initial deployment and updates with new images
+  if [ "$SEED_COUNT" -gt 0 ]; then
+    echo "🔄 Syncing video game images from Docker image to volume..."
+    mkdir -p "$DATA_PATH/video-game-images"
+    cp -rn /app/data-seed/video-game-images/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
+    NEW_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
+    echo "✅ Video game images on volume: $NEW_COUNT files (synced from $SEED_COUNT seed files)"
   else
-    echo "✅ Video game images ready: $FILE_COUNT files"
+    echo "⚠️  No video game images in Docker image seed data"
+    echo "   Images will show as broken until uploaded"
   fi
 
   # If no board game images on volume, copy from seed data
