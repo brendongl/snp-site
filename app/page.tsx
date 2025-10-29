@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Dice6, Calendar, Users, MessageCircle } from 'lucide-react';
+import { Dice6, Calendar, Users, MessageCircle, Gamepad2 } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -16,11 +16,17 @@ export default function Home() {
             Open for 3 years and counting!
           </p>
 
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <Link href="/games">
               <Button size="lg">
                 <Dice6 className="mr-2 h-5 w-5" />
-                Browse Games
+                Browse Board Games
+              </Button>
+            </Link>
+            <Link href="/video-games">
+              <Button size="lg" variant="outline">
+                <Gamepad2 className="mr-2 h-5 w-5" />
+                Browse Video Games
               </Button>
             </Link>
             <Button size="lg" variant="outline" disabled>
@@ -44,13 +50,15 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="border rounded-lg p-6 opacity-60 cursor-not-allowed">
-            <Calendar className="h-12 w-12 mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Make a Booking</h3>
-            <p className="text-sm text-muted-foreground">
-              Reserve your spot for board games or video games (Coming Soon)
-            </p>
-          </div>
+          <Link href="/video-games" className="group">
+            <div className="border rounded-lg p-6 transition-all hover:shadow-lg hover:border-primary">
+              <Gamepad2 className="h-12 w-12 mb-4 text-primary" />
+              <h3 className="text-lg font-semibold mb-2">Video Game Collection</h3>
+              <p className="text-sm text-muted-foreground">
+                Browse our Nintendo Switch game library with screenshots and details
+              </p>
+            </div>
+          </Link>
 
           <div className="border rounded-lg p-6 opacity-60 cursor-not-allowed">
             <Users className="h-12 w-12 mb-4 text-muted-foreground" />
@@ -75,13 +83,20 @@ export default function Home() {
         <div className="bg-primary rounded-lg p-8 text-center text-primary-foreground">
           <h2 className="text-3xl font-bold mb-4">Ready to Play?</h2>
           <p className="mb-6 opacity-90">
-            Start by exploring our board game collection
+            Explore our board games and video game collections
           </p>
-          <Link href="/games">
-            <Button size="lg" variant="secondary">
-              View All Games
-            </Button>
-          </Link>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Link href="/games">
+              <Button size="lg" variant="secondary">
+                View Board Games
+              </Button>
+            </Link>
+            <Link href="/video-games">
+              <Button size="lg" variant="secondary">
+                View Video Games
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
