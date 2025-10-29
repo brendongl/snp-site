@@ -27,8 +27,8 @@ interface StaffKnowledge {
 }
 
 interface Staff {
-  stafflist_id: string;
-  staff_name: string;
+  id: string;
+  name: string;
 }
 
 interface Opportunity {
@@ -110,7 +110,7 @@ export default function LearningOpportunityTool() {
       // Find teachers: selected staff who can teach this game
       const teachers = selectedStaff
         .map((staffId) => {
-          const staffMember = staffList.find((s) => s.stafflist_id === staffId);
+          const staffMember = staffList.find((s) => s.id === staffId);
           const knowledgeRecord = knowledge.find(
             (k) =>
               k.staffMemberId === staffId &&
@@ -126,7 +126,7 @@ export default function LearningOpportunityTool() {
       // Find learners: selected staff with no knowledge or confidence < Intermediate
       const learners = selectedStaff
         .map((staffId) => {
-          const staffMember = staffList.find((s) => s.stafflist_id === staffId);
+          const staffMember = staffList.find((s) => s.id === staffId);
           const knowledgeRecord = knowledge.find(
             (k) => k.staffMemberId === staffId && k.gameName === game.name
           );
@@ -199,17 +199,17 @@ export default function LearningOpportunityTool() {
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {staffList.map((staff) => (
-            <div key={staff.stafflist_id} className="flex items-center gap-2">
+            <div key={staff.id} className="flex items-center gap-2">
               <Checkbox
-                id={`staff-${staff.stafflist_id}`}
-                checked={selectedStaff.includes(staff.stafflist_id)}
-                onCheckedChange={() => toggleStaff(staff.stafflist_id)}
+                id={`staff-${staff.id}`}
+                checked={selectedStaff.includes(staff.id)}
+                onCheckedChange={() => toggleStaff(staff.id)}
               />
               <label
-                htmlFor={`staff-${staff.stafflist_id}`}
+                htmlFor={`staff-${staff.id}`}
                 className="text-sm cursor-pointer"
               >
-                {staff.staff_name}
+                {staff.name}
               </label>
             </div>
           ))}
@@ -285,13 +285,13 @@ export default function LearningOpportunityTool() {
                     <div className="flex items-center gap-2">
                       <GraduationCap className="h-4 w-4 text-green-600" />
                       <span className="font-medium">Teacher:</span>
-                      <span>{opp.teacher.staff_name}</span>
+                      <span>{opp.teacher.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-blue-600" />
                       <span className="font-medium">Can learn:</span>
                       <span>
-                        {opp.learners.map((l) => l.staff_name).join(', ')}
+                        {opp.learners.map((l) => l.name).join(', ')}
                         <span className="ml-1 text-gray-500">
                           ({opp.learnerCount} learner{opp.learnerCount !== 1 ? 's' : ''})
                         </span>
