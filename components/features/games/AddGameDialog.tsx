@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Check, AlertCircle, HelpCircle, ChevronsUpDown, Upload, X } from 'lucide-react';
 import { CreateGameInput, BGGGameData } from '@/types';
 import { cn } from '@/lib/utils';
@@ -48,7 +50,30 @@ interface Game {
 }
 
 export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) {
+  // Mode toggle
+  const [entryMode, setEntryMode] = useState<'bgg' | 'manual'>('bgg');
+
+  // BGG Import fields
   const [bggId, setBggId] = useState('');
+  const [fetchingPreview, setFetchingPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<BGGGameData | null>(null);
+
+  // Manual entry fields (all mandatory except categories/mechanisms/expansion)
+  const [manualName, setManualName] = useState('');
+  const [manualYear, setManualYear] = useState('');
+  const [manualMinPlayers, setManualMinPlayers] = useState('');
+  const [manualMaxPlayers, setManualMaxPlayers] = useState('');
+  const [manualPlaytime, setManualPlaytime] = useState('');
+  const [manualMinPlaytime, setManualMinPlaytime] = useState('');
+  const [manualMaxPlaytime, setManualMaxPlaytime] = useState('');
+  const [manualMinAge, setManualMinAge] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualComplexity, setManualComplexity] = useState('');
+  const [manualBestPlayerCount, setManualBestPlayerCount] = useState('');
+  const [manualCategories, setManualCategories] = useState('');
+  const [manualMechanisms, setManualMechanisms] = useState('');
+
+  // Shared fields
   const [costPrice, setCostPrice] = useState('');
   const [gameSize, setGameSize] = useState('');
   const [deposit, setDeposit] = useState('');
@@ -57,8 +82,6 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
   const [baseGameId, setBaseGameId] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [fetchingPreview, setFetchingPreview] = useState(false);
-  const [previewData, setPreviewData] = useState<BGGGameData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -203,10 +226,20 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const id = parseInt(bggId);
-    if (isNaN(id) || id <= 0) {
-      setError('Please enter a valid BGG ID');
-      return;
+    // Validate mode-specific requirements
+    if (entryMode === 'bgg') {
+      const id = parseInt(bggId);
+      if (isNaN(id) || id <= 0) {
+        setError('Please enter a valid BGG ID');
+        return;
+      }
+    } else {
+      // Manual mode validation
+      const totalImages = customImageUrls.filter(u => u.trim()).length + selectedFiles.length;
+      if (totalImages < 2) {
+        setError('Please provide at least 2 images');
+        return;
+      }
     }
 
     setLoading(true);
@@ -214,27 +247,65 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
     setSuccess(false);
 
     try {
-      const input: CreateGameInput = {
-        bggId: id,
-        isExpansion,
-        dateOfAcquisition,
-      };
+      let input: CreateGameInput;
 
-      if (costPrice) input.costPrice = parseFloat(costPrice);
-      if (gameSize) input.gameSize = gameSize;
-      if (deposit) input.deposit = parseFloat(deposit);
-      if (isExpansion && baseGameId) input.baseGameId = baseGameId;
-
-      // Add selected images if both are chosen
-      if (selectedBoxImage) {
-        input.selectedImages = {
-          boxImage: selectedBoxImage,
-          gameplayImage: selectedGameplayImage || undefined,
+      if (entryMode === 'bgg') {
+        // BGG Import mode
+        const id = parseInt(bggId);
+        input = {
+          bggId: id,
+          isExpansion,
+          dateOfAcquisition,
         };
-      }
 
-      // Add custom image URLs if provided
-      if (useCustomImages) {
+        if (costPrice) input.costPrice = parseFloat(costPrice);
+        if (gameSize) input.gameSize = gameSize;
+        if (deposit) input.deposit = parseFloat(deposit);
+        if (isExpansion && baseGameId) input.baseGameId = baseGameId;
+
+        // Add selected images if both are chosen
+        if (selectedBoxImage) {
+          input.selectedImages = {
+            boxImage: selectedBoxImage,
+            gameplayImage: selectedGameplayImage || undefined,
+          };
+        }
+
+        // Add custom image URLs if provided
+        if (useCustomImages) {
+          const validUrls = customImageUrls.filter(url => url.trim() !== '');
+          if (validUrls.length > 0) {
+            input.customImageUrls = validUrls;
+          }
+        }
+      } else {
+        // Manual Entry mode
+        input = {
+          manualEntry: {
+            name: manualName,
+            yearPublished: parseInt(manualYear),
+            minPlayers: parseInt(manualMinPlayers),
+            maxPlayers: parseInt(manualMaxPlayers),
+            playingTime: parseInt(manualPlaytime),
+            minPlaytime: parseInt(manualMinPlaytime),
+            maxPlaytime: parseInt(manualMaxPlaytime),
+            minAge: parseInt(manualMinAge),
+            description: manualDescription,
+            complexity: parseInt(manualComplexity),
+            bestPlayerCount: parseInt(manualBestPlayerCount),
+            categories: manualCategories ? manualCategories.split(',').map(c => c.trim()).filter(Boolean) : [],
+            mechanisms: manualMechanisms ? manualMechanisms.split(',').map(m => m.trim()).filter(Boolean) : [],
+          },
+          isExpansion,
+          dateOfAcquisition,
+          costPrice: parseFloat(costPrice),
+          gameSize,
+          deposit: parseFloat(deposit),
+        };
+
+        if (isExpansion && baseGameId) input.baseGameId = baseGameId;
+
+        // Add image URLs for manual entry
         const validUrls = customImageUrls.filter(url => url.trim() !== '');
         if (validUrls.length > 0) {
           input.customImageUrls = validUrls;
@@ -344,14 +415,32 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
   };
 
   const handleClose = () => {
+    // Reset BGG fields
     setBggId('');
+    setPreviewData(null);
+
+    // Reset manual entry fields
+    setManualName('');
+    setManualYear('');
+    setManualMinPlayers('');
+    setManualMaxPlayers('');
+    setManualPlaytime('');
+    setManualMinPlaytime('');
+    setManualMaxPlaytime('');
+    setManualMinAge('');
+    setManualDescription('');
+    setManualComplexity('');
+    setManualBestPlayerCount('');
+    setManualCategories('');
+    setManualMechanisms('');
+
+    // Reset shared fields
     setCostPrice('');
     setGameSize('');
     setDeposit('');
     setDateOfAcquisition(new Date().toISOString().split('T')[0]);
     setIsExpansion(false);
     setBaseGameId('');
-    setPreviewData(null);
     setError(null);
     setSuccess(false);
     setSelectedBoxImage(null);
@@ -368,11 +457,18 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
         <DialogHeader>
           <DialogTitle>Add Board Game</DialogTitle>
           <DialogDescription>
-            Enter a BoardGameGeek ID to automatically import game details
+            Import from BoardGameGeek or enter manually
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <Tabs value={entryMode} onValueChange={(value) => setEntryMode(value as 'bgg' | 'manual')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="bgg">Import from BGG</TabsTrigger>
+            <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bgg">
+            <form onSubmit={handleSubmit} className="space-y-4">
           {/* BGG ID Input */}
           <div className="space-y-2">
             <Label htmlFor="bggId">BoardGameGeek ID *</Label>
@@ -801,6 +897,490 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
             </Button>
           </DialogFooter>
         </form>
+          </TabsContent>
+
+          <TabsContent value="manual">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Manual Entry Form - All fields mandatory except categories/mechanisms/expansion */}
+
+              {/* Game Name */}
+              <div className="space-y-2">
+                <Label htmlFor="manualName">Game Name *</Label>
+                <Input
+                  id="manualName"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  placeholder="e.g., Catan"
+                  required
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Year Published */}
+              <div className="space-y-2">
+                <Label htmlFor="manualYear">Year Published *</Label>
+                <Input
+                  id="manualYear"
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  value={manualYear}
+                  onChange={(e) => setManualYear(e.target.value)}
+                  placeholder="e.g., 1995"
+                  required
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Players (Min and Max) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manualMinPlayers">Min Players *</Label>
+                  <Input
+                    id="manualMinPlayers"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={manualMinPlayers}
+                    onChange={(e) => setManualMinPlayers(e.target.value)}
+                    placeholder="e.g., 2"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualMaxPlayers">Max Players *</Label>
+                  <Input
+                    id="manualMaxPlayers"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={manualMaxPlayers}
+                    onChange={(e) => setManualMaxPlayers(e.target.value)}
+                    placeholder="e.g., 4"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+              </div>
+
+              {/* Playtime fields */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manualPlaytime">Playtime (min) *</Label>
+                  <Input
+                    id="manualPlaytime"
+                    type="number"
+                    min="1"
+                    value={manualPlaytime}
+                    onChange={(e) => setManualPlaytime(e.target.value)}
+                    placeholder="60"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualMinPlaytime">Min Playtime *</Label>
+                  <Input
+                    id="manualMinPlaytime"
+                    type="number"
+                    min="1"
+                    value={manualMinPlaytime}
+                    onChange={(e) => setManualMinPlaytime(e.target.value)}
+                    placeholder="45"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualMaxPlaytime">Max Playtime *</Label>
+                  <Input
+                    id="manualMaxPlaytime"
+                    type="number"
+                    min="1"
+                    value={manualMaxPlaytime}
+                    onChange={(e) => setManualMaxPlaytime(e.target.value)}
+                    placeholder="90"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+              </div>
+
+              {/* Min Age and Best Player Count */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manualMinAge">Minimum Age *</Label>
+                  <Input
+                    id="manualMinAge"
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={manualMinAge}
+                    onChange={(e) => setManualMinAge(e.target.value)}
+                    placeholder="e.g., 10"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualBestPlayerCount">Best Player Count *</Label>
+                  <Input
+                    id="manualBestPlayerCount"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={manualBestPlayerCount}
+                    onChange={(e) => setManualBestPlayerCount(e.target.value)}
+                    placeholder="e.g., 3"
+                    required
+                    disabled={loading || success}
+                  />
+                </div>
+              </div>
+
+              {/* Complexity */}
+              <div className="space-y-2">
+                <Label htmlFor="manualComplexity">Complexity (1-5) *</Label>
+                <Select value={manualComplexity} onValueChange={setManualComplexity} required disabled={loading || success}>
+                  <SelectTrigger id="manualComplexity">
+                    <SelectValue placeholder="Select complexity..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - Very Light</SelectItem>
+                    <SelectItem value="2">2 - Light</SelectItem>
+                    <SelectItem value="3">3 - Medium</SelectItem>
+                    <SelectItem value="4">4 - Medium Heavy</SelectItem>
+                    <SelectItem value="5">5 - Heavy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="manualDescription">Description *</Label>
+                <Textarea
+                  id="manualDescription"
+                  value={manualDescription}
+                  onChange={(e) => setManualDescription(e.target.value)}
+                  placeholder="Enter a detailed description of the game..."
+                  rows={4}
+                  required
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Categories (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="manualCategories">Categories (optional, comma-separated)</Label>
+                <Input
+                  id="manualCategories"
+                  value={manualCategories}
+                  onChange={(e) => setManualCategories(e.target.value)}
+                  placeholder="e.g., Strategy, Family, Card Game"
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Mechanisms (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="manualMechanisms">Mechanisms (optional, comma-separated)</Label>
+                <Input
+                  id="manualMechanisms"
+                  value={manualMechanisms}
+                  onChange={(e) => setManualMechanisms(e.target.value)}
+                  placeholder="e.g., Worker Placement, Deck Building"
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Cost Price */}
+              <div className="space-y-2">
+                <Label htmlFor="costPrice">Cost Price *</Label>
+                <Input
+                  id="costPrice"
+                  type="number"
+                  step="0.01"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder="0.00"
+                  required
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Game Size */}
+              <div className="space-y-2">
+                <Label htmlFor="gameSize">Game Size (Rental) *</Label>
+                <Select value={gameSize} onValueChange={setGameSize} required disabled={loading || success}>
+                  <SelectTrigger id="gameSize">
+                    <SelectValue placeholder="Select size..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 (Smallest)</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5 (Largest)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Deposit */}
+              <div className="space-y-2">
+                <Label htmlFor="deposit">Deposit *</Label>
+                <Input
+                  id="deposit"
+                  type="number"
+                  step="0.01"
+                  value={deposit}
+                  onChange={(e) => setDeposit(e.target.value)}
+                  placeholder="0.00"
+                  required
+                  disabled={loading || success}
+                />
+              </div>
+
+              {/* Date of Acquisition */}
+              <div className="space-y-2">
+                <Label htmlFor="dateOfAcquisition">Date of Acquisition *</Label>
+                <Input
+                  id="dateOfAcquisition"
+                  type="date"
+                  value={dateOfAcquisition}
+                  onChange={(e) => setDateOfAcquisition(e.target.value)}
+                  disabled={loading || success}
+                  required
+                />
+              </div>
+
+              {/* Is Expansion (Optional) */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isExpansion"
+                  checked={isExpansion}
+                  onChange={(e) => setIsExpansion(e.target.checked)}
+                  disabled={loading || success}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="isExpansion" className="font-normal cursor-pointer">
+                  This is an expansion
+                </Label>
+              </div>
+
+              {/* Base Game Selection (if expansion, Optional) */}
+              {isExpansion && (
+                <div className="space-y-2">
+                  <Label>Base Game (optional)</Label>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={comboboxOpen}
+                        className="w-full justify-between"
+                        disabled={loading || success || loadingGames}
+                      >
+                        {loadingGames ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading games...
+                          </>
+                        ) : baseGameId ? (
+                          games.find((game) => game.id === baseGameId)?.name || 'Select base game...'
+                        ) : (
+                          'Select base game...'
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search games..." />
+                        <CommandEmpty>No game found.</CommandEmpty>
+                        <CommandGroup className="max-h-64 overflow-auto">
+                          {games.map((game) => (
+                            <CommandItem
+                              key={game.id}
+                              value={`${game.name} ${game.year}`}
+                              onSelect={() => {
+                                setBaseGameId(game.id);
+                                setComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  baseGameId === game.id ? 'opacity-100' : 'opacity-0'
+                                )}
+                              />
+                              <div>
+                                <div>{game.name}</div>
+                                {game.year && (
+                                  <div className="text-xs text-muted-foreground">({game.year})</div>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+
+              {/* Images Section - MINIMUM 2 REQUIRED */}
+              <div className="border-t pt-4 mt-4">
+                <Label className="text-sm font-semibold mb-3 block">Images (Minimum 2 required) *</Label>
+
+                {/* Image URLs */}
+                <div className="space-y-2 mb-4">
+                  <Label className="text-sm">Image URLs</Label>
+                  {customImageUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        type="url"
+                        value={url}
+                        onChange={(e) => {
+                          const newUrls = [...customImageUrls];
+                          newUrls[index] = e.target.value;
+                          setCustomImageUrls(newUrls);
+                        }}
+                        placeholder="https://example.com/image.jpg"
+                        disabled={loading || success}
+                        className="flex-1"
+                      />
+                      {customImageUrls.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setCustomImageUrls(customImageUrls.filter((_, i) => i !== index));
+                          }}
+                          disabled={loading || success}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCustomImageUrls([...customImageUrls, ''])}
+                    disabled={loading || success}
+                    className="w-full"
+                  >
+                    + Add Another Image URL
+                  </Button>
+                </div>
+
+                {/* File Upload */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Or Upload Files</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loading || success}
+                    className="gap-2 w-full"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {selectedFiles.length > 0
+                      ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`
+                      : 'Choose Files or Take Photo'}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    capture="environment"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+
+                  {/* Preview selected files */}
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden border border-primary bg-muted">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Upload ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(index)}
+                            className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all shadow-lg"
+                            disabled={loading || success}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Image count validation message */}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Total images: {(customImageUrls.filter(u => u.trim()).length + selectedFiles.length)}
+                  {(customImageUrls.filter(u => u.trim()).length + selectedFiles.length) < 2 && (
+                    <span className="text-destructive ml-1">(Need at least 2)</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md text-green-700">
+                  <Check className="h-4 w-4" />
+                  <p className="text-sm">Game added successfully! Refreshing...</p>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={loading || success}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || success || (customImageUrls.filter(u => u.trim()).length + selectedFiles.length) < 2}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Add Game'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -240,13 +240,35 @@ export interface BGGGameData {
 
 // Create Game Input Types
 export interface CreateGameInput {
-  bggId: number;
+  // BGG import mode (when bggId is provided)
+  bggId?: number;
+
+  // Manual entry mode (when manualEntry is provided)
+  manualEntry?: {
+    name: string;
+    yearPublished: number;
+    minPlayers: number;
+    maxPlayers: number;
+    playingTime: number;
+    minPlaytime: number;
+    maxPlaytime: number;
+    minAge: number;
+    description: string;
+    complexity: number;
+    bestPlayerCount: number;
+    categories: string[];
+    mechanisms: string[];
+  };
+
+  // Shared fields
   costPrice?: number;
   gameSize?: string;
   deposit?: number;
   dateOfAcquisition: string;
   isExpansion: boolean;
   baseGameId?: string;
+
+  // Image fields
   selectedImages?: {
     boxImage: string;
     gameplayImage?: string;

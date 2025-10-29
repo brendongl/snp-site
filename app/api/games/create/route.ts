@@ -88,13 +88,21 @@ export async function POST(request: Request) {
 
   try {
     const body: CreateGameInput = await request.json();
-    const { bggId, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId, selectedImages, customImageUrls } = body;
+    const { bggId, manualEntry, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId, selectedImages, customImageUrls } = body;
     bggIdForError = bggId;
 
-    logger.info('Game Creation', 'Starting game creation', { bggId, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId, selectedImages, customImageUrls });
+    logger.info('Game Creation', 'Starting game creation', { bggId, manualEntry: !!manualEntry, costPrice, gameSize, deposit, dateOfAcquisition, isExpansion, baseGameId });
 
-    // Validate input
-    if (!bggId || typeof bggId !== 'number' || bggId <= 0) {
+    // Validate input - must have either bggId or manualEntry
+    if (!bggId && !manualEntry) {
+      logger.warn('Game Creation', 'No BGG ID or manual entry provided');
+      return NextResponse.json(
+        { error: 'Either BGG ID or manual entry data is required' },
+        { status: 400 }
+      );
+    }
+
+    if (bggId && (typeof bggId !== 'number' || bggId <= 0)) {
       logger.warn('Game Creation', 'Invalid BGG ID provided', { bggId });
       return NextResponse.json(
         { error: 'Valid BGG ID is required' },
@@ -102,10 +110,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch game data from BGG
-    logger.info('Game Creation', `Fetching game from BGG ID: ${bggId}`);
-    const bggData = await fetchBGGGame(bggId);
-    logger.debug('Game Creation', 'BGG data fetched', bggData);
+    let bggData: any = null;
+
+    // Fetch game data from BGG if in BGG mode
+    if (bggId) {
+      logger.info('Game Creation', `Fetching game from BGG ID: ${bggId}`);
+      bggData = await fetchBGGGame(bggId);
+      logger.debug('Game Creation', 'BGG data fetched', bggData);
+    }
 
     // Clean HTML entities from text
     const cleanText = (text: string) => text
@@ -118,64 +130,90 @@ export async function POST(request: Request) {
       .replace(/&gt;/g, '>')
       .replace(/&nbsp;/g, ' ');
 
-    // Clean game name, categories, and mechanisms
-    const cleanedGameName = cleanText(bggData.name);
-    const cleanedCategories = bggData.categories.map(cleanText);
-    const cleanedMechanisms = bggData.mechanisms.map(cleanText);
-
-    // Clean up HTML entities in description
-    const cleanDescription = (bggData.description || '')
-      .replace(/&rsquo;/g, "'")
-      .replace(/&lsquo;/g, "'")
-      .replace(/&ldquo;/g, '"')
-      .replace(/&rdquo;/g, '"')
-      .replace(/&mdash;/g, '—')
-      .replace(/&ndash;/g, '–')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#10;/g, '\n')
-      .replace(/&#039;/g, "'")
-      .replace(/&nbsp;/g, ' ');
-
     // Generate game ID
     const gameId = `rec${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
 
     // Initialize database service
     const db = DatabaseService.initialize();
 
-    // Prepare game data for PostgreSQL
-    const gameData: any = {
-      id: gameId,
-      name: cleanedGameName,
-      description: cleanDescription,
-      categories: cleanedCategories,
-      mechanisms: cleanedMechanisms,
-      yearReleased: bggData.yearPublished,
-      minPlayers: bggData.minPlayers.toString(),
-      maxPlayers: bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),
-      bggId: bggId.toString(),
-      dateOfAcquisition: dateOfAcquisition || new Date().toISOString().split('T')[0],
-      minPlaytime: bggData.minPlaytime || null,
-      maxPlaytime: bggData.maxPlaytime || null,
-    };
+    // Prepare game data for PostgreSQL based on mode
+    let gameData: any;
+    let cleanedGameName: string;
 
-    // Add optional fields
-    if (bggData.complexity !== null && bggData.complexity !== undefined) {
-      gameData.complexity = bggData.complexity;
-    }
-    if (bggData.bestPlayerCount) {
-      gameData.bestPlayerAmount = bggData.bestPlayerCount.toString();
-    }
-    if (costPrice !== undefined && costPrice !== null) {
-      gameData.costPrice = costPrice;
-    }
-    if (gameSize) {
-      gameData.gameSize = gameSize;
-    }
-    if (deposit !== undefined && deposit !== null) {
-      gameData.deposit = deposit;
+    if (manualEntry) {
+      // Manual entry mode
+      cleanedGameName = manualEntry.name;
+      gameData = {
+        id: gameId,
+        name: manualEntry.name,
+        description: manualEntry.description,
+        categories: manualEntry.categories,
+        mechanisms: manualEntry.mechanisms,
+        yearReleased: manualEntry.yearPublished,
+        minPlayers: manualEntry.minPlayers.toString(),
+        maxPlayers: manualEntry.maxPlayers >= 99 ? 'No Limit' : manualEntry.maxPlayers.toString(),
+        dateOfAcquisition: dateOfAcquisition || new Date().toISOString().split('T')[0],
+        minPlaytime: manualEntry.minPlaytime || null,
+        maxPlaytime: manualEntry.maxPlaytime || null,
+        complexity: manualEntry.complexity,
+        bestPlayerAmount: manualEntry.bestPlayerCount.toString(),
+        costPrice: costPrice || null,
+        gameSize: gameSize || null,
+        deposit: deposit || null,
+      };
+    } else {
+      // BGG import mode
+      const cleanedCategories = bggData.categories.map(cleanText);
+      const cleanedMechanisms = bggData.mechanisms.map(cleanText);
+      cleanedGameName = cleanText(bggData.name);
+
+      // Clean up HTML entities in description
+      const cleanDescription = (bggData.description || '')
+        .replace(/&rsquo;/g, "'")
+        .replace(/&lsquo;/g, "'")
+        .replace(/&ldquo;/g, '"')
+        .replace(/&rdquo;/g, '"')
+        .replace(/&mdash;/g, '—')
+        .replace(/&ndash;/g, '–')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#10;/g, '\n')
+        .replace(/&#039;/g, "'")
+        .replace(/&nbsp;/g, ' ');
+
+      gameData = {
+        id: gameId,
+        name: cleanedGameName,
+        description: cleanDescription,
+        categories: cleanedCategories,
+        mechanisms: cleanedMechanisms,
+        yearReleased: bggData.yearPublished,
+        minPlayers: bggData.minPlayers.toString(),
+        maxPlayers: bggData.maxPlayers >= 99 ? 'No Limit' : bggData.maxPlayers.toString(),
+        bggId: bggId?.toString(),
+        dateOfAcquisition: dateOfAcquisition || new Date().toISOString().split('T')[0],
+        minPlaytime: bggData.minPlaytime || null,
+        maxPlaytime: bggData.maxPlaytime || null,
+      };
+
+      // Add optional fields from BGG
+      if (bggData.complexity !== null && bggData.complexity !== undefined) {
+        gameData.complexity = bggData.complexity;
+      }
+      if (bggData.bestPlayerCount) {
+        gameData.bestPlayerAmount = bggData.bestPlayerCount.toString();
+      }
+      if (costPrice !== undefined && costPrice !== null) {
+        gameData.costPrice = costPrice;
+      }
+      if (gameSize) {
+        gameData.gameSize = gameSize;
+      }
+      if (deposit !== undefined && deposit !== null) {
+        gameData.deposit = deposit;
+      }
     }
 
     // Handle expansion configuration
@@ -194,24 +232,35 @@ export async function POST(request: Request) {
     // Handle images
     const imageUrls: string[] = [];
 
-    if (selectedImages) {
-      imageUrls.push(selectedImages.boxImage);
-      if (selectedImages.gameplayImage) {
-        imageUrls.push(selectedImages.gameplayImage);
+    if (manualEntry) {
+      // Manual entry mode - use customImageUrls only (file uploads handled separately)
+      if (customImageUrls && customImageUrls.length > 0) {
+        logger.info('Game Creation', 'Processing custom image URLs for manual entry', { count: customImageUrls.length });
+        customImageUrls.forEach((url: string) => {
+          if (url.trim()) imageUrls.push(url.trim());
+        });
       }
     } else {
-      if (bggData.imageUrl) imageUrls.push(bggData.imageUrl);
-      if (bggData.thumbnailUrl && bggData.thumbnailUrl !== bggData.imageUrl) {
-        imageUrls.push(bggData.thumbnailUrl);
+      // BGG import mode
+      if (selectedImages) {
+        imageUrls.push(selectedImages.boxImage);
+        if (selectedImages.gameplayImage) {
+          imageUrls.push(selectedImages.gameplayImage);
+        }
+      } else {
+        if (bggData.imageUrl) imageUrls.push(bggData.imageUrl);
+        if (bggData.thumbnailUrl && bggData.thumbnailUrl !== bggData.imageUrl) {
+          imageUrls.push(bggData.thumbnailUrl);
+        }
       }
-    }
 
-    // Add custom images
-    if (customImageUrls && customImageUrls.length > 0) {
-      logger.info('Game Creation', 'Processing custom image URLs', { count: customImageUrls.length });
-      customImageUrls.forEach((url: string) => {
-        if (url.trim()) imageUrls.push(url.trim());
-      });
+      // Add custom images for BGG mode
+      if (customImageUrls && customImageUrls.length > 0) {
+        logger.info('Game Creation', 'Processing custom image URLs', { count: customImageUrls.length });
+        customImageUrls.forEach((url: string) => {
+          if (url.trim()) imageUrls.push(url.trim());
+        });
+      }
     }
 
     // Download and cache images to disk, then add to PostgreSQL
