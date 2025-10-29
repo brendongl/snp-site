@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.14.2] - 2025-01-29
+
+### Fixed
+- **Database Consistency** - Fixed `can_teach` field inconsistencies in staff_knowledge table
+  - 20 records had incorrect `can_teach` values that didn't match confidence level
+  - 19 Intermediate records incorrectly had `can_teach = true` (should be false)
+  - 1 Expert record incorrectly had `can_teach = false` (should be true)
+  - Learning Opportunities Tool now shows correct teacher/learner pairings
+  - No more staff appearing as both teacher and learner for same game
+
+### Added
+- **Database Repair Script** - `scripts/fix-can-teach-inconsistency.js`
+  - Identifies records where `can_teach` doesn't match confidence level
+  - Shows breakdown of issues before applying fix
+  - Enforces business rule: only Expert (3) and Instructor (4) can teach
+  - Includes verification step after fix
+
+### Technical
+- Business rule: `can_teach = true` only when `confidence_level IN (3, 4)`
+- Script updates `can_teach` field based on `confidence_level` with proper validation
+
 ## [1.14.1] - 2025-01-29
 
 ### Fixed
