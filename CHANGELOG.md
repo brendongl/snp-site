@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.14.1] - 2025-01-29
+
+### Fixed
+- **Learning Opportunities Tool** - Fixed data structure mismatch causing 0 results
+  - Updated Game interface to use nested `fields` object structure
+  - Fixed all references to use `fields['Game Name']` and `fields['Min Playtime']`
+  - Tool now correctly filters 179 games (from 363 total) for "Quick" time tier
+  - Successfully matches teachers with learners (82 opportunities found in test)
+  - Teaching time calculations now work correctly (e.g., 5 min → ~8 min to teach)
+
+### Technical
+- Component now properly handles API response structure from `/api/games`
+- Games API returns: `{ id, fields: { 'Game Name', 'Min Playtime' } }`
+- Updated 7 locations in `LearningOpportunityTool.tsx` to use nested field access
+
 ## [1.14.0] - 2025-01-29
 
 ### Added

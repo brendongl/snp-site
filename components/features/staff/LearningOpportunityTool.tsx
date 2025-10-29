@@ -15,8 +15,10 @@ import { GraduationCap, Users } from 'lucide-react';
 
 interface Game {
   id: string;
-  name: string;
-  min_playtime: number;
+  fields: {
+    'Game Name': string;
+    'Min Playtime': number;
+  };
 }
 
 interface StaffKnowledge {
@@ -106,7 +108,7 @@ export default function LearningOpportunityTool() {
 
     // Filter games by time tier
     const eligibleGames = games.filter(
-      (game) => game.min_playtime <= timeThresholds[timeTier]
+      (game) => game.fields['Min Playtime'] <= timeThresholds[timeTier]
     );
 
     console.log('Eligible games after time filter:', eligibleGames.length);
@@ -122,7 +124,7 @@ export default function LearningOpportunityTool() {
           const knowledgeRecord = knowledge.find(
             (k) =>
               k.staffMemberId === staffId &&
-              k.gameName === game.name &&
+              k.gameName === game.fields['Game Name'] &&
               k.canTeach === true
           );
           return knowledgeRecord && staffMember
@@ -136,7 +138,7 @@ export default function LearningOpportunityTool() {
         .map((staffId) => {
           const staffMember = staffList.find((s) => s.id === staffId);
           const knowledgeRecord = knowledge.find(
-            (k) => k.staffMemberId === staffId && k.gameName === game.name
+            (k) => k.staffMemberId === staffId && k.gameName === game.fields['Game Name']
           );
 
           // Include if: no knowledge record OR confidence is Beginner/Intermediate
@@ -150,7 +152,7 @@ export default function LearningOpportunityTool() {
 
       // Debug first few games
       if (idx < 3) {
-        console.log(`Game: ${game.name}, Teachers: ${teachers.length}, Learners: ${learners.length}`);
+        console.log(`Game: ${game.fields['Game Name']}, Teachers: ${teachers.length}, Learners: ${learners.length}`);
       }
 
       // Only include if we have at least 1 teacher and 1 learner
@@ -167,7 +169,7 @@ export default function LearningOpportunityTool() {
           teacher: primaryTeacher,
           learners,
           learnerCount: learners.length,
-          teachingTime: Math.ceil(game.min_playtime * 1.5),
+          teachingTime: Math.ceil(game.fields['Min Playtime'] * 1.5),
         });
       }
     });
@@ -290,9 +292,9 @@ export default function LearningOpportunityTool() {
                 <Card key={`${opp.game.id}-${index}`} className="p-4 border-l-4 border-l-purple-500">
                   <div className="mb-2">
                     <h4 className="font-semibold">
-                      {opp.game.name}
+                      {opp.game.fields['Game Name']}
                       <span className="text-sm text-gray-600 ml-2">
-                        ({opp.game.min_playtime} min → ~{opp.teachingTime} min
+                        ({opp.game.fields['Min Playtime']} min → ~{opp.teachingTime} min
                         to teach)
                       </span>
                     </h4>
