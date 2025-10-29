@@ -91,6 +91,12 @@ export default function LearningOpportunityTool() {
   };
 
   const findOpportunities = () => {
+    console.log('=== Finding Opportunities ===');
+    console.log('Selected staff:', selectedStaff);
+    console.log('Time tier:', timeTier);
+    console.log('Total games:', games.length);
+    console.log('Total knowledge records:', knowledge.length);
+
     // Time thresholds (in minutes)
     const timeThresholds = {
       quick: 20,
@@ -103,10 +109,12 @@ export default function LearningOpportunityTool() {
       (game) => game.min_playtime <= timeThresholds[timeTier]
     );
 
+    console.log('Eligible games after time filter:', eligibleGames.length);
+
     // For each game, find teachers and learners
     const opportunitiesList: Opportunity[] = [];
 
-    eligibleGames.forEach((game) => {
+    eligibleGames.forEach((game, idx) => {
       // Find teachers: selected staff who can teach this game
       const teachers = selectedStaff
         .map((staffId) => {
@@ -140,6 +148,11 @@ export default function LearningOpportunityTool() {
         })
         .filter(Boolean) as Staff[];
 
+      // Debug first few games
+      if (idx < 3) {
+        console.log(`Game: ${game.name}, Teachers: ${teachers.length}, Learners: ${learners.length}`);
+      }
+
       // Only include if we have at least 1 teacher and 1 learner
       if (teachers.length > 0 && learners.length > 0) {
         // Pick the teacher with highest confidence (prioritize Instructor > Expert)
@@ -163,6 +176,9 @@ export default function LearningOpportunityTool() {
     const sortedOpportunities = opportunitiesList
       .sort((a, b) => b.learnerCount - a.learnerCount)
       .slice(0, 10);
+
+    console.log('Total opportunities found:', opportunitiesList.length);
+    console.log('Top 10 opportunities:', sortedOpportunities);
 
     setOpportunities(sortedOpportunities);
     setHasSearched(true);
