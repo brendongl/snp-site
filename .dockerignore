@@ -50,8 +50,8 @@ README.md
 temp
 tmp
 
-# Large data directories (uploaded to persistent volume separately)
-# This saves 1.6GB from Docker image, reducing build time from 8min to 4min
-# Images are uploaded to Railway volume using railway CLI or admin upload endpoint
-data/video-game-images/
-data/images/
+# Note: Images are now included in the Docker build to ensure they're available
+# This increases image size but ensures images work without manual upload
+# Uncomment these lines if you have a separate upload process:
+# data/video-game-images/
+# data/images/

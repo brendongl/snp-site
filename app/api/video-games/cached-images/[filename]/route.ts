@@ -7,7 +7,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const VOLUME_PATH = process.env.VOLUME_PATH || path.join(process.cwd(), 'data', 'video-game-images');
+// Video game images are in a separate folder from board game images
+const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'video-game-images')
+  : path.join(process.cwd(), 'data', 'video-game-images');
 
 export async function GET(
   request: NextRequest,

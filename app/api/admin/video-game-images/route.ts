@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     let exists = false;
     let fileCount = 0;
     let dirSize = 0;
+    let sampleFiles: string[] = [];
 
     try {
       await fs.access(VOLUME_PATH);
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
       // Count files
       const files = await fs.readdir(VOLUME_PATH);
       fileCount = files.length;
+      sampleFiles = files.filter(f => f.endsWith('.jpg')).slice(0, 5);
 
       // Calculate total size
       for (const file of files) {
@@ -46,7 +48,8 @@ export async function GET(request: NextRequest) {
       sizeMB: Math.round(dirSize / 1024 / 1024),
       expectedFiles: 1390, // Approximate based on 511 games × ~2.7 images (deduplicated)
       percentComplete: Math.round((fileCount / 1390) * 100),
-      status: fileCount >= 1000 ? 'ready' : fileCount > 0 ? 'downloading' : 'empty'
+      status: fileCount >= 1000 ? 'ready' : fileCount > 0 ? 'downloading' : 'empty',
+      sampleFiles
     });
   } catch (error) {
     console.error('[Admin Video Game Images] Error checking status:', error);

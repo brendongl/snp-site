@@ -70,8 +70,8 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy small cache files only (images excluded via .dockerignore to reduce build time)
-# This keeps the image small (~200MB instead of ~1.8GB)
+# Copy data directory including video game images
+# This includes both board game images and video game images
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
 
 # Copy scripts directory for admin operations (image downloads, migrations, etc.)

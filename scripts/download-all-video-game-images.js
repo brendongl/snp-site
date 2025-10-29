@@ -10,8 +10,10 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway';
-const VOLUME_PATH = process.env.VOLUME_PATH || './data/video-game-images';
+const DATABASE_URL = process.env.DATABASE_URL;
+const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'video-game-images')
+  : path.join(process.cwd(), 'data', 'video-game-images');
 const MAX_CONCURRENT = 5; // Download 5 images at a time
 const RETRY_COUNT = 3;
 const TIMEOUT = 30000;

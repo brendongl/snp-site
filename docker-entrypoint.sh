@@ -20,20 +20,42 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   echo "📊 Current video game images on volume: $FILE_COUNT files"
 
-  # Expected minimum: ~1300 images (511 games × 3 images, with some deduplication)
+  # If no video game images on volume, copy from seed data
   if [ "$FILE_COUNT" -lt 1000 ]; then
-    echo "⚠️  Video game images need to be seeded to volume"
-    echo "   Images must be uploaded separately via Railway CLI or admin endpoint"
-    echo "   Run: railway run --service <service> 'mkdir -p /app/data/video-game-images'"
-    echo "   Then use: railway shell to upload images"
-    echo ""
-    echo "   For now, application will start without images (images will show as broken)"
+    echo "📦 Seeding video game images to volume..."
+    if [ -d "/app/data-seed/video-game-images" ]; then
+      mkdir -p "$DATA_PATH/video-game-images"
+      cp -r /app/data-seed/video-game-images/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
+      NEW_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
+      echo "✅ Seeded $NEW_COUNT video game images to volume"
+    else
+      echo "⚠️  No video game images in seed data"
+      echo "   Images will show as broken until uploaded"
+    fi
   else
     echo "✅ Video game images ready: $FILE_COUNT files"
   fi
 
+  # If no board game images on volume, copy from seed data
+  IMAGE_COUNT=0
+  if [ -d "$DATA_PATH/images" ]; then
+    IMAGE_COUNT=$(find "$DATA_PATH/images" -type f 2>/dev/null | wc -l)
+  fi
+
+  if [ "$IMAGE_COUNT" -lt 500 ]; then
+    echo "📦 Seeding board game images to volume..."
+    if [ -d "/app/data-seed/images" ]; then
+      mkdir -p "$DATA_PATH/images"
+      cp -r /app/data-seed/images/* "$DATA_PATH/images/" 2>/dev/null || true
+      NEW_IMAGE_COUNT=$(find "$DATA_PATH/images" -type f 2>/dev/null | wc -l)
+      echo "✅ Seeded $NEW_IMAGE_COUNT board game images to volume"
+    fi
+  else
+    echo "✅ Board game images ready: $IMAGE_COUNT files"
+  fi
+
   # Create standard directories on volume
-  mkdir -p "$DATA_PATH/images" "$DATA_PATH/logs"
+  mkdir -p "$DATA_PATH/images" "$DATA_PATH/video-game-images" "$DATA_PATH/logs"
   chown -R nextjs:nodejs "$DATA_PATH"
 else
   echo "📁 No volume mount, copying seed data to /app/data"
