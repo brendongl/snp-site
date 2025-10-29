@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import LearningOpportunityTool from '@/components/features/staff/LearningOpportunityTool';
 
 interface StaffKnowledgeEntry {
   id: string;
@@ -497,6 +498,11 @@ export default function KnowledgePage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-6xl">
+
+        {/* Learning Opportunity Tool */}
+        <div className="mb-8">
+          <LearningOpportunityTool />
+        </div>
 
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">

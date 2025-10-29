@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.14.0] - 2025-01-29
+
+### Added
+- **Learning Opportunities Tool** - New tool on Staff Knowledge page (`/staff/knowledge`)
+  - Manual staff selector with checkboxes (12 staff members, 3-column grid)
+  - Time tier dropdown (Quick 0-20min / Medium 20-45min / Long 45+ min)
+  - Teaching time estimate: playtime × 1.5 multiplier displayed
+  - Client-side filtering for instant results (no API latency)
+  - Prioritizes games by most learners (maximize training impact)
+  - Shows teacher → learners pairings with learner count badge
+  - Top 10 results displayed with game details
+  - Requires 2+ staff selected (1 teacher + 1 learner minimum)
+  - Empty state guidance when no matches found
+  - Responsive layout: 3 cols desktop → 2 tablet → 1 mobile
+
+### Technical
+- New component: `LearningOpportunityTool.tsx`
+- Uses existing APIs: `/api/games`, `/api/staff-knowledge`, `/api/staff-list`
+- Filters 400 games + ~500 knowledge records client-side (< 100ms)
+- Design documented in `docs/plans/2025-01-29-learning-opportunities-tool-design.md`
+
 ## [1.12.0] - 2025-10-28
 
 ### Fixed
