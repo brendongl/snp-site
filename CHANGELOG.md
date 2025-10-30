@@ -12,6 +12,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.1] - 2025-01-30
+
+### Fixed
+- **Recent Activity Display** - Fixed bulk knowledge entries showing "1 game" instead of actual game name
+  - Modified condition to only use bulk format when game count > 1
+  - Single-game entries now properly display game name from description field
+
+- **URL Parameters** - Removed unnecessary `?staff=true` parameter from links
+  - Cleaned up "Games I don't know" link in staff dashboard
+  - Cleaned up "Check Now" links in Priority Actions
+
+- **Knowledge Filter UX** - Redesigned filter UI for better clarity
+  - Merged regular sort and staff sort into one combined dropdown (mutually exclusive)
+  - Added visual separator (|) and "Staff Knowledge:" label before knowledge filters
+  - Made it clear which controls work together and which are mutually exclusive
+  - Staff can now only select one sort option at a time
+
+- **Navigation** - Added hamburger menu (StaffMenu) to missing pages
+  - Added to `/staff/changelog` page
+  - Added to `/staff/knowledge` page
+  - Consistent navigation across all staff pages
+
+- **Edit Button Visibility** - Fixed edit buttons scrolling under sticky headers on mobile
+  - Increased sticky header z-indexes: back button to `z-[100]`, filters to `z-[90]`
+  - Edit buttons no longer poke through or blend into headers when scrolling
+
+- **Modal Close Behavior** - Fixed double-click required to close game modal
+  - Added ref tracking to prevent modal from re-opening after close
+  - Game modal now closes properly on first click when opened from Priority Actions
+
 ## [1.17.0] - 2025-01-30
 
 ### Added

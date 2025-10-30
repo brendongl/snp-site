@@ -138,7 +138,7 @@ export default function StaffDashboard() {
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
           </div>
           <div className="text-xl sm:text-3xl font-bold">{stats?.knowledgeGaps || 0}</div>
-          <Link href="/games?staff=true&knowledgeFilter=unknown" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
+          <Link href="/games?knowledgeFilter=unknown" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
           </Link>
         </Card>
@@ -169,7 +169,7 @@ export default function StaffDashboard() {
                   </div>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/games?staff=true&openGame=${action.game_id}`}>
+                  <Link href={`/games?openGame=${action.game_id}`}>
                     Check Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

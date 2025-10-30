@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SearchBar } from '@/components/features/games/SearchBar';
 import { GameFilters } from '@/components/features/games/GameFilters';
@@ -47,6 +47,9 @@ function GamesPageContent() {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
   const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
+
+  // Track which game ID was auto-opened from query param to prevent re-opening
+  const autoOpenedGameId = useRef<string | null>(null);
 
   // Staff knowledge filters (staff mode only)
   const [staffList, setStaffList] = useState<Array<{ id: string; name: string }>>([]);
@@ -214,10 +217,12 @@ function GamesPageContent() {
   // Auto-open game modal from query parameter
   useEffect(() => {
     const openGameId = searchParams?.get('openGame');
-    if (openGameId && games.length > 0 && !selectedGame) {
+    // Only auto-open if we haven't already opened this game ID
+    if (openGameId && games.length > 0 && !selectedGame && autoOpenedGameId.current !== openGameId) {
       const gameToOpen = games.find(g => g.id === openGameId);
       if (gameToOpen) {
         setSelectedGame(gameToOpen);
+        autoOpenedGameId.current = openGameId;
       }
     }
   }, [searchParams, games, selectedGame]);
@@ -225,6 +230,8 @@ function GamesPageContent() {
   // Close modal and clear openGame query param
   const handleCloseModal = () => {
     setSelectedGame(null);
+    // Reset the auto-open tracking so the same game can be opened again later
+    autoOpenedGameId.current = null;
     // Clear openGame param if it exists
     const currentParams = new URLSearchParams(window.location.search);
     if (currentParams.has('openGame')) {
@@ -807,14 +814,21 @@ function GamesPageContent() {
                   <span className="sm:hidden">Random</span>
                 </Button>
 
+                {/* Combined Sort Dropdown */}
                 <Select
-                  value={sortOption}
+                  value={staffSortOption || sortOption}
                   onValueChange={(value: SortOption) => {
-                    setSortOption(value);
-                    setStaffSortOption(null); // Clear staff sort when regular sort is changed
+                    // Check if it's a staff-only sort option
+                    if (['lastChecked', 'lastCheckedDesc', 'totalChecks', 'totalChecksDesc'].includes(value)) {
+                      setStaffSortOption(value);
+                      setSortOption('dateAcquired'); // Reset regular sort to default
+                    } else {
+                      setSortOption(value);
+                      setStaffSortOption(null); // Clear staff sort
+                    }
                   }}
                 >
-                  <SelectTrigger className="w-[130px] sm:w-[180px]">
+                  <SelectTrigger className="w-[180px] sm:w-[220px]">
                     <SelectValue placeholder="Sort by..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -824,34 +838,26 @@ function GamesPageContent() {
                     <SelectItem value="year">Year Released</SelectItem>
                     <SelectItem value="maxPlayers">Max Players</SelectItem>
                     <SelectItem value="complexity">Complexity</SelectItem>
+                    {isStaff && (
+                      <>
+                        <div className="h-px bg-border my-1" />
+                        <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
+                        <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
+                        <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
+                        <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
 
                 {isStaff && (
                   <>
-                    <Select
-                      value={staffSortOption || 'none'}
-                      onValueChange={(value: string) => {
-                        if (value === 'none') {
-                          setStaffSortOption(null);
-                        } else {
-                          setStaffSortOption(value as SortOption);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-[200px] sm:w-[240px]">
-                        <SelectValue placeholder="Sort by Checks" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sort by Checks</SelectItem>
-                        <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
-                        <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
-                        <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
-                        <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {/* Visual separator and label for Staff Knowledge Filters */}
+                    <div className="h-6 w-px bg-border mx-2" />
+                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                      Staff Knowledge:
+                    </span>
 
-                    {/* Staff Knowledge Filters */}
                     <Select
                       value={selectedStaffFilter}
                       onValueChange={(value: string) => setSelectedStaffFilter(value)}
@@ -865,8 +871,8 @@ function GamesPageContent() {
                           const currentStaffName = localStorage.getItem('staff_name');
                           const currentStaffId = localStorage.getItem('staff_id');
                           const otherStaff = staffList
-                            .filter(s => s.id !== currentStaffId && s.name) // Filter out staff without names
-                            .sort((a, b) => (a.name || '').localeCompare(b.name || '')); // Safe sort with fallback
+                            .filter(s => s.id !== currentStaffId && s.name)
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>

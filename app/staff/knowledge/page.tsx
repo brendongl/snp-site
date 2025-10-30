@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2, X } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 import LearningOpportunityTool from '@/components/features/staff/LearningOpportunityTool';
 import {
   Dialog,
@@ -359,12 +360,13 @@ export default function KnowledgePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Back to Games - Always visible */}
-      <div className="border-b border-border bg-card sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 max-w-6xl">
+      <div className="border-b border-border bg-card sticky top-0 z-[100]">
+        <div className="container mx-auto px-4 py-3 max-w-6xl flex items-center justify-between">
           <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
             <ArrowLeft className="w-4 h-4" />
             Back to Games
           </Link>
+          <StaffMenu />
         </div>
       </div>
 
@@ -381,7 +383,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* Sticky Filters Header */}
-      <div className="sticky top-0 bg-card border-b border-border z-30">
+      <div className="sticky top-0 bg-card border-b border-border z-[90]">
         <div className="container mx-auto px-4 py-2 max-w-6xl space-y-2">
           {/* Row 1: Game Search + Staff Filter */}
           <div className="flex gap-2">

@@ -55,10 +55,10 @@ export async function GET(request: NextRequest) {
         const metadata = row.metadata || {};
         const level = metadata.confidenceLevel || 'Unknown';
 
-        // Check for bulk creation
-        if (metadata.isBulk) {
-          const count = metadata.gameCount || 1;
-          game_name = `${count} game${count > 1 ? 's' : ''}`;
+        // Check for bulk creation (but only show as bulk if count > 1)
+        if (metadata.isBulk && (metadata.gameCount || 1) > 1) {
+          const count = metadata.gameCount;
+          game_name = `${count} games`;
           action = `marked knowledge for ${game_name} as ${level}`;
         } else {
           // Single game: "Added knowledge: GAME NAME - LEVEL level"
