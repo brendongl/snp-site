@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, User, Play, Zap, Trash2, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import PlayLogStats from '@/components/features/staff/PlayLogStats';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface PlayLogEntry {
   id: string;
@@ -244,11 +245,12 @@ export default function PlayLogsPage() {
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
               <ArrowLeft className="w-4 h-4" />
               Back to Games
             </Link>
+            <StaffMenu />
           </div>
           <div>
             <h1 className="text-3xl font-bold">Play Logs</h1>

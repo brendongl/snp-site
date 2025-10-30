@@ -123,16 +123,18 @@ export async function getRecentPlayLogs(
 
 /**
  * Get all staff members from cache
+ * Returns both staff_id (for display/primary key) and stafflist_id (for knowledge filtering)
  */
-export async function getStaffList(): Promise<Array<{ id: string; name: string; type: string }>> {
+export async function getStaffList(): Promise<Array<{ id: string; stafflistId: string; name: string; type: string }>> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT stafflist_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
+      `SELECT staff_id, stafflist_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
     );
 
     return result.rows.map(row => ({
-      id: row.stafflist_id, // Use stafflist_id (primary key used in changelog) not staff_id (Airtable ID)
+      id: row.staff_id, // Primary key for display
+      stafflistId: row.stafflist_id, // Foreign key used in staff_knowledge.staff_member_id
       name: row.staff_name,
       type: row.staff_type || 'Staff',
     }));

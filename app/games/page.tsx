@@ -52,7 +52,7 @@ function GamesPageContent() {
   const autoOpenedGameId = useRef<string | null>(null);
 
   // Staff knowledge filters (staff mode only)
-  const [staffList, setStaffList] = useState<Array<{ id: string; name: string }>>([]);
+  const [staffList, setStaffList] = useState<Array<{ id: string; stafflistId: string; name: string }>>([]);
   const [allStaffKnowledge, setAllStaffKnowledge] = useState<Array<{ staffMemberId: string; gameName: string; confidenceLevel: string }>>([]);
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');
   const [selectedKnowledgeFilter, setSelectedKnowledgeFilter] = useState<string>('all');
@@ -174,7 +174,9 @@ function GamesPageContent() {
         if (!response.ok) return;
         const data = await response.json();
         const staff = data.staff || [];
-        setStaffList(staff.map((s: any) => ({ id: s.stafflist_id, name: s.staff_name })));
+        // API returns { id, stafflistId, name, type }
+        // id = staff_id (for display), stafflistId = for filtering (matches staff_knowledge.staff_member_id)
+        setStaffList(staff.map((s: any) => ({ id: s.id, stafflistId: s.stafflistId, name: s.name })));
       } catch (err) {
         console.error('Error fetching staff list:', err);
       }
@@ -218,14 +220,14 @@ function GamesPageContent() {
   useEffect(() => {
     const openGameId = searchParams?.get('openGame');
     // Only auto-open if we haven't already opened this game ID
-    if (openGameId && games.length > 0 && !selectedGame && autoOpenedGameId.current !== openGameId) {
+    if (openGameId && games.length > 0 && autoOpenedGameId.current !== openGameId) {
       const gameToOpen = games.find(g => g.id === openGameId);
       if (gameToOpen) {
         setSelectedGame(gameToOpen);
         autoOpenedGameId.current = openGameId;
       }
     }
-  }, [searchParams, games, selectedGame]);
+  }, [searchParams, games]);
 
   // Close modal and clear openGame query param
   const handleCloseModal = () => {
@@ -870,17 +872,21 @@ function GamesPageContent() {
                         {(() => {
                           const currentStaffName = localStorage.getItem('staff_name');
                           const currentStaffId = localStorage.getItem('staff_id');
+                          // Find current staff's stafflistId for filtering
+                          const currentStaff = staffList.find(s => s.id === currentStaffId);
+                          const currentStafflistId = currentStaff?.stafflistId;
+
                           const otherStaff = staffList
                             .filter(s => s.id !== currentStaffId && s.name)
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>
-                              {currentStaffId && currentStaffName && (
-                                <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
+                              {currentStafflistId && currentStaffName && (
+                                <SelectItem value={currentStafflistId}>{currentStaffName} (Me)</SelectItem>
                               )}
                               {otherStaff.map(staff => (
-                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                <SelectItem key={staff.id} value={staff.stafflistId}>{staff.name}</SelectItem>
                               ))}
                             </>
                           );

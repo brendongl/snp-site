@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Zap, Check, LayoutGrid, List } from 'lucide-react';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface Game {
   id: string;
@@ -272,11 +273,12 @@ Click OK to confirm or Cancel to go back.`;
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <Link href="/staff/knowledge" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
               <ArrowLeft className="w-4 h-4" />
               Back to Knowledge
             </Link>
+            <StaffMenu />
           </div>
           <div>
             <h1 className="text-3xl font-bold">Bulk Knowledge Updater</h1>
