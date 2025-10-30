@@ -518,7 +518,7 @@ function GamesPageContent() {
     });
 
     return filtered;
-  }, [games, filters, sortOption, staffSortOption]);
+  }, [games, filters, sortOption, staffSortOption, selectedStaffFilter, selectedKnowledgeFilter, allStaffKnowledge, isStaff]);
 
   // Calculate active filter count
   const activeFiltersCount = useMemo(() => {
