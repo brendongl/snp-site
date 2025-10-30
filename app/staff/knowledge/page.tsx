@@ -383,7 +383,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* Sticky Filters Header */}
-      <div className="sticky top-0 bg-card border-b border-border z-[90]">
+      <div className="sticky top-[52px] bg-card border-b border-border z-[90]">
         <div className="container mx-auto px-4 py-2 max-w-6xl space-y-2">
           {/* Row 1: Game Search + Staff Filter */}
           <div className="flex gap-2">
@@ -466,7 +466,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl pt-4">
 
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">

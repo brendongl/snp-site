@@ -12,6 +12,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.2] - 2025-01-30
+
+### Fixed
+- **Staff Knowledge Filter** - Fixed staff dropdown only showing current user
+  - Changed from `staff_id` (Airtable ID) to `staff_record_id` (PostgreSQL ID) for correct comparison
+  - Staff dropdown now properly shows all staff members with current user labeled "(Me)"
+  - Fixed knowledge level filtering to work correctly with staff selection
+
+- **Edit Button Mobile Clickability** - Fixed edit buttons not clickable on mobile when scrolling
+  - Positioned second sticky header at `top-[52px]` instead of `top-0` to stack properly below first header
+  - Added padding to main content area to prevent cards from scrolling under sticky headers
+  - Edit and delete buttons now remain clickable throughout scrolling
+
+- **Modal Close Behavior** - Fixed requiring double-click to close game modal from Priority Actions
+  - Removed `selectedGame` from useEffect dependencies to prevent race condition
+  - Modal now closes on first click without re-opening
+  - URL parameter cleanup no longer triggers modal re-open
+
+- **Navigation** - Added hamburger menu to Play Logs page
+  - Imported and added StaffMenu component to `/staff/play-logs` page
+  - Consistent navigation across all staff pages now complete
+
+- **iOS Tick Overlay** - Fixed knowledge badge not appearing on iOS devices
+  - Changed SVG attributes from React camelCase (`fillRule`, `clipRule`) to hyphenated (`fill-rule`, `clip-rule`)
+  - Added explicit xmlns attribute to SVG elements
+  - Added webkit transform (`translateZ(0)`) to trigger hardware acceleration on iOS
+  - Green tick (Expert/Instructor) and yellow tick (Beginner/Intermediate) now render correctly on iOS Safari
+
 ## [1.17.1] - 2025-01-30
 
 ### Fixed

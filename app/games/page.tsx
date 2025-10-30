@@ -218,14 +218,14 @@ function GamesPageContent() {
   useEffect(() => {
     const openGameId = searchParams?.get('openGame');
     // Only auto-open if we haven't already opened this game ID
-    if (openGameId && games.length > 0 && !selectedGame && autoOpenedGameId.current !== openGameId) {
+    if (openGameId && games.length > 0 && autoOpenedGameId.current !== openGameId) {
       const gameToOpen = games.find(g => g.id === openGameId);
       if (gameToOpen) {
         setSelectedGame(gameToOpen);
         autoOpenedGameId.current = openGameId;
       }
     }
-  }, [searchParams, games, selectedGame]);
+  }, [searchParams, games]);
 
   // Close modal and clear openGame query param
   const handleCloseModal = () => {
@@ -869,15 +869,15 @@ function GamesPageContent() {
                         <SelectItem value="all">All Staff</SelectItem>
                         {(() => {
                           const currentStaffName = localStorage.getItem('staff_name');
-                          const currentStaffId = localStorage.getItem('staff_id');
+                          const currentStaffRecordId = localStorage.getItem('staff_record_id'); // Use staff_record_id which matches stafflist_id
                           const otherStaff = staffList
-                            .filter(s => s.id !== currentStaffId && s.name)
+                            .filter(s => s.id !== currentStaffRecordId && s.name)
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>
-                              {currentStaffId && currentStaffName && (
-                                <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
+                              {currentStaffRecordId && currentStaffName && (
+                                <SelectItem value={currentStaffRecordId}>{currentStaffName} (Me)</SelectItem>
                               )}
                               {otherStaff.map(staff => (
                                 <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
