@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { BoardGame } from '@/types';
 import { useToast } from '@/lib/context/toast-context';
 
@@ -40,6 +40,10 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   const [loading, setLoading] = useState(false);
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [loadingInspectors, setLoadingInspectors] = useState(true);
+  const [errorDialog, setErrorDialog] = useState<{ show: boolean; message: string; details?: any }>({
+    show: false,
+    message: '',
+  });
 
   // Form state
   const [inspector, setInspector] = useState<string>('');
@@ -137,11 +141,18 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create content check');
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        // Show detailed error dialog with debugging info
+        setErrorDialog({
+          show: true,
+          message: `Content Check submission failed (${response.status})`,
+          details: data,
+        });
+        logger.error('Content Check Dialog', 'API returned error', new Error(JSON.stringify(data)));
+        return;
+      }
 
       // Verify the record was actually created by checking for ID
       if (!data.contentCheckId || !data.record) {
@@ -168,6 +179,14 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       onClose();
     } catch (error) {
       console.error('Error creating content check:', error);
+      setErrorDialog({
+        show: true,
+        message: 'Network or unexpected error occurred',
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      });
       addToast('Failed to create content check. Please try again.', 'error');
     } finally {
       setLoading(false);
@@ -193,11 +212,46 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Content Check: {game.fields['Game Name']}</DialogTitle>
-        </DialogHeader>
+    <>
+      {/* Error Dialog */}
+      {errorDialog.show && (
+        <Dialog open={errorDialog.show} onOpenChange={() => setErrorDialog({ show: false, message: '' })}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                Content Check Error
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="font-semibold text-red-800 dark:text-red-300">{errorDialog.message}</p>
+              </div>
+              {errorDialog.details && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Debug Information:</h4>
+                  <pre className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs overflow-x-auto">
+                    {JSON.stringify(errorDialog.details, null, 2)}
+                  </pre>
+                  <p className="text-sm text-muted-foreground">
+                    Please share this information with technical support for debugging.
+                  </p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setErrorDialog({ show: false, message: '' })}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Main Content Check Dialog */}
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Content Check: {game.fields['Game Name']}</DialogTitle>
+          </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Inspector - Auto-selected from localStorage, hidden from UI */}
@@ -327,5 +381,13 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
+
+// Add logger for client-side logging
+const logger = {
+  error: (context: string, message: string, error: Error) => {
+    console.error(`[${context}] ${message}`, error);
+  },
+};

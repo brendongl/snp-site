@@ -5,7 +5,7 @@ import { VideoGame } from '@/types';
 import VideoGameCard from '@/components/features/video-games/VideoGameCard';
 import VideoGameModal from '@/components/features/video-games/VideoGameModal';
 import VideoGameFilters from '@/components/features/video-games/VideoGameFilters';
-import { LayoutGrid, LayoutList, Grid3x3 } from 'lucide-react';
+import { LayoutGrid, LayoutList, Grid3x3, Home } from 'lucide-react';
 
 type ViewMode = 'grid' | 'list' | 'icon';
 
@@ -128,7 +128,17 @@ export default function VideoGamesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <h1 className="text-4xl font-bold mb-8">Video Games Library</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-bold">Video Games Library</h1>
+        <button
+          onClick={() => window.location.href = '/'}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          title="Go to Home Page"
+        >
+          <Home className="w-5 h-5" />
+          <span className="hidden sm:inline">Home</span>
+        </button>
+      </div>
 
       {/* Search Bar */}
       <div className="mb-6">

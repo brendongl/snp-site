@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images } from 'lucide-react';
+import { Shuffle, Loader2, RefreshCw, Plus, ChevronDown, ChevronUp, Images, Home } from 'lucide-react';
 import { VERSION, BUILD_DATE } from '@/lib/version';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
@@ -523,6 +523,16 @@ function GamesPageContent() {
 
             {/* Right side - Action buttons */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/'}
+                className="whitespace-nowrap h-8 text-xs"
+                title="Go to Home Page"
+              >
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1.5">Home</span>
+              </Button>
               {!isStaff && (
                 <Button
                   variant="outline"

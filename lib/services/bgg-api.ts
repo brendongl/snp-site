@@ -31,12 +31,18 @@ async function rateLimit() {
  */
 async function fetchWithRetry(url: string, retryCount = 0): Promise<Response> {
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*'
-      }
-    });
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'application/xml, text/xml, */*'
+    };
+
+    // Add BGG API bearer token if available
+    const bggToken = process.env.BGG_API_TOKEN;
+    if (bggToken) {
+      headers['Authorization'] = `Bearer ${bggToken}`;
+    }
+
+    const response = await fetch(url, { headers });
 
     // Handle rate limiting or temporary blocks
     if ([401, 429, 503].includes(response.status)) {

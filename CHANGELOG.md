@@ -12,6 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.15.1] - 2025-01-30
+
+### Added
+- **Home Navigation Button** - Added "Home" button to gallery pages
+  - Board game gallery (/games) now has Home button in header
+  - Video game gallery (/video-games) now has Home button in header
+  - Icon-based design with responsive text label (icon-only on mobile)
+
+- **BGG API Bearer Token Support** - Added authentication for BoardGameGeek API
+  - New environment variable: `BGG_API_TOKEN`
+  - Bearer token added to Authorization header for all BGG API requests
+  - Token: faa89220-1ad1-46eb-8ebd-2574d6cfd400 (configured in .env)
+  - Improves API reliability and access to premium features
+
+### Fixed
+- **Content Check Submit Button** - Fixed validation bug preventing submission
+  - Changed validation from strict `missingPieces === undefined` check to proper field validation
+  - Missing pieces and notes are now correctly treated as optional fields
+  - Empty strings ('') no longer trigger validation errors
+
+- **Content Check Error Handling** - Added detailed debugging dialog
+  - Error dialog shows exact cause of failure with API response details
+  - JSON formatted debug information for troubleshooting
+  - Proper error logging to console for server-side debugging
+  - Errors now logged with full context for issue tracking
+  - Helps identify validation vs network vs database errors
+
+### Technical
+- Updated `app/api/games/content-check/route.ts` with improved validation logic
+- Added error dialog component in `ContentCheckDialog.tsx` with AlertCircle icon
+- Added Authorization header handling in `lib/services/bgg-api.ts`
+- Error responses now include detailed `missingFields` and `receivedData` information
+
 ## [1.15.0] - 2025-01-30
 
 ### Changed

@@ -22,12 +22,30 @@ export async function POST(request: NextRequest) {
       boxWrappedAtCheck,
     } = body;
 
-    // Validation
-    if (!gameId || !inspector || !status || !boxCondition || !cardCondition || missingPieces === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    // Validation - missingPieces and notes are optional
+    const missingFields = [];
+    if (!gameId) missingFields.push('gameId');
+    if (!inspector) missingFields.push('inspector');
+    if (!status) missingFields.push('status');
+    if (!boxCondition) missingFields.push('boxCondition');
+    if (!cardCondition) missingFields.push('cardCondition');
+
+    if (missingFields.length > 0) {
+      const errorDetails = {
+        error: 'Missing required fields',
+        missingFields,
+        receivedData: {
+          gameId: !!gameId,
+          inspector: !!inspector,
+          status: !!status,
+          boxCondition: !!boxCondition,
+          cardCondition: !!cardCondition,
+          missingPieces: missingPieces !== undefined ? 'provided' : 'not provided',
+          notes: notes !== undefined ? 'provided' : 'not provided',
+        },
+      };
+      logger.error('Content Check', 'Validation failed', new Error(JSON.stringify(errorDetails)));
+      return NextResponse.json(errorDetails, { status: 400 });
     }
 
     logger.info('Content Check', 'Creating new content check', {
