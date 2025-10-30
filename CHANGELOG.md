@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures toast notifications are always visible, even when modal is open
   - Fixes issue where content check success toasts appeared behind game modal
 
+- **Staff Selector Crash Fix** - Fixed "can't access property 'localeCompare'" error (HOTFIX)
+  - Added null/undefined check for staff names before sorting
+  - Filters out staff members without names from dropdown
+  - Safe sort with empty string fallback: `(a.name || '').localeCompare(b.name || '')`
+
 ### Changed
 - **API Endpoints**
   - Added GET method to `/api/content-checks/[id]` to fetch single content check by ID

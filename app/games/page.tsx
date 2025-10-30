@@ -864,7 +864,9 @@ function GamesPageContent() {
                         {(() => {
                           const currentStaffName = localStorage.getItem('staff_name');
                           const currentStaffId = localStorage.getItem('staff_id');
-                          const otherStaff = staffList.filter(s => s.id !== currentStaffId).sort((a, b) => a.name.localeCompare(b.name));
+                          const otherStaff = staffList
+                            .filter(s => s.id !== currentStaffId && s.name) // Filter out staff without names
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || '')); // Safe sort with fallback
 
                           return (
                             <>
