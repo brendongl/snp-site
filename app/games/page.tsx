@@ -174,7 +174,8 @@ function GamesPageContent() {
         if (!response.ok) return;
         const data = await response.json();
         const staff = data.staff || [];
-        setStaffList(staff.map((s: any) => ({ id: s.stafflist_id, name: s.staff_name })));
+        // API returns { id, name, type } - use these fields directly
+        setStaffList(staff.map((s: any) => ({ id: s.id, name: s.name })));
       } catch (err) {
         console.error('Error fetching staff list:', err);
       }

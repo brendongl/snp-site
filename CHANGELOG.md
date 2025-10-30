@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.4] - 2025-01-30
+
+### Fixed
+- **Staff Dropdown Filter** - ACTUALLY fixed staff dropdown only showing one name (critical bug fix)
+  - **Root Cause**: Line 177 in app/games/page.tsx was accessing wrong API response fields
+  - Was trying to access `s.stafflist_id` and `s.staff_name` which don't exist in API response
+  - API returns `{ id, name, type }` but code was mapping from old Airtable structure
+  - Changed to correctly access `s.id` and `s.name` from the API response
+  - Staff dropdown now shows all staff members correctly
+
+**Technical Details:**
+- API `/api/staff-list` returns: `{ staff: [{ id, name, type }] }`
+- Previous fix (v1.17.3) corrected the database layer (postgres.ts) ✓
+- This fix corrects the frontend mapping layer (games/page.tsx) ✓
+- The bug was a two-layer issue requiring fixes at both levels
+
 ## [1.17.3] - 2025-01-30
 
 ### Fixed
