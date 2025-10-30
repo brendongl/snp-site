@@ -1,10 +1,29 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Dice6, Calendar, Users, MessageCircle, Gamepad2 } from 'lucide-react';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check if user is logged in (staff mode)
+  useEffect(() => {
+    const staffEmail = localStorage.getItem('staff_email');
+    setIsLoggedIn(!!staffEmail);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+      {/* Staff Menu (Top Right) */}
+      {isLoggedIn && (
+        <div className="fixed top-4 right-4 z-50">
+          <StaffMenu />
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-3xl mx-auto">

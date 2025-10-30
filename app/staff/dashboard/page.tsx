@@ -134,11 +134,11 @@ export default function StaffDashboard() {
 
         <Card className="p-3 sm:p-6">
           <div className="flex items-center justify-between mb-1 sm:mb-2">
-            <div className="text-[10px] sm:text-sm text-gray-600">Learning Gaps</div>
+            <div className="text-[10px] sm:text-sm text-gray-600">Games I don't know</div>
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
           </div>
           <div className="text-xl sm:text-3xl font-bold">{stats?.knowledgeGaps || 0}</div>
-          <Link href="/staff/knowledge" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
+          <Link href="/games?staff=true&knowledgeFilter=unknown" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
           </Link>
         </Card>
@@ -190,8 +190,7 @@ export default function StaffDashboard() {
             recentActivity.map((activity, index) => (
               <div key={index} className="text-sm py-2 border-b last:border-0">
                 <span className="font-medium">{activity.staff_name}</span>
-                <span className="text-gray-600"> {activity.action} </span>
-                <span className="font-medium">{activity.game_name}</span>
+                <span className="text-gray-600"> {activity.action}</span>
                 <span className="text-gray-400 ml-2">
                   • {formatTimeAgo(activity.timestamp)}
                 </span>

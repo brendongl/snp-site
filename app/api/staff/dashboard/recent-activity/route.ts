@@ -27,33 +27,67 @@ export async function GET(request: NextRequest) {
 
     // Format activities to match dashboard display format
     const activities = result.rows.map((row) => {
-      // Extract game name from description if available
-      // Metadata may contain game_name field
       let game_name = 'Unknown Game';
-      try {
-        if (row.metadata) {
-          const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
-          game_name = metadata.game_name || metadata.gameName || 'Unknown Game';
-        }
-      } catch (e) {
-        // Fallback: try to extract from description
-        const match = row.description.match(/(?:for|to|:)\s+([^-(\n]+)/);
+      let action = '';
+      let status_info = '';
+
+      // Extract game name and format action based on category
+      if (row.type === 'content_check') {
+        // Format: "Content check: TIME BOMB (JAPANESE) - Minor Issues"
+        const match = row.description.match(/Content check:\s*(.+?)\s*-\s*(.+)/);
         if (match) {
           game_name = match[1].trim();
+          status_info = match[2].trim();
+          action = `checked ${game_name} - Has ${status_info}`;
+        } else {
+          action = 'checked a game';
         }
-      }
+      } else if (row.type === 'play_log') {
+        // Format: "Logged play session for GAME NAME"
+        const match = row.description.match(/Logged play session for\s*(.+)/);
+        if (match) {
+          game_name = match[1].trim();
+          action = `logged play for ${game_name}`;
+        } else {
+          action = 'logged play';
+        }
+      } else if (row.type === 'staff_knowledge') {
+        const metadata = row.metadata || {};
+        const level = metadata.confidenceLevel || 'Unknown';
 
-      // Generate action text based on category and event type
-      let action = row.description;
-      if (row.event_type === 'created') {
-        if (row.type === 'staff_knowledge') action = 'created staff knowledge';
-        else if (row.type === 'play_log') action = 'logged play';
-        else if (row.type === 'content_check') action = 'checked';
-        else if (row.type === 'board_game') action = 'added game';
-      } else if (row.event_type === 'updated') {
-        action = 'updated';
-      } else if (row.event_type === 'deleted') {
-        action = 'deleted';
+        // Check for bulk creation
+        if (metadata.isBulk) {
+          const count = metadata.gameCount || 1;
+          game_name = `${count} game${count > 1 ? 's' : ''}`;
+          action = `marked knowledge for ${game_name} as ${level}`;
+        } else {
+          // Single game: "Added knowledge: GAME NAME - LEVEL level"
+          const match = row.description.match(/Added knowledge:\s*(.+?)\s*-\s*(.+?)\s*level/);
+          if (match) {
+            game_name = match[1].trim();
+            action = `marked knowledge for ${game_name} as ${level}`;
+          } else {
+            action = `marked knowledge as ${level}`;
+          }
+        }
+      } else if (row.type === 'board_game') {
+        if (row.event_type === 'photo_added') {
+          const match = row.description.match(/Added \d+ photos? to\s*(.+)/);
+          if (match) {
+            game_name = match[1].trim();
+            action = `added photo to ${game_name}`;
+          }
+        } else if (row.event_type === 'updated') {
+          const match = row.description.match(/Updated game:\s*(.+)/);
+          if (match) {
+            game_name = match[1].trim();
+            action = `updated ${game_name}`;
+          }
+        } else if (row.event_type === 'created') {
+          const metadata = row.metadata || {};
+          game_name = metadata.name || 'a game';
+          action = `added game ${game_name}`;
+        }
       }
 
       return {

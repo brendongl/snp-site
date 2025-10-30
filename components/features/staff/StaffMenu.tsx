@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, LogOut, User, Users, LayoutDashboard } from 'lucide-react';
+import { Menu, LogOut, User, Users, LayoutDashboard, Gamepad2, Tv } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
@@ -97,6 +97,29 @@ export function StaffMenu() {
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Staff Dashboard</span>
+            </Link>
+
+            {/* Divider */}
+            <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
+
+            {/* Board Games Gallery */}
+            <Link
+              href="/games?staff=true"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+              onClick={() => setIsOpen(false)}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>Board Games</span>
+            </Link>
+
+            {/* Video Games Gallery */}
+            <Link
+              href="/video-games"
+              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+              onClick={() => setIsOpen(false)}
+            >
+              <Tv className="w-4 h-4" />
+              <span>Video Games</span>
             </Link>
 
             {/* Divider */}

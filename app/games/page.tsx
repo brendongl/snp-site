@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { SearchBar } from '@/components/features/games/SearchBar';
 import { GameFilters } from '@/components/features/games/GameFilters';
 import { AdvancedFilters } from '@/components/features/games/AdvancedFilters';
@@ -31,6 +31,7 @@ function GamesPageContent() {
   const isStaff = useStaffMode();
   const isAdmin = useAdminMode();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [games, setGames] = useState<BoardGame[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +165,19 @@ function GamesPageContent() {
       }
     }
   }, [searchParams, games, selectedGame]);
+
+  // Close modal and clear openGame query param
+  const handleCloseModal = () => {
+    setSelectedGame(null);
+    // Clear openGame param if it exists
+    const currentParams = new URLSearchParams(window.location.search);
+    if (currentParams.has('openGame')) {
+      currentParams.delete('openGame');
+      const newSearch = currentParams.toString();
+      const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}`;
+      router.replace(newUrl);
+    }
+  };
 
   // Toggle header collapse and save preference
   const toggleHeaderCollapse = () => {
@@ -871,7 +885,7 @@ function GamesPageContent() {
       <GameDetailModal
         game={selectedGame}
         open={!!selectedGame}
-        onClose={() => setSelectedGame(null)}
+        onClose={handleCloseModal}
         onRefresh={handleRefresh}
       />
 
