@@ -6,9 +6,9 @@ import VideoGameCard from '@/components/features/video-games/VideoGameCard';
 import VideoGameModal from '@/components/features/video-games/VideoGameModal';
 import VideoGameFilters from '@/components/features/video-games/VideoGameFilters';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
-import { LayoutGrid, LayoutList, Grid3x3, Home } from 'lucide-react';
+import { LayoutGrid, LayoutList, Grid3x3, Home, Camera } from 'lucide-react';
 
-type ViewMode = 'grid' | 'list' | 'icon';
+type ViewMode = 'grid' | 'list' | 'icon' | 'screenshot';
 
 export default function VideoGamesPage() {
   const [games, setGames] = useState<VideoGame[]>([]);
@@ -31,10 +31,14 @@ export default function VideoGamesPage() {
     locatedOn: string[];
     category: string[];
     ageRating: number[];
+    playerCount: number[];
+    quickFilter: '4-player' | '8-player' | null;
   }>({
     locatedOn: [],
     category: [],
     ageRating: [],
+    playerCount: [],
+    quickFilter: null,
   });
 
   // Fetch games
@@ -107,6 +111,33 @@ export default function VideoGamesPage() {
         if (!filters.ageRating.includes(game.age_rating)) return false; // Exclude games with non-matching ratings
       }
 
+      // Player Count filter (OR logic - game supports ANY selected player count)
+      if (filters.playerCount.length > 0) {
+        const playerCount = game.number_of_players;
+        if (!playerCount) return false; // Exclude games without player count data
+
+        // Check if the game's player count matches any selected range
+        const hasMatchingPlayerCount = filters.playerCount.some(selected => {
+          if (selected === 1) return playerCount >= 1;
+          if (selected === 2) return playerCount >= 2;
+          if (selected === 3) return playerCount >= 3;
+          if (selected === 4) return playerCount >= 4;
+          if (selected === 5) return playerCount >= 5 && playerCount <= 6;
+          if (selected === 7) return playerCount >= 7 && playerCount <= 8;
+          return false;
+        });
+        if (!hasMatchingPlayerCount) return false;
+      }
+
+      // Quick Filter for 4-player or 8-player games
+      if (filters.quickFilter === '4-player') {
+        const playerCount = game.number_of_players;
+        if (!playerCount || playerCount > 4) return false;
+      } else if (filters.quickFilter === '8-player') {
+        const playerCount = game.number_of_players;
+        if (!playerCount || playerCount > 8) return false;
+      }
+
       return true;
     });
   }, [games, searchQuery, filters]);
@@ -129,6 +160,9 @@ export default function VideoGamesPage() {
   const getGridClasses = () => {
     if (viewMode === 'icon') {
       return 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2';
+    }
+    if (viewMode === 'screenshot') {
+      return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
     }
     return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
   };
@@ -191,6 +225,17 @@ export default function VideoGamesPage() {
           >
             <Grid3x3 className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => setViewMode('screenshot')}
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'screenshot'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+            title="Screenshot view (in-game screenshots)"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -207,7 +252,7 @@ export default function VideoGamesPage() {
           <button
             onClick={() => {
               setSearchQuery('');
-              setFilters({ locatedOn: [], category: [], ageRating: [] });
+              setFilters({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null });
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -218,12 +263,13 @@ export default function VideoGamesPage() {
         <>
           <div className={getGridClasses()}>
             {paginatedGames.map((game) => (
-              <VideoGameCard
-                key={game.id}
-                game={game}
-                onClick={() => setSelectedGame(game)}
-                viewMode={viewMode}
-              />
+              <div key={game.id} data-game-id={game.id}>
+                <VideoGameCard
+                  game={game}
+                  onClick={() => setSelectedGame(game)}
+                  viewMode={viewMode}
+                />
+              </div>
             ))}
           </div>
 
@@ -258,6 +304,8 @@ export default function VideoGamesPage() {
           game={selectedGame}
           isOpen={!!selectedGame}
           onClose={() => setSelectedGame(null)}
+          allGames={games}
+          onSelectGame={(game) => setSelectedGame(game)}
         />
       )}
     </div>
