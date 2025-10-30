@@ -12,6 +12,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.16.0] - 2025-01-30
+
+### Added
+- **Hamburger Menu on All Pages** - Staff menu now appears on all pages when logged in
+  - Added to home page, board games gallery, video games gallery
+  - Fixed top-right position, consistent UX across app
+  - Menu includes Board Games and Video Games links with dividers
+  - Only visible when user has staff credentials in localStorage
+
+### Fixed
+- **Activity Log Display** - Fixed "Unknown Game" issues and improved formatting
+  - Game names now properly extracted from changelog descriptions
+  - Content checks: "Brendon Gan-Le checked Time Bomb (Japanese) - Has Minor Issues"
+  - Staff knowledge: "Brendon Gan-Le marked knowledge for Monopoly as Expert"
+  - Play logs: "Nguyễn Minh Hiếu logged play for Calico"
+  - Proper extraction from metadata and description fields
+
+- **Modal Loop Issue** - Fixed game modal reopening infinitely
+  - Clear `openGame` query parameter when closing modal
+  - Added handleCloseModal function that removes param from URL
+  - Prevents modal from auto-reopening after clicking X
+
+- **Edit Button on Mobile** - Improved touch handling for better clickability
+  - Increased button size: min-width/min-height 44px (Apple HIG standard)
+  - Increased icon size from w-4 h-4 to w-5 h-5
+  - Added explicit `type="button"` attribute
+  - Added `preventDefault()` in addition to `stopPropagation()`
+  - Increased z-index from z-10 to z-50
+  - Better flex centering with `flex items-center justify-center`
+
+### Changed
+- **Staff Dashboard Updates**
+  - Renamed "Learning Gaps" to "Games I don't know"
+  - Updated link to `/games?staff=true&knowledgeFilter=unknown`
+  - More user-friendly terminology
+
+- **Staff Knowledge Page**
+  - Changed default sort from A-Z to latest record (newest first)
+  - Added `createdAt` and `updatedAt` fields to interface
+  - Sort by `createdAt` descending in list view
+  - Better chronological tracking of knowledge updates
+
+- **Menu Structure**
+  - Added Board Games and Video Games links to staff menu
+  - Links appear between Staff Dashboard and Play Logs
+  - Board Games link includes `?staff=true` parameter
+  - Added divider separators for better visual organization
+
+### Technical
+- Home page converted to client component for staff menu rendering
+- Video games page now checks for logged-in user via localStorage
+- Added `useRouter` and `useSearchParams` imports to games page
+- Updated StaffMenu component with Gamepad2 and Tv icons
+- Activity log API now queries changelog table directly
+- Improved regex patterns for extracting game names from descriptions
+
 ## [1.15.3] - 2025-01-30
 
 ### Fixed - Staff Knowledge Page (Mobile)

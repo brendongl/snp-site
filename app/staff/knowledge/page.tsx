@@ -21,6 +21,8 @@ interface StaffKnowledgeEntry {
   taughtBy: string | null;
   notes: string;
   canTeach: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface GroupedGame {
@@ -180,8 +182,12 @@ export default function KnowledgePage() {
         filtered = filtered.filter(k => k.staffMember === selectedStaff);
       }
 
-      // Sort by game name for list view
-      return filtered.sort((a, b) => a.gameName.localeCompare(b.gameName));
+      // Sort by latest record (createdAt descending) for list view
+      return filtered.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
     }
 
 
@@ -613,20 +619,22 @@ export default function KnowledgePage() {
                       </div>
                     </div>
                     {canEditEntry(entry) && (
-                      <div className="flex gap-1 relative z-10">
+                      <div className="flex gap-2 relative z-50">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
-                          className="p-2.5 text-primary hover:bg-primary/10 rounded touch-manipulation active:scale-95 transition-transform"
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleEditEntry(entry); }}
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-primary hover:bg-primary/10 rounded-lg touch-manipulation active:scale-95 transition-transform"
                           title="Edit"
+                          type="button"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-5 h-5" />
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry.id); }}
-                          className="p-2.5 text-destructive hover:bg-destructive/10 rounded touch-manipulation active:scale-95 transition-transform"
+                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteEntry(entry.id); }}
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg touch-manipulation active:scale-95 transition-transform"
                           title="Delete"
+                          type="button"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     )}
