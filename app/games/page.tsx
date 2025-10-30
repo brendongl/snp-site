@@ -48,6 +48,12 @@ function GamesPageContent() {
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
   const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
 
+  // Staff knowledge filters (staff mode only)
+  const [staffList, setStaffList] = useState<Array<{ id: string; name: string }>>([]);
+  const [allStaffKnowledge, setAllStaffKnowledge] = useState<Array<{ staffMemberId: string; gameName: string; confidenceLevel: string }>>([]);
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');
+  const [selectedKnowledgeFilter, setSelectedKnowledgeFilter] = useState<string>('all');
+
   const [filters, setFilters] = useState<FilterType>({
     search: '',
     quickFilter: undefined,
@@ -154,6 +160,56 @@ function GamesPageContent() {
       fetchStaffKnowledge();
     }
   }, [isStaff, games]);
+
+  // Fetch staff list for knowledge filter (staff mode only)
+  useEffect(() => {
+    if (!isStaff) return;
+
+    const fetchStaffList = async () => {
+      try {
+        const response = await fetch('/api/staff-list');
+        if (!response.ok) return;
+        const data = await response.json();
+        const staff = data.staff || [];
+        setStaffList(staff.map((s: any) => ({ id: s.stafflist_id, name: s.staff_name })));
+      } catch (err) {
+        console.error('Error fetching staff list:', err);
+      }
+    };
+
+    fetchStaffList();
+  }, [isStaff]);
+
+  // Fetch all staff knowledge for filtering (staff mode only)
+  useEffect(() => {
+    if (!isStaff || games.length === 0) return;
+
+    const fetchAllKnowledge = async () => {
+      try {
+        const response = await fetch('/api/staff-knowledge');
+        if (!response.ok) return;
+        const data = await response.json();
+        const knowledge = data.knowledge || [];
+        setAllStaffKnowledge(knowledge);
+      } catch (err) {
+        console.error('Error fetching all staff knowledge:', err);
+      }
+    };
+
+    fetchAllKnowledge();
+  }, [isStaff, games]);
+
+  // Handle knowledgeFilter query parameter from dashboard
+  useEffect(() => {
+    const knowledgeFilter = searchParams?.get('knowledgeFilter');
+    if (knowledgeFilter === 'unknown') {
+      const staffId = localStorage.getItem('staff_id');
+      if (staffId) {
+        setSelectedStaffFilter(staffId);
+        setSelectedKnowledgeFilter('none');
+      }
+    }
+  }, [searchParams]);
 
   // Auto-open game modal from query parameter
   useEffect(() => {
@@ -355,6 +411,37 @@ function GamesPageContent() {
         const totalChecks = game.fields['Total Checks'];
         // Show games with no checks (undefined, 0, or null)
         return !totalChecks || totalChecks === 0;
+      });
+    }
+
+    // Staff Knowledge Filter (staff mode only)
+    if (isStaff && selectedKnowledgeFilter !== 'all') {
+      filtered = filtered.filter(game => {
+        const gameName = game.fields['Game Name'];
+        if (!gameName) return false;
+
+        // Get knowledge records for this game
+        const gameKnowledge = allStaffKnowledge.filter(k => k.gameName === gameName);
+
+        // If specific staff member selected, filter by that staff member
+        let relevantKnowledge = gameKnowledge;
+        if (selectedStaffFilter !== 'all') {
+          relevantKnowledge = gameKnowledge.filter(k => k.staffMemberId === selectedStaffFilter);
+        }
+
+        // Apply knowledge level filter
+        if (selectedKnowledgeFilter === 'none') {
+          // Show games with NO knowledge records for this staff member
+          return relevantKnowledge.length === 0;
+        } else if (selectedKnowledgeFilter === 'beginner-intermediate') {
+          // Show games with Beginner or Intermediate knowledge
+          return relevantKnowledge.some(k => k.confidenceLevel === 'Beginner' || k.confidenceLevel === 'Intermediate');
+        } else if (selectedKnowledgeFilter === 'expert-instructor') {
+          // Show games with Expert or Instructor knowledge
+          return relevantKnowledge.some(k => k.confidenceLevel === 'Expert' || k.confidenceLevel === 'Instructor');
+        }
+
+        return true;
       });
     }
 
@@ -741,27 +828,73 @@ function GamesPageContent() {
                 </Select>
 
                 {isStaff && (
-                  <Select
-                    value={staffSortOption || 'none'}
-                    onValueChange={(value: string) => {
-                      if (value === 'none') {
-                        setStaffSortOption(null);
-                      } else {
-                        setStaffSortOption(value as SortOption);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px] sm:w-[240px]">
-                      <SelectValue placeholder="Sort by Checks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sort by Checks</SelectItem>
-                      <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
-                      <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
-                      <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
-                      <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      value={staffSortOption || 'none'}
+                      onValueChange={(value: string) => {
+                        if (value === 'none') {
+                          setStaffSortOption(null);
+                        } else {
+                          setStaffSortOption(value as SortOption);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[200px] sm:w-[240px]">
+                        <SelectValue placeholder="Sort by Checks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sort by Checks</SelectItem>
+                        <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
+                        <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
+                        <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
+                        <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Staff Knowledge Filters */}
+                    <Select
+                      value={selectedStaffFilter}
+                      onValueChange={(value: string) => setSelectedStaffFilter(value)}
+                    >
+                      <SelectTrigger className="w-[140px] sm:w-[180px]">
+                        <SelectValue placeholder="All Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Staff</SelectItem>
+                        {(() => {
+                          const currentStaffName = localStorage.getItem('staff_name');
+                          const currentStaffId = localStorage.getItem('staff_id');
+                          const otherStaff = staffList.filter(s => s.id !== currentStaffId).sort((a, b) => a.name.localeCompare(b.name));
+
+                          return (
+                            <>
+                              {currentStaffId && currentStaffName && (
+                                <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
+                              )}
+                              {otherStaff.map(staff => (
+                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                              ))}
+                            </>
+                          );
+                        })()}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={selectedKnowledgeFilter}
+                      onValueChange={(value: string) => setSelectedKnowledgeFilter(value)}
+                    >
+                      <SelectTrigger className="w-[160px] sm:w-[200px]">
+                        <SelectValue placeholder="All Levels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Levels</SelectItem>
+                        <SelectItem value="none">No Knowledge Records</SelectItem>
+                        <SelectItem value="beginner-intermediate">Beginner + Intermediate</SelectItem>
+                        <SelectItem value="expert-instructor">Expert + Instructor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
                 )}
               </div>
             </div>

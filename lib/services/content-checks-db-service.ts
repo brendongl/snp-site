@@ -196,6 +196,45 @@ class ContentChecksDbService {
   }
 
   /**
+   * Get a single content check by ID
+   */
+  async getCheckById(id: string): Promise<ContentCheck | null> {
+    try {
+      // Check if check_type column exists (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      const selectClause = hasCheckType
+        ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`
+        : `id, game_id, inspector_id, check_date, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`;
+
+      const result = await this.pool.query(
+        `SELECT ${selectClause}
+        FROM content_checks
+        WHERE id = $1`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return this.mapRowToCheck(result.rows[0]);
+    } catch (error) {
+      console.error('Error fetching content check by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a new content check
    */
   async createCheck(check: Omit<ContentCheck, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentCheck> {

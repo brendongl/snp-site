@@ -12,6 +12,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.0] - 2025-01-30
+
+### Added
+- **Staff Knowledge Filters in Gallery** - New filtering system for staff expertise levels
+  - Two dropdown selectors: Staff selector (All Staff, current user, other staff alphabetically)
+  - Knowledge level selector: All levels, No knowledge records, Beginner + Intermediate, Expert + Instructor
+  - Filters work in combination to show games matching criteria
+  - Handles `knowledgeFilter=unknown` query parameter from dashboard "Games I don't know" link
+  - Mobile-first responsive design
+  - Only visible in staff mode (`?staff=true`)
+
+- **Mark Found Button Functionality** - Content check history now allows marking missing pieces as found
+  - "Mark Found" button in Missing Pieces Inventory now functional
+  - Fetches previous content check details via new GET endpoint
+  - Creates new content check with same details + "- Found!" appended to missing pieces
+  - Pre-fills all fields from last check (status, box condition, card condition, notes, etc.)
+  - Shows loading state while processing ("Marking...")
+  - Displays success/error toast notifications
+  - Refreshes missing pieces list after marking found
+  - "View Game" button now correctly opens game modal
+
+### Fixed
+- **Toast Notification Visibility** - Toasts now appear above modals
+  - Increased z-index from `z-50` to `z-[9999]`
+  - Ensures toast notifications are always visible, even when modal is open
+  - Fixes issue where content check success toasts appeared behind game modal
+
+### Changed
+- **API Endpoints**
+  - Added GET method to `/api/content-checks/[id]` to fetch single content check by ID
+  - Returns check details including all fields for cloning functionality
+
+### Technical
+- Added `useToast` hook to MissingPiecesInventory component
+- Added `markingFound` state for loading indication
+- Added `handleMarkFound` async function to clone content checks
+- Added staff knowledge data fetching in games page
+- Added filtering logic in `filteredAndSortedGames` useMemo
+- Added two Select dropdowns to games page header (staff mode only)
+- Updated toast-container z-index for proper layering
+- Added GET handler to content-checks/[id] route
+
 ## [1.16.0] - 2025-01-30
 
 ### Added
