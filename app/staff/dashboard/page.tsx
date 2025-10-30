@@ -26,6 +26,7 @@ interface Activity {
   staff_name: string;
   game_name: string;
   action: string;
+  description?: string;
 }
 
 export default function StaffDashboard() {
@@ -105,39 +106,39 @@ export default function StaffDashboard() {
       <h1 className="text-3xl font-bold">Staff Dashboard</h1>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Games Need Checking</div>
-            <CheckCircle2 className="h-5 w-5 text-orange-500" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="text-[10px] sm:text-sm text-gray-600">Games Need Checking</div>
+            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
           </div>
-          <div className="text-3xl font-bold">{stats?.gamesNeedingCheck || 0}</div>
-          <Link href="/staff/check-history" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+          <div className="text-xl sm:text-3xl font-bold">{stats?.gamesNeedingCheck || 0}</div>
+          <Link href="/staff/check-history" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
           </Link>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Play Logs</div>
-            <GamepadIcon className="h-5 w-5 text-blue-500" />
+        <Card className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="text-[10px] sm:text-sm text-gray-600">Play Logs</div>
+            <GamepadIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
           </div>
-          <div className="text-3xl font-bold">{stats?.playLogsToday || 0}</div>
-          <div className="text-sm text-gray-500 mt-1">
+          <div className="text-xl sm:text-3xl font-bold">{stats?.playLogsToday || 0}</div>
+          <div className="text-[10px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
             {stats?.playLogsThisWeek || 0} this week
           </div>
-          <Link href="/staff/play-logs" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+          <Link href="/staff/play-logs" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
           </Link>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Learning Gaps</div>
-            <TrendingUp className="h-5 w-5 text-purple-500" />
+        <Card className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="text-[10px] sm:text-sm text-gray-600">Learning Gaps</div>
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
           </div>
-          <div className="text-3xl font-bold">{stats?.knowledgeGaps || 0}</div>
-          <Link href="/staff/knowledge" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+          <div className="text-xl sm:text-3xl font-bold">{stats?.knowledgeGaps || 0}</div>
+          <Link href="/staff/knowledge" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
           </Link>
         </Card>
@@ -168,7 +169,7 @@ export default function StaffDashboard() {
                   </div>
                 </div>
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/games/${action.game_id}`}>
+                  <Link href={`/games?staff=true&openGame=${action.game_id}`}>
                     Check Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

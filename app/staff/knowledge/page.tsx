@@ -3,9 +3,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2, X } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import LearningOpportunityTool from '@/components/features/staff/LearningOpportunityTool';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface StaffKnowledgeEntry {
   id: string;
@@ -39,7 +45,7 @@ export default function KnowledgePage() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [gameNameSearch, setGameNameSearch] = useState<string>('');
   const [showKnowledgeGaps, setShowKnowledgeGaps] = useState(false);
-  const [showTrainingOpportunities, setShowTrainingOpportunities] = useState(false);
+  const [showLearningOpportunitiesModal, setShowLearningOpportunitiesModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{ confidenceLevel: string; notes: string } | null>(null);
@@ -47,7 +53,7 @@ export default function KnowledgePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isLearningToolCollapsed, setIsLearningToolCollapsed] = useState(true);
 
   // Check authentication and set default filter
   useEffect(() => {
@@ -126,15 +132,7 @@ export default function KnowledgePage() {
     fetchData();
   }, [staffName]);
 
-  // Add scroll listener for sticky header
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 150);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // Removed scroll listener to fix mobile jitter - using CSS-only sticky positioning now
 
   // Normalize name for comparison (must be before useMemo that uses it)
   const normalizeName = (name: string | null | undefined): string => {
@@ -226,36 +224,9 @@ export default function KnowledgePage() {
       ).length,
     }));
 
-    if (showTrainingOpportunities) {
-      // Training opportunities: 1-2 Expert/Instructor AND max 2 Beginner OR max 2 Intermediate
-      groupedArray = groupedArray.filter(group => {
-        const expertInstructorCount = group.entries.filter(e =>
-          e.confidenceLevel === 'Expert' || e.confidenceLevel === 'Instructor'
-        ).length;
-        const beginnerCount = group.entries.filter(e =>
-          e.confidenceLevel === 'Beginner'
-        ).length;
-        const intermediateCount = group.entries.filter(e =>
-          e.confidenceLevel === 'Intermediate'
-        ).length;
-
-        // Must have 1-2 Expert/Instructor
-        if (expertInstructorCount < 1 || expertInstructorCount > 2) {
-          return false;
-        }
-
-        // Must have max 2 Beginner OR max 2 Intermediate (not both over 2)
-        if (beginnerCount <= 2 || intermediateCount <= 2) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
     // Sort by game name
     return groupedArray.sort((a, b) => a.gameName.localeCompare(b.gameName));
-  }, [allKnowledge, allGames, gameNameSearch, selectedConfidenceLevels, selectedStaff, showKnowledgeGaps, showTrainingOpportunities]);
+  }, [allKnowledge, allGames, gameNameSearch, selectedConfidenceLevels, selectedStaff, showKnowledgeGaps]);
 
   // Pagination
   const totalPages = Math.ceil(
@@ -269,7 +240,7 @@ export default function KnowledgePage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedConfidenceLevels, selectedStaff, gameNameSearch, showKnowledgeGaps, showTrainingOpportunities]);
+  }, [selectedConfidenceLevels, selectedStaff, gameNameSearch, showKnowledgeGaps]);
 
   const toggleGameExpansion = (gameName: string) => {
     setExpandedGames(prev => {
@@ -392,7 +363,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* Main Header - Hides when scrolling */}
-      <div className={`border-b border-border bg-card transition-all duration-200 ${isScrolled ? 'h-0 overflow-hidden opacity-0' : 'h-auto opacity-100'}`}>
+      <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
           <div>
             <h1 className="text-3xl font-bold">Staff Game Knowledge</h1>
@@ -404,23 +375,26 @@ export default function KnowledgePage() {
       </div>
 
       {/* Sticky Filters Header */}
-      <div className={`sticky bg-card border-b border-border z-30 ${isScrolled ? 'top-[49px]' : 'top-0'}`}>
+      <div className="sticky top-0 bg-card border-b border-border z-30">
         <div className="container mx-auto px-4 py-2 max-w-6xl space-y-2">
           {/* Row 1: Game Search + Staff Filter */}
           <div className="flex gap-2">
-            <select
+            <input
+              type="text"
               value={gameNameSearch}
               onChange={(e) => setGameNameSearch(e.target.value)}
-              className="w-1/2 px-2 py-1.5 rounded-lg text-xs sm:text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-            >
-              <option value="">All Games</option>
-              {uniqueGameNames.map(game => (
-                <option key={game} value={game}>{game}</option>
-              ))}
-            </select>
+              placeholder="Search games..."
+              className="w-1/2 px-2 py-1.5 rounded-lg text-xs sm:text-sm border border-border bg-background text-foreground hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
             <select
               value={selectedStaff || ''}
-              onChange={(e) => setSelectedStaff(e.target.value || null)}
+              onChange={(e) => {
+                setSelectedStaff(e.target.value || null);
+                // Turn off knowledge gaps when switching staff members
+                if (showKnowledgeGaps) {
+                  setShowKnowledgeGaps(false);
+                }
+              }}
               className="w-1/2 px-2 py-1.5 rounded-lg text-xs sm:text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <option value="">All Staff</option>
@@ -457,7 +431,6 @@ export default function KnowledgePage() {
                   // Clear other filters and set to All Staff
                   setSelectedStaff(null);
                   setSelectedConfidenceLevels(new Set());
-                  setShowTrainingOpportunities(false);
                   setGameNameSearch('');
                 }
               }}
@@ -470,22 +443,10 @@ export default function KnowledgePage() {
               📚 Knowledge Gaps
             </button>
             <button
-              onClick={() => {
-                const newValue = !showTrainingOpportunities;
-                setShowTrainingOpportunities(newValue);
-                if (newValue) {
-                  // Set to All Staff and clear knowledge gaps
-                  setSelectedStaff(null);
-                  setShowKnowledgeGaps(false);
-                }
-              }}
-              className={`flex-1 px-3 py-1 rounded-lg text-xs border transition-all ${
-                showTrainingOpportunities
-                  ? 'border-green-500 bg-green-50 text-green-700 font-medium'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
-              }`}
+              onClick={() => setShowLearningOpportunitiesModal(true)}
+              className="flex-1 px-3 py-1 rounded-lg text-xs border border-border bg-background text-muted-foreground hover:bg-muted/50 transition-all"
             >
-              🎯 Training Opportunities
+              🎯 Learning Opportunities
             </button>
           </div>
 
@@ -499,11 +460,6 @@ export default function KnowledgePage() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-6xl">
 
-        {/* Learning Opportunity Tool */}
-        <div className="mb-8">
-          <LearningOpportunityTool />
-        </div>
-
         {/* Results Count */}
         <div className="mb-6 flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
@@ -516,7 +472,7 @@ export default function KnowledgePage() {
                 <p>
                   {(paginatedData as GroupedGame[]).length} game{(paginatedData as GroupedGame[]).length !== 1 ? 's' : ''} — Page {currentPage} of {totalPages || 1}
                 </p>
-                {!gameNameSearch && !showKnowledgeGaps && !showTrainingOpportunities && selectedConfidenceLevels.size === 0 && (
+                {!gameNameSearch && !showKnowledgeGaps && selectedConfidenceLevels.size === 0 && (
                   <p className="text-xs mt-1">
                     📊 Known: {new Set(allKnowledge.map(k => k.gameName)).size} out of {allGames.length} games
                     {' • '}
@@ -657,16 +613,18 @@ export default function KnowledgePage() {
                       </div>
                     </div>
                     {canEditEntry(entry) && (
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 relative z-10">
                         <button
-                          onClick={() => handleEditEntry(entry)}
-                          className="p-2 text-primary hover:bg-primary/10 rounded"
+                          onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
+                          className="p-2.5 text-primary hover:bg-primary/10 rounded touch-manipulation active:scale-95 transition-transform"
+                          title="Edit"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          className="p-2 text-destructive hover:bg-destructive/10 rounded"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry.id); }}
+                          className="p-2.5 text-destructive hover:bg-destructive/10 rounded touch-manipulation active:scale-95 transition-transform"
+                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -779,6 +737,20 @@ export default function KnowledgePage() {
           </div>
         )}
       </div>
+
+      {/* Learning Opportunities Modal */}
+      <Dialog open={showLearningOpportunitiesModal} onOpenChange={setShowLearningOpportunitiesModal}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              🎯 Learning Opportunities
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <LearningOpportunityTool />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

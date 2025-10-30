@@ -8,51 +8,63 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Get recent content checks and play logs, combine and sort
-    const checksResult = await pool.query(
+    // Fetch recent activity directly from changelog table (EXACT match to /staff/changelog)
+    const result = await pool.query(
       `
       SELECT
-        'check' as type,
-        cc.created_at as timestamp,
-        sl.staff_name as staff_name,
-        g.name as game_name
-      FROM content_checks cc
-      LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
-      LEFT JOIN games g ON cc.game_id = g.id
-      ORDER BY cc.created_at DESC
+        category as type,
+        created_at as timestamp,
+        staff_member as staff_name,
+        description,
+        event_type,
+        metadata
+      FROM changelog
+      ORDER BY created_at DESC
       LIMIT $1
       `,
       [limit]
     );
 
-    const logsResult = await pool.query(
-      `
-      SELECT
-        'play' as type,
-        pl.created_at as timestamp,
-        sl.staff_name as staff_name,
-        g.name as game_name
-      FROM play_logs pl
-      LEFT JOIN staff_list sl ON pl.staff_list_id = sl.stafflist_id
-      LEFT JOIN games g ON pl.game_id = g.id
-      ORDER BY pl.created_at DESC
-      LIMIT $1
-      `,
-      [limit]
-    );
+    // Format activities to match dashboard display format
+    const activities = result.rows.map((row) => {
+      // Extract game name from description if available
+      // Metadata may contain game_name field
+      let game_name = 'Unknown Game';
+      try {
+        if (row.metadata) {
+          const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          game_name = metadata.game_name || metadata.gameName || 'Unknown Game';
+        }
+      } catch (e) {
+        // Fallback: try to extract from description
+        const match = row.description.match(/(?:for|to|:)\s+([^-(\n]+)/);
+        if (match) {
+          game_name = match[1].trim();
+        }
+      }
 
-    // Combine and sort by timestamp
-    const activities = [...checksResult.rows, ...logsResult.rows]
-      .filter((row) => row.timestamp && row.game_name) // Filter out invalid entries
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, limit)
-      .map((row) => ({
+      // Generate action text based on category and event type
+      let action = row.description;
+      if (row.event_type === 'created') {
+        if (row.type === 'staff_knowledge') action = 'created staff knowledge';
+        else if (row.type === 'play_log') action = 'logged play';
+        else if (row.type === 'content_check') action = 'checked';
+        else if (row.type === 'board_game') action = 'added game';
+      } else if (row.event_type === 'updated') {
+        action = 'updated';
+      } else if (row.event_type === 'deleted') {
+        action = 'deleted';
+      }
+
+      return {
         type: row.type,
         timestamp: row.timestamp,
         staff_name: row.staff_name || 'Unknown',
-        game_name: row.game_name || 'Unknown Game',
-        action: row.type === 'check' ? 'checked' : 'logged play',
-      }));
+        game_name,
+        action,
+        description: row.description,
+      };
+    });
 
     return NextResponse.json({ activities });
   } catch (error) {

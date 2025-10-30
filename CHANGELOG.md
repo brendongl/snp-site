@@ -12,6 +12,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.15.3] - 2025-01-30
+
+### Fixed - Staff Knowledge Page (Mobile)
+- **Mobile Scrolling Jitter** - Fixed stuttering/jumping when scrolling
+  - Removed JavaScript scroll listener that caused constant re-renders
+  - Changed sticky header from dynamic positioning (`isScrolled` state) to pure CSS (`sticky top-0`)
+  - Smoother scrolling experience on mobile devices
+
+- **All Games Filter** - Replaced dropdown with search input
+  - Changed from dropdown select to text input with placeholder "Search games..."
+  - Better UX for filtering large game lists
+  - Supports partial matching and instant filtering
+
+- **Edit Button Clickability** - Fixed edit button not responding to touch on mobile
+  - Added `z-index: 10` to ensure buttons are above other elements
+  - Increased touch target size from `p-2` to `p-2.5` (larger tap area)
+  - Added `touch-manipulation` CSS for better mobile touch handling
+  - Added `active:scale-95` for visual feedback on tap
+  - Added `stopPropagation()` to prevent event bubbling
+
+### Fixed - Staff Dashboard (Mobile & Desktop)
+- **Responsive Dashboard Stats** - Compressed 3 stat boxes into 1 row on mobile
+  - Changed from `grid-cols-1 md:grid-cols-3` to `grid-cols-3` (always 3 columns)
+  - Reduced text sizes on mobile: `text-[10px]` → `text-sm` (responsive)
+  - Reduced icon sizes on mobile: `h-4 w-4` → `h-5 w-5` (responsive)
+  - Reduced padding on mobile: `p-3` → `p-6` (responsive)
+  - Reduced gaps: `gap-2` → `gap-4` (responsive)
+
+- **Priority Actions "Check Now" Button** - Fixed navigation to non-existent game pages
+  - Changed link from `/games/{game_id}` (404) to `/games?staff=true&openGame={game_id}`
+  - Added auto-open functionality to games page via query parameter
+  - Games page now detects `openGame` param and opens modal automatically
+  - No need for dedicated game detail pages (stays as modal-based)
+
+- **Recent Activity Log** - Fixed to match exact changelog data
+  - Changed API from querying content_checks + play_logs tables to querying changelog table directly
+  - Now shows EXACT same activity as /staff/changelog page
+  - Includes all event types: board games, play logs, staff knowledge, content checks
+  - Matches event types: created, updated, deleted, photo_added
+
+- **Missing Game Names** - Fixed activity entries showing blank game names
+  - Extract game name from `metadata` JSON field in changelog table
+  - Fallback to regex extraction from description if metadata unavailable
+  - No more "Oct 30, 2025, 01:54 PM created staff knowledge Added knowledge for 1 game - Beginner level Nguyen Ngoc Bao Nhi" without game name
+
+### Changed - Staff Knowledge Page
+- **Learning Opportunities Tool** - Converted to modal popup
+  - Removed always-visible Learning Opportunities Tool section
+  - Replaced "Training Opportunities" button with "Learning Opportunities" button
+  - Clicking button now opens modal dialog with the tool
+  - Cleaner page layout, less clutter
+  - Modal uses Dialog component with max-width and scrollable content
+
+- **Knowledge Gaps Toggle** - Auto-toggle off when switching staff members
+  - When knowledge gaps filter is on, switching to different staff member now turns it off visually
+  - Prevents confusion of showing gaps for wrong person
+  - Improves UX consistency
+
+### Technical Changes
+- Added `useSearchParams` from `next/navigation` to games page
+- Added auto-open game modal logic via query parameter detection
+- Updated `app/staff/knowledge/page.tsx` - removed scroll listener, added Dialog imports
+- Updated `app/staff/dashboard/page.tsx` - responsive grid layout, updated Priority Actions link
+- Updated `app/api/staff/dashboard/recent-activity/route.ts` - query changelog table instead of multiple tables
+- Updated `app/games/page.tsx` - added `openGame` query parameter handling
+- Improved mobile touch targets and CSS classes for better mobile UX
+
 ## [1.15.2] - 2025-01-30
 
 ### Fixed

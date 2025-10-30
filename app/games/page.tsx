@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SearchBar } from '@/components/features/games/SearchBar';
 import { GameFilters } from '@/components/features/games/GameFilters';
 import { AdvancedFilters } from '@/components/features/games/AdvancedFilters';
@@ -29,6 +30,7 @@ import { trackGameViewed, trackAdvancedFiltersSelected, trackSpecialFilterCount 
 function GamesPageContent() {
   const isStaff = useStaffMode();
   const isAdmin = useAdminMode();
+  const searchParams = useSearchParams();
   const [games, setGames] = useState<BoardGame[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,6 +153,17 @@ function GamesPageContent() {
       fetchStaffKnowledge();
     }
   }, [isStaff, games]);
+
+  // Auto-open game modal from query parameter
+  useEffect(() => {
+    const openGameId = searchParams?.get('openGame');
+    if (openGameId && games.length > 0 && !selectedGame) {
+      const gameToOpen = games.find(g => g.id === openGameId);
+      if (gameToOpen) {
+        setSelectedGame(gameToOpen);
+      }
+    }
+  }, [searchParams, games, selectedGame]);
 
   // Toggle header collapse and save preference
   const toggleHeaderCollapse = () => {
