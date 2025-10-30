@@ -57,7 +57,7 @@ tmp
 
 # Exclude large data directories from Docker image
 # These should be stored on persistent volumes or uploaded separately
-data/video-game-images/
+# NOTE: data/video-game-images/ is now INCLUDED in Docker image (removed from ignore)
 data/staff-ids/
 data/images/
 

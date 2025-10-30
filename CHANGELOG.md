@@ -12,6 +12,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.5] - 2025-01-30
+
+### Fixed
+- **Staff Knowledge Filtering** - Fixed games not changing when staff filter changes (critical bug fix)
+  - **Root Cause**: Database foreign key mismatch between dropdown values and filtering logic
+  - `staff_knowledge.staff_member_id` links to `staff_list.stafflist_id` (NOT staff_id)
+  - Previous fix (v1.17.4) made dropdown use staff_id, but filtering needs stafflist_id
+  - **Solution**: API now returns BOTH IDs so dropdown can use correct ID for filtering
+
+**Changes:**
+- `lib/db/postgres.ts`: getStaffList() now returns both `staff_id` and `stafflist_id`
+- `app/games/page.tsx`: Dropdown values use `stafflistId` to match database foreign key
+- Staff filtering now correctly shows/hides games based on knowledge records
+
+**Technical Details:**
+```
+Database Schema:
+  staff_knowledge.staff_member_id → staff_list.stafflist_id ✓
+
+Previous State (v1.17.4):
+  Dropdown: staff_id values
+  Filtering: staff_member_id (contains stafflist_id)
+  Result: Never match! ✗
+
+Fixed State (v1.17.5):
+  Dropdown: stafflist_id values
+  Filtering: staff_member_id (contains stafflist_id)
+  Result: Matches correctly! ✓
+```
+
 ## [1.17.4] - 2025-01-30
 
 ### Fixed

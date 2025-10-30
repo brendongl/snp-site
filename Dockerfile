@@ -70,8 +70,12 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# NOTE: data/ and scripts/ directories are intentionally excluded from Docker image
-# - data/ directories (images, video-game-images, staff-ids) should use persistent volumes
+# Copy video game images into the container
+# These will be available at /app/data/video-game-images/switch/ in production
+# Railway will mount persistent volume at /app/data for other data (images, staff-ids)
+COPY --from=builder --chown=nextjs:nodejs /app/data/video-game-images ./data/video-game-images
+
+# NOTE: Other data/ directories (images, staff-ids) should use persistent volumes
 # - scripts/ are migration scripts not needed in production runtime
 # See .dockerignore for excluded paths
 

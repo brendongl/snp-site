@@ -52,7 +52,7 @@ function GamesPageContent() {
   const autoOpenedGameId = useRef<string | null>(null);
 
   // Staff knowledge filters (staff mode only)
-  const [staffList, setStaffList] = useState<Array<{ id: string; name: string }>>([]);
+  const [staffList, setStaffList] = useState<Array<{ id: string; stafflistId: string; name: string }>>([]);
   const [allStaffKnowledge, setAllStaffKnowledge] = useState<Array<{ staffMemberId: string; gameName: string; confidenceLevel: string }>>([]);
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');
   const [selectedKnowledgeFilter, setSelectedKnowledgeFilter] = useState<string>('all');
@@ -174,8 +174,9 @@ function GamesPageContent() {
         if (!response.ok) return;
         const data = await response.json();
         const staff = data.staff || [];
-        // API returns { id, name, type } - use these fields directly
-        setStaffList(staff.map((s: any) => ({ id: s.id, name: s.name })));
+        // API returns { id, stafflistId, name, type }
+        // id = staff_id (for display), stafflistId = for filtering (matches staff_knowledge.staff_member_id)
+        setStaffList(staff.map((s: any) => ({ id: s.id, stafflistId: s.stafflistId, name: s.name })));
       } catch (err) {
         console.error('Error fetching staff list:', err);
       }
@@ -870,18 +871,22 @@ function GamesPageContent() {
                         <SelectItem value="all">All Staff</SelectItem>
                         {(() => {
                           const currentStaffName = localStorage.getItem('staff_name');
-                          const currentStaffId = localStorage.getItem('staff_id'); // Use staff_id which matches staff_knowledge.staff_member_id
+                          const currentStaffId = localStorage.getItem('staff_id');
+                          // Find current staff's stafflistId for filtering
+                          const currentStaff = staffList.find(s => s.id === currentStaffId);
+                          const currentStafflistId = currentStaff?.stafflistId;
+
                           const otherStaff = staffList
                             .filter(s => s.id !== currentStaffId && s.name)
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>
-                              {currentStaffId && currentStaffName && (
-                                <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
+                              {currentStafflistId && currentStaffName && (
+                                <SelectItem value={currentStafflistId}>{currentStaffName} (Me)</SelectItem>
                               )}
                               {otherStaff.map(staff => (
-                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                <SelectItem key={staff.id} value={staff.stafflistId}>{staff.name}</SelectItem>
                               ))}
                             </>
                           );
