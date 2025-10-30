@@ -436,7 +436,8 @@ function GamesPageContent() {
     }
 
     // Staff Knowledge Filter (staff mode only)
-    if (isStaff && selectedKnowledgeFilter !== 'all') {
+    // Run filtering when EITHER staff member OR knowledge level is selected
+    if (isStaff && (selectedStaffFilter !== 'all' || selectedKnowledgeFilter !== 'all')) {
       console.log('🔍 STAFF FILTER DEBUG:');
       console.log('  selectedStaffFilter:', selectedStaffFilter);
       console.log('  selectedKnowledgeFilter:', selectedKnowledgeFilter);
@@ -473,9 +474,10 @@ function GamesPageContent() {
         } else if (selectedKnowledgeFilter === 'expert-instructor') {
           // Show games with Expert or Instructor knowledge
           return relevantKnowledge.some(k => k.confidenceLevel === 'Expert' || k.confidenceLevel === 'Instructor');
+        } else {
+          // knowledge level is 'all' - show games with ANY knowledge for the selected staff
+          return relevantKnowledge.length > 0;
         }
-
-        return true;
       });
     }
 
