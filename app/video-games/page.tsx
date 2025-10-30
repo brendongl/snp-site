@@ -304,7 +304,7 @@ export default function VideoGamesPage() {
           game={selectedGame}
           isOpen={!!selectedGame}
           onClose={() => setSelectedGame(null)}
-          allGames={games}
+          allGames={filteredGames}
           onSelectGame={(game) => setSelectedGame(game)}
         />
       )}

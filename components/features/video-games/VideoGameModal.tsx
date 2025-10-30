@@ -3,7 +3,7 @@
 import { VideoGame } from '@/types';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 interface VideoGameModalProps {
@@ -18,6 +18,26 @@ export default function VideoGameModal({ game, isOpen, onClose, allGames = [], o
   const router = useRouter();
 
   if (!isOpen) return null;
+
+  // Calculate current index and navigation
+  const currentIndex = useMemo(() => {
+    return allGames.findIndex(g => g.id === game.id);
+  }, [game, allGames]);
+
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex < allGames.length - 1;
+
+  const handlePrevious = () => {
+    if (canGoPrevious && onSelectGame) {
+      onSelectGame(allGames[currentIndex - 1]);
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoNext && onSelectGame) {
+      onSelectGame(allGames[currentIndex + 1]);
+    }
+  };
 
   const getRatingLabel = (rating: number | undefined) => {
     if (!rating) return null;
@@ -112,7 +132,7 @@ export default function VideoGameModal({ game, isOpen, onClose, allGames = [], o
           <X size={24} />
         </button>
 
-        {/* Large Landscape Image */}
+        {/* Large Landscape Image with Navigation */}
         <div className="relative w-full h-64 md:h-96">
           <Image
             src={game.image_landscape_url || '/placeholder-game.jpg'}
@@ -120,6 +140,26 @@ export default function VideoGameModal({ game, isOpen, onClose, allGames = [], o
             fill
             className="object-cover"
           />
+
+          {/* Navigation Buttons */}
+          {canGoPrevious && (
+            <button
+              onClick={handlePrevious}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+              aria-label="Previous game"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+          {canGoNext && (
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+              aria-label="Next game"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -144,13 +184,27 @@ export default function VideoGameModal({ game, isOpen, onClose, allGames = [], o
             {game.image_screenshot_url && (
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">In-Game Screenshot</p>
-                <div className="relative w-full h-48 md:h-64 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                <div className="relative w-full h-48 md:h-64 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
                   <Image
                     src={game.image_screenshot_url}
                     alt={`${game.name} gameplay`}
                     fill
                     className="object-cover"
+                    onError={(e) => {
+                      // Show placeholder on error
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
                   />
+                  {/* Placeholder shown if image fails to load */}
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600">
+                    <div className="text-center">
+                      <svg className="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-sm">Screenshot will be available soon</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
