@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, User, Phone, AlertTriangle, Calendar, Zap, Search } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DirectoryStats {
   totalKnowledge: number;
@@ -144,11 +145,12 @@ export default function StaffDirectoryPage() {
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-7xl">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
               <ArrowLeft className="w-4 h-4" />
               Back to Games
             </Link>
+            <StaffMenu />
           </div>
           <div>
             <h1 className="text-3xl font-bold">Staff Directory</h1>

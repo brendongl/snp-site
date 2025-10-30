@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SearchBar } from '@/components/features/games/SearchBar';
 import { GameFilters } from '@/components/features/games/GameFilters';
@@ -47,6 +47,15 @@ function GamesPageContent() {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
   const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
+
+  // Track which game ID was auto-opened from query param to prevent re-opening
+  const autoOpenedGameId = useRef<string | null>(null);
+
+  // Staff knowledge filters (staff mode only)
+  const [staffList, setStaffList] = useState<Array<{ id: string; stafflistId: string; name: string }>>([]);
+  const [allStaffKnowledge, setAllStaffKnowledge] = useState<Array<{ staffMemberId: string; gameName: string; confidenceLevel: string }>>([]);
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');
+  const [selectedKnowledgeFilter, setSelectedKnowledgeFilter] = useState<string>('all');
 
   const [filters, setFilters] = useState<FilterType>({
     search: '',
@@ -155,20 +164,88 @@ function GamesPageContent() {
     }
   }, [isStaff, games]);
 
+  // Fetch staff list for knowledge filter (staff mode only)
+  useEffect(() => {
+    if (!isStaff) return;
+
+    const fetchStaffList = async () => {
+      try {
+        const response = await fetch('/api/staff-list');
+        if (!response.ok) return;
+        const data = await response.json();
+        const staff = data.staff || [];
+        console.log('📋 STAFF LIST DEBUG:');
+        console.log('  Fetched', staff.length, 'staff members');
+        if (staff.length > 0) {
+          console.log('  Sample staff entry:', staff[0]);
+        }
+        // API returns { id, stafflistId, name, type }
+        // id = staff_id (for display), stafflistId = for filtering (matches staff_knowledge.staff_member_id)
+        const mappedStaff = staff.map((s: any) => ({ id: s.id, stafflistId: s.stafflistId, name: s.name }));
+        console.log('  Mapped staff list:', mappedStaff);
+        setStaffList(mappedStaff);
+      } catch (err) {
+        console.error('Error fetching staff list:', err);
+      }
+    };
+
+    fetchStaffList();
+  }, [isStaff]);
+
+  // Fetch all staff knowledge for filtering (staff mode only)
+  useEffect(() => {
+    if (!isStaff || games.length === 0) return;
+
+    const fetchAllKnowledge = async () => {
+      try {
+        const response = await fetch('/api/staff-knowledge');
+        if (!response.ok) return;
+        const data = await response.json();
+        const knowledge = data.knowledge || [];
+        console.log('📚 STAFF KNOWLEDGE DEBUG:');
+        console.log('  Fetched', knowledge.length, 'knowledge records');
+        if (knowledge.length > 0) {
+          console.log('  Sample knowledge entry:', knowledge[0]);
+        }
+        setAllStaffKnowledge(knowledge);
+      } catch (err) {
+        console.error('Error fetching all staff knowledge:', err);
+      }
+    };
+
+    fetchAllKnowledge();
+  }, [isStaff, games]);
+
+  // Handle knowledgeFilter query parameter from dashboard
+  useEffect(() => {
+    const knowledgeFilter = searchParams?.get('knowledgeFilter');
+    if (knowledgeFilter === 'unknown') {
+      const staffId = localStorage.getItem('staff_id');
+      if (staffId) {
+        setSelectedStaffFilter(staffId);
+        setSelectedKnowledgeFilter('none');
+      }
+    }
+  }, [searchParams]);
+
   // Auto-open game modal from query parameter
   useEffect(() => {
     const openGameId = searchParams?.get('openGame');
-    if (openGameId && games.length > 0 && !selectedGame) {
+    // Only auto-open if we haven't already opened this game ID
+    if (openGameId && games.length > 0 && autoOpenedGameId.current !== openGameId) {
       const gameToOpen = games.find(g => g.id === openGameId);
       if (gameToOpen) {
         setSelectedGame(gameToOpen);
+        autoOpenedGameId.current = openGameId;
       }
     }
-  }, [searchParams, games, selectedGame]);
+  }, [searchParams, games]);
 
   // Close modal and clear openGame query param
   const handleCloseModal = () => {
     setSelectedGame(null);
+    // Reset the auto-open tracking so the same game can be opened again later
+    autoOpenedGameId.current = null;
     // Clear openGame param if it exists
     const currentParams = new URLSearchParams(window.location.search);
     if (currentParams.has('openGame')) {
@@ -358,6 +435,52 @@ function GamesPageContent() {
       });
     }
 
+    // Staff Knowledge Filter (staff mode only)
+    // Run filtering when EITHER staff member OR knowledge level is selected
+    if (isStaff && (selectedStaffFilter !== 'all' || selectedKnowledgeFilter !== 'all')) {
+      console.log('🔍 STAFF FILTER DEBUG:');
+      console.log('  selectedStaffFilter:', selectedStaffFilter);
+      console.log('  selectedKnowledgeFilter:', selectedKnowledgeFilter);
+      console.log('  allStaffKnowledge count:', allStaffKnowledge.length);
+      if (allStaffKnowledge.length > 0) {
+        console.log('  Sample knowledge entry:', allStaffKnowledge[0]);
+      }
+
+      filtered = filtered.filter(game => {
+        const gameName = game.fields['Game Name'];
+        if (!gameName) return false;
+
+        // Get knowledge records for this game
+        const gameKnowledge = allStaffKnowledge.filter(k => k.gameName === gameName);
+
+        // If specific staff member selected, filter by that staff member
+        let relevantKnowledge = gameKnowledge;
+        if (selectedStaffFilter !== 'all') {
+          console.log(`  Filtering ${gameName}: gameKnowledge=${gameKnowledge.length}, checking staffMemberId against ${selectedStaffFilter}`);
+          if (gameKnowledge.length > 0) {
+            console.log(`    First knowledge entry staffMemberId: ${gameKnowledge[0].staffMemberId}`);
+          }
+          relevantKnowledge = gameKnowledge.filter(k => k.staffMemberId === selectedStaffFilter);
+          console.log(`    After staff filter: ${relevantKnowledge.length} relevant entries`);
+        }
+
+        // Apply knowledge level filter
+        if (selectedKnowledgeFilter === 'none') {
+          // Show games with NO knowledge records for this staff member
+          return relevantKnowledge.length === 0;
+        } else if (selectedKnowledgeFilter === 'beginner-intermediate') {
+          // Show games with Beginner or Intermediate knowledge
+          return relevantKnowledge.some(k => k.confidenceLevel === 'Beginner' || k.confidenceLevel === 'Intermediate');
+        } else if (selectedKnowledgeFilter === 'expert-instructor') {
+          // Show games with Expert or Instructor knowledge
+          return relevantKnowledge.some(k => k.confidenceLevel === 'Expert' || k.confidenceLevel === 'Instructor');
+        } else {
+          // knowledge level is 'all' - show games with ANY knowledge for the selected staff
+          return relevantKnowledge.length > 0;
+        }
+      });
+    }
+
     // Sorting - use staff sort if set, otherwise regular sort
     const activeSortOption = staffSortOption || sortOption;
 
@@ -395,7 +518,7 @@ function GamesPageContent() {
     });
 
     return filtered;
-  }, [games, filters, sortOption, staffSortOption]);
+  }, [games, filters, sortOption, staffSortOption, selectedStaffFilter, selectedKnowledgeFilter, allStaffKnowledge, isStaff]);
 
   // Calculate active filter count
   const activeFiltersCount = useMemo(() => {
@@ -720,14 +843,21 @@ function GamesPageContent() {
                   <span className="sm:hidden">Random</span>
                 </Button>
 
+                {/* Combined Sort Dropdown */}
                 <Select
-                  value={sortOption}
+                  value={staffSortOption || sortOption}
                   onValueChange={(value: SortOption) => {
-                    setSortOption(value);
-                    setStaffSortOption(null); // Clear staff sort when regular sort is changed
+                    // Check if it's a staff-only sort option
+                    if (['lastChecked', 'lastCheckedDesc', 'totalChecks', 'totalChecksDesc'].includes(value)) {
+                      setStaffSortOption(value);
+                      setSortOption('dateAcquired'); // Reset regular sort to default
+                    } else {
+                      setSortOption(value);
+                      setStaffSortOption(null); // Clear staff sort
+                    }
                   }}
                 >
-                  <SelectTrigger className="w-[130px] sm:w-[180px]">
+                  <SelectTrigger className="w-[180px] sm:w-[220px]">
                     <SelectValue placeholder="Sort by..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -737,31 +867,75 @@ function GamesPageContent() {
                     <SelectItem value="year">Year Released</SelectItem>
                     <SelectItem value="maxPlayers">Max Players</SelectItem>
                     <SelectItem value="complexity">Complexity</SelectItem>
+                    {isStaff && (
+                      <>
+                        <div className="h-px bg-border my-1" />
+                        <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
+                        <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
+                        <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
+                        <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
 
                 {isStaff && (
-                  <Select
-                    value={staffSortOption || 'none'}
-                    onValueChange={(value: string) => {
-                      if (value === 'none') {
-                        setStaffSortOption(null);
-                      } else {
-                        setStaffSortOption(value as SortOption);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px] sm:w-[240px]">
-                      <SelectValue placeholder="Sort by Checks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sort by Checks</SelectItem>
-                      <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
-                      <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
-                      <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
-                      <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <>
+                    {/* Visual separator and label for Staff Knowledge Filters */}
+                    <div className="h-6 w-px bg-border mx-2" />
+                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                      Staff Knowledge:
+                    </span>
+
+                    <Select
+                      value={selectedStaffFilter}
+                      onValueChange={(value: string) => setSelectedStaffFilter(value)}
+                    >
+                      <SelectTrigger className="w-[140px] sm:w-[180px]">
+                        <SelectValue placeholder="All Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Staff</SelectItem>
+                        {(() => {
+                          const currentStaffName = localStorage.getItem('staff_name');
+                          const currentStaffId = localStorage.getItem('staff_id');
+                          // Find current staff's stafflistId for filtering
+                          const currentStaff = staffList.find(s => s.id === currentStaffId);
+                          const currentStafflistId = currentStaff?.stafflistId;
+
+                          const otherStaff = staffList
+                            .filter(s => s.id !== currentStaffId && s.name)
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                          return (
+                            <>
+                              {currentStafflistId && currentStaffName && (
+                                <SelectItem value={currentStafflistId}>{currentStaffName} (Me)</SelectItem>
+                              )}
+                              {otherStaff.map(staff => (
+                                <SelectItem key={staff.id} value={staff.stafflistId}>{staff.name}</SelectItem>
+                              ))}
+                            </>
+                          );
+                        })()}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={selectedKnowledgeFilter}
+                      onValueChange={(value: string) => setSelectedKnowledgeFilter(value)}
+                    >
+                      <SelectTrigger className="w-[160px] sm:w-[200px]">
+                        <SelectValue placeholder="All Levels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Levels</SelectItem>
+                        <SelectItem value="none">No Knowledge Records</SelectItem>
+                        <SelectItem value="beginner-intermediate">Beginner + Intermediate</SelectItem>
+                        <SelectItem value="expert-instructor">Expert + Instructor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
                 )}
               </div>
             </div>

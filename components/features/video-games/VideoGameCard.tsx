@@ -6,11 +6,15 @@ import Image from 'next/image';
 interface VideoGameCardProps {
   game: VideoGame;
   onClick: () => void;
-  viewMode?: 'grid' | 'list' | 'icon';
+  viewMode?: 'grid' | 'list' | 'icon' | 'screenshot';
 }
 
 export default function VideoGameCard({ game, onClick, viewMode = 'grid' }: VideoGameCardProps) {
-  const imageUrl = viewMode === 'icon' ? game.image_portrait_url : game.image_landscape_url;
+  const imageUrl = viewMode === 'icon'
+    ? game.image_portrait_url
+    : viewMode === 'screenshot'
+      ? game.image_screenshot_url
+      : game.image_landscape_url;
   const hasImage = imageUrl && imageUrl !== '/placeholder-game.jpg';
 
   // Map age rating to ESRB label

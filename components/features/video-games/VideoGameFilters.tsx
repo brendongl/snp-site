@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, ChevronUp, X, MapPin } from 'lucide-react';
 
 interface VideoGameFiltersProps {
   onFilterChange: (filters: {
@@ -9,6 +9,7 @@ interface VideoGameFiltersProps {
     category: string[];
     ageRating: number[];
     playerCount: number[];
+    quickFilter: '4-player' | '8-player' | null;
   }) => void;
   availableLocations: string[];
   availableCategories: string[];
@@ -36,10 +37,21 @@ export default function VideoGameFilters({
   availableCategories,
 }: VideoGameFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAgeRatings, setSelectedAgeRatings] = useState<number[]>([]);
   const [selectedPlayerCounts, setSelectedPlayerCounts] = useState<number[]>([]);
+  const [quickFilter, setQuickFilter] = useState<'4-player' | '8-player' | null>(null);
+
+  // Filter out non-English genres
+  const englishCategories = useMemo(() => {
+    return availableCategories.filter(category => {
+      // Filter out non-Latin characters (non-English genres)
+      const hasNonLatinChars = /[^\x00-\x7F]/.test(category);
+      return !hasNonLatinChars;
+    });
+  }, [availableCategories]);
 
   const handleLocationToggle = (location: string) => {
     const updated = selectedLocations.includes(location)
@@ -47,7 +59,7 @@ export default function VideoGameFilters({
       : [...selectedLocations, location];
 
     setSelectedLocations(updated);
-    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts });
+    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter });
   };
 
   const handleCategoryToggle = (category: string) => {
@@ -56,7 +68,7 @@ export default function VideoGameFilters({
       : [...selectedCategories, category];
 
     setSelectedCategories(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts });
+    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter });
   };
 
   const handleAgeRatingToggle = (rating: number) => {
@@ -65,7 +77,7 @@ export default function VideoGameFilters({
       : [...selectedAgeRatings, rating];
 
     setSelectedAgeRatings(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated, playerCount: selectedPlayerCounts });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated, playerCount: selectedPlayerCounts, quickFilter });
   };
 
   const handlePlayerCountToggle = (count: number) => {
@@ -74,7 +86,13 @@ export default function VideoGameFilters({
       : [...selectedPlayerCounts, count];
 
     setSelectedPlayerCounts(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: updated });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: updated, quickFilter });
+  };
+
+  const handleQuickFilterToggle = (filter: '4-player' | '8-player') => {
+    const newQuickFilter = quickFilter === filter ? null : filter;
+    setQuickFilter(newQuickFilter);
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter: newQuickFilter });
   };
 
   const handleClearFilters = () => {
@@ -82,41 +100,73 @@ export default function VideoGameFilters({
     setSelectedCategories([]);
     setSelectedAgeRatings([]);
     setSelectedPlayerCounts([]);
-    onFilterChange({ locatedOn: [], category: [], ageRating: [], playerCount: [] });
+    setQuickFilter(null);
+    onFilterChange({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null });
   };
 
-  const hasActiveFilters = selectedLocations.length > 0 || selectedCategories.length > 0 || selectedAgeRatings.length > 0 || selectedPlayerCounts.length > 0;
+  const hasActiveFilters = selectedLocations.length > 0 || selectedCategories.length > 0 || selectedAgeRatings.length > 0 || selectedPlayerCounts.length > 0 || quickFilter !== null;
 
   return (
-    <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      {/* Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Filters</span>
-          {hasActiveFilters && (
-            <span className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full">
-              {selectedLocations.length + selectedCategories.length + selectedAgeRatings.length + selectedPlayerCounts.length}
-            </span>
-          )}
-        </div>
-        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
+    <div className="mb-6 space-y-3">
+      {/* Quick Filter Buttons - 4 Player & 8 Player */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => handleQuickFilterToggle('4-player')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            quickFilter === '4-player'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          🎮 Up to 4 Players
+        </button>
+        <button
+          onClick={() => handleQuickFilterToggle('8-player')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            quickFilter === '8-player'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
+        >
+          🎮 Up to 8 Players
+        </button>
 
-      {/* Filter Content */}
-      {isExpanded && (
-        <div className="p-4 space-y-6">
-          {/* Console Location Filter */}
-          {availableLocations.length > 0 && (
-            <div>
-              <label className="block text-sm font-semibold mb-3">Console Location</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {/* Console Location Popup Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowLocationPopup(!showLocationPopup)}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
+              selectedLocations.length > 0
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            <MapPin size={16} />
+            Console Location
+            {selectedLocations.length > 0 && (
+              <span className="px-2 py-0.5 text-xs bg-white/20 rounded-full">
+                {selectedLocations.length}
+              </span>
+            )}
+          </button>
+
+          {/* Location Popup */}
+          {showLocationPopup && (
+            <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-10 min-w-[250px]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-semibold">Select Console</span>
+                <button
+                  onClick={() => setShowLocationPopup(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {availableLocations.map((location) => (
                   <label
                     key={location}
-                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                    className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -130,13 +180,36 @@ export default function VideoGameFilters({
               </div>
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Genre Filter */}
-          {availableCategories.length > 0 && (
+      {/* Advanced Filters Section */}
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        {/* Header */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Advanced Filters</span>
+            {hasActiveFilters && (
+              <span className="px-2 py-1 text-xs bg-blue-600 text-white rounded-full">
+                {selectedLocations.length + selectedCategories.length + selectedAgeRatings.length + selectedPlayerCounts.length + (quickFilter ? 1 : 0)}
+              </span>
+            )}
+          </div>
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+
+      {/* Filter Content */}
+      {isExpanded && (
+        <div className="p-4 space-y-6">
+          {/* Genre Filter - English only */}
+          {englishCategories.length > 0 && (
             <div>
               <label className="block text-sm font-semibold mb-3">Genre</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                {availableCategories.map((category) => (
+                {englishCategories.map((category) => (
                   <label
                     key={category}
                     className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
@@ -153,6 +226,27 @@ export default function VideoGameFilters({
               </div>
             </div>
           )}
+
+          {/* Player Count Filter */}
+          <div>
+            <label className="block text-sm font-semibold mb-3">Number of Players</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {PLAYER_COUNTS.map((playerCount) => (
+                <label
+                  key={playerCount.value}
+                  className="flex items-center gap-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPlayerCounts.includes(playerCount.value)}
+                    onChange={() => handlePlayerCountToggle(playerCount.value)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{playerCount.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
           {/* Age Rating Filter */}
           <div>
@@ -195,6 +289,7 @@ export default function VideoGameFilters({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

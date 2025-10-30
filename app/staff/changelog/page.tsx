@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3, Info } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData, AnalyticsInsights } from '@/types';
 import {
   Chart as ChartJS,
@@ -361,9 +362,7 @@ export default function ChangelogPage() {
                 Changelog
               </h1>
             </div>
-            <div className="text-sm text-gray-500">
-              Admin: {staffName}
-            </div>
+            <StaffMenu />
           </div>
         </div>
       </div>

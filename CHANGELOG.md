@@ -12,6 +12,171 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.5] - 2025-01-30
+
+### Fixed
+- **Staff Knowledge Filtering** - Fixed games not changing when staff filter changes (critical bug fix)
+  - **Root Cause**: Database foreign key mismatch between dropdown values and filtering logic
+  - `staff_knowledge.staff_member_id` links to `staff_list.stafflist_id` (NOT staff_id)
+  - Previous fix (v1.17.4) made dropdown use staff_id, but filtering needs stafflist_id
+  - **Solution**: API now returns BOTH IDs so dropdown can use correct ID for filtering
+
+**Changes:**
+- `lib/db/postgres.ts`: getStaffList() now returns both `staff_id` and `stafflist_id`
+- `app/games/page.tsx`: Dropdown values use `stafflistId` to match database foreign key
+- Staff filtering now correctly shows/hides games based on knowledge records
+
+**Technical Details:**
+```
+Database Schema:
+  staff_knowledge.staff_member_id → staff_list.stafflist_id ✓
+
+Previous State (v1.17.4):
+  Dropdown: staff_id values
+  Filtering: staff_member_id (contains stafflist_id)
+  Result: Never match! ✗
+
+Fixed State (v1.17.5):
+  Dropdown: stafflist_id values
+  Filtering: staff_member_id (contains stafflist_id)
+  Result: Matches correctly! ✓
+```
+
+## [1.17.4] - 2025-01-30
+
+### Fixed
+- **Staff Dropdown Filter** - ACTUALLY fixed staff dropdown only showing one name (critical bug fix)
+  - **Root Cause**: Line 177 in app/games/page.tsx was accessing wrong API response fields
+  - Was trying to access `s.stafflist_id` and `s.staff_name` which don't exist in API response
+  - API returns `{ id, name, type }` but code was mapping from old Airtable structure
+  - Changed to correctly access `s.id` and `s.name` from the API response
+  - Staff dropdown now shows all staff members correctly
+
+**Technical Details:**
+- API `/api/staff-list` returns: `{ staff: [{ id, name, type }] }`
+- Previous fix (v1.17.3) corrected the database layer (postgres.ts) ✓
+- This fix corrects the frontend mapping layer (games/page.tsx) ✓
+- The bug was a two-layer issue requiring fixes at both levels
+
+## [1.17.3] - 2025-01-30
+
+### Fixed
+- **Staff Dropdown Filter** - Fixed staff dropdown only showing one name
+  - Changed `getStaffList()` to return `staff_id` instead of `stafflist_id` (lib/db/postgres.ts:131)
+  - Changed games page to use `staff_id` from localStorage instead of `staff_record_id` (app/games/page.tsx:872)
+  - Staff dropdown now correctly shows all staff members because it matches `staff_knowledge.staff_member_id` foreign key
+  - Resolved confusion between two ID columns: `staff_id` (for staff_knowledge) vs `stafflist_id` (for play logs)
+
+- **Navigation** - Added hamburger menu to all remaining staff pages
+  - Added StaffMenu component to 5 pages: add-knowledge, profile, directory, check-history, dashboard
+  - All 8 staff pages now have consistent navigation with hamburger menu
+  - Staff Dashboard redesigned with proper header matching other staff pages
+
+## [1.17.2] - 2025-01-30
+
+### Fixed
+- **Staff Knowledge Filter** - Fixed staff dropdown only showing current user
+  - Changed from `staff_id` (Airtable ID) to `staff_record_id` (PostgreSQL ID) for correct comparison
+  - Staff dropdown now properly shows all staff members with current user labeled "(Me)"
+  - Fixed knowledge level filtering to work correctly with staff selection
+
+- **Edit Button Mobile Clickability** - Fixed edit buttons not clickable on mobile when scrolling
+  - Positioned second sticky header at `top-[52px]` instead of `top-0` to stack properly below first header
+  - Added padding to main content area to prevent cards from scrolling under sticky headers
+  - Edit and delete buttons now remain clickable throughout scrolling
+
+- **Modal Close Behavior** - Fixed requiring double-click to close game modal from Priority Actions
+  - Removed `selectedGame` from useEffect dependencies to prevent race condition
+  - Modal now closes on first click without re-opening
+  - URL parameter cleanup no longer triggers modal re-open
+
+- **Navigation** - Added hamburger menu to Play Logs page
+  - Imported and added StaffMenu component to `/staff/play-logs` page
+  - Consistent navigation across all staff pages now complete
+
+- **iOS Tick Overlay** - Fixed knowledge badge not appearing on iOS devices
+  - Changed SVG attributes from React camelCase (`fillRule`, `clipRule`) to hyphenated (`fill-rule`, `clip-rule`)
+  - Added explicit xmlns attribute to SVG elements
+  - Added webkit transform (`translateZ(0)`) to trigger hardware acceleration on iOS
+  - Green tick (Expert/Instructor) and yellow tick (Beginner/Intermediate) now render correctly on iOS Safari
+
+## [1.17.1] - 2025-01-30
+
+### Fixed
+- **Recent Activity Display** - Fixed bulk knowledge entries showing "1 game" instead of actual game name
+  - Modified condition to only use bulk format when game count > 1
+  - Single-game entries now properly display game name from description field
+
+- **URL Parameters** - Removed unnecessary `?staff=true` parameter from links
+  - Cleaned up "Games I don't know" link in staff dashboard
+  - Cleaned up "Check Now" links in Priority Actions
+
+- **Knowledge Filter UX** - Redesigned filter UI for better clarity
+  - Merged regular sort and staff sort into one combined dropdown (mutually exclusive)
+  - Added visual separator (|) and "Staff Knowledge:" label before knowledge filters
+  - Made it clear which controls work together and which are mutually exclusive
+  - Staff can now only select one sort option at a time
+
+- **Navigation** - Added hamburger menu (StaffMenu) to missing pages
+  - Added to `/staff/changelog` page
+  - Added to `/staff/knowledge` page
+  - Consistent navigation across all staff pages
+
+- **Edit Button Visibility** - Fixed edit buttons scrolling under sticky headers on mobile
+  - Increased sticky header z-indexes: back button to `z-[100]`, filters to `z-[90]`
+  - Edit buttons no longer poke through or blend into headers when scrolling
+
+- **Modal Close Behavior** - Fixed double-click required to close game modal
+  - Added ref tracking to prevent modal from re-opening after close
+  - Game modal now closes properly on first click when opened from Priority Actions
+
+## [1.17.0] - 2025-01-30
+
+### Added
+- **Staff Knowledge Filters in Gallery** - New filtering system for staff expertise levels
+  - Two dropdown selectors: Staff selector (All Staff, current user, other staff alphabetically)
+  - Knowledge level selector: All levels, No knowledge records, Beginner + Intermediate, Expert + Instructor
+  - Filters work in combination to show games matching criteria
+  - Handles `knowledgeFilter=unknown` query parameter from dashboard "Games I don't know" link
+  - Mobile-first responsive design
+  - Only visible in staff mode (`?staff=true`)
+
+- **Mark Found Button Functionality** - Content check history now allows marking missing pieces as found
+  - "Mark Found" button in Missing Pieces Inventory now functional
+  - Fetches previous content check details via new GET endpoint
+  - Creates new content check with same details + "- Found!" appended to missing pieces
+  - Pre-fills all fields from last check (status, box condition, card condition, notes, etc.)
+  - Shows loading state while processing ("Marking...")
+  - Displays success/error toast notifications
+  - Refreshes missing pieces list after marking found
+  - "View Game" button now correctly opens game modal
+
+### Fixed
+- **Toast Notification Visibility** - Toasts now appear above modals
+  - Increased z-index from `z-50` to `z-[9999]`
+  - Ensures toast notifications are always visible, even when modal is open
+  - Fixes issue where content check success toasts appeared behind game modal
+
+- **Staff Selector Crash Fix** - Fixed "can't access property 'localeCompare'" error (HOTFIX)
+  - Added null/undefined check for staff names before sorting
+  - Filters out staff members without names from dropdown
+  - Safe sort with empty string fallback: `(a.name || '').localeCompare(b.name || '')`
+
+### Changed
+- **API Endpoints**
+  - Added GET method to `/api/content-checks/[id]` to fetch single content check by ID
+  - Returns check details including all fields for cloning functionality
+
+### Technical
+- Added `useToast` hook to MissingPiecesInventory component
+- Added `markingFound` state for loading indication
+- Added `handleMarkFound` async function to clone content checks
+- Added staff knowledge data fetching in games page
+- Added filtering logic in `filteredAndSortedGames` useMemo
+- Added two Select dropdowns to games page header (staff mode only)
+- Updated toast-container z-index for proper layering
+- Added GET handler to content-checks/[id] route
+
 ## [1.16.0] - 2025-01-30
 
 ### Added

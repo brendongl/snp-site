@@ -1,8 +1,75 @@
 # iPOS (Fabi POS) API Endpoints Reference
 
-**Last Updated:** October 26, 2025
+**Last Updated:** October 30, 2025
 **Base URL:** `https://fabi.ipos.vn/api`
 **Authentication:** Bearer Token (JWT)
+
+---
+
+## ⚠️ CRITICAL FINDING: APIs DO NOT WORK
+
+**Date Tested:** October 30, 2025
+
+After extensive testing using multiple authentication methods, **all documented API endpoints return HTML instead of JSON**, making them unusable for programmatic access.
+
+### What Was Tested
+✅ Valid JWT token from localStorage
+✅ All browser cookies and session data
+✅ Authenticated browser context (Playwright)
+✅ Multiple endpoint variations
+❌ **ALL endpoints return `200 OK` with HTML (login page)**
+
+### Endpoints That Don't Work
+```
+❌ /api/v3/pos-cms/sale-tracking?date=YYYY-MM-DD
+❌ /api/v1/reports/sale-summary/overview?from_date=X&to_date=Y
+❌ /api/pos/v1/reports/sale-summary/overview?from_date=X&to_date=Y
+❌ /api/pos/v1/reports/overview?from_date=X&to_date=Y
+❌ /api/pos-cms/v1/dashboard?date=YYYY-MM-DD
+```
+
+Even when called FROM WITHIN an authenticated browser session with a valid token, these endpoints return the HTML login page.
+
+### How Dashboard Actually Loads Data
+
+The dashboard (`https://fabi.ipos.vn/dashboard`) uses **server-side rendering**. The financial data is embedded in the initial HTML response, not fetched via API calls.
+
+### Working Solution: HTML Scraping
+
+Since APIs don't work, you MUST:
+
+1. **Login via browser automation** (Playwright/Puppeteer)
+   - URL: `https://fabi.ipos.vn/login`
+   - Email field: `input[name="email_input"]`
+   - Password field: `input[type="password"]`
+   - Submit: `button:has-text("Đăng nhập")`
+
+2. **Navigate to dashboard**: `https://fabi.ipos.vn/dashboard`
+
+3. **Extract data from HTML**:
+   - **Paid Amount (Revenue)**: Pattern `/(\d{1,3}(?:,\d{3})*)\s*₫/` in "Doanh thu (NET)" section
+   - **Unpaid Amount**: Pattern `/Tổng tiền chưa thanh toán\s+([\d,]+)/`
+   - **Tables**: Pattern `/Có\s+(\d+)\s+bàn\s+\/\s+(\d+)\s+bàn/`
+   - **Customers**: Pattern `/Tổng:\s+(\d+)\s+khách/`
+
+### Example Implementation
+
+See `lib/services/ipos-playwright-service.ts` for a working implementation using Playwright to:
+- Log in with credentials from environment variables
+- Extract dashboard data
+- Cache results for 5 minutes
+
+**Environment Variables Required**:
+```bash
+IPOS_EMAIL=sipnplay@ipos.vn
+IPOS_PASSWORD=your_password_here
+```
+
+---
+
+## Original API Documentation (Non-Functional)
+
+⚠️ The following documentation describes endpoints that **do not work**. It is preserved for reference only.
 
 ---
 

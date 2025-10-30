@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Content check ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the content check from PostgreSQL
+    const db = DatabaseService.initialize();
+    const check = await db.contentChecks.getCheckById(id);
+
+    if (!check) {
+      return NextResponse.json(
+        { error: 'Content check not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      check,
+    });
+  } catch (error) {
+    console.error('Error fetching content check:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch content check' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
