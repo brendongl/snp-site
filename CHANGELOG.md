@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.17.3] - 2025-01-30
+
+### Fixed
+- **Staff Dropdown Filter** - Fixed staff dropdown only showing one name
+  - Changed `getStaffList()` to return `staff_id` instead of `stafflist_id` (lib/db/postgres.ts:131)
+  - Changed games page to use `staff_id` from localStorage instead of `staff_record_id` (app/games/page.tsx:872)
+  - Staff dropdown now correctly shows all staff members because it matches `staff_knowledge.staff_member_id` foreign key
+  - Resolved confusion between two ID columns: `staff_id` (for staff_knowledge) vs `stafflist_id` (for play logs)
+
+- **Navigation** - Added hamburger menu to all remaining staff pages
+  - Added StaffMenu component to 5 pages: add-knowledge, profile, directory, check-history, dashboard
+  - All 8 staff pages now have consistent navigation with hamburger menu
+  - Staff Dashboard redesigned with proper header matching other staff pages
+
 ## [1.17.2] - 2025-01-30
 
 ### Fixed

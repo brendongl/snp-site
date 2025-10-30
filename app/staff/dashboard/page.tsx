@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft } from 'lucide-react';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DashboardStats {
   gamesNeedingCheck: number;
@@ -87,23 +88,48 @@ export default function StaffDashboard() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Staff Dashboard</h1>
-        <div className="space-y-8 animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
-            ))}
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-card">
+          <div className="container mx-auto px-4 py-6 max-w-6xl">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Games
+              </Link>
+              <StaffMenu />
+            </div>
+            <h1 className="text-3xl font-bold">Staff Dashboard</h1>
           </div>
-          <div className="h-64 bg-gray-200 rounded-lg"></div>
+        </div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-8 animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
+              ))}
+            </div>
+            <div className="h-64 bg-gray-200 rounded-lg"></div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Games
+            </Link>
+            <StaffMenu />
+          </div>
+          <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+        </div>
+      </div>
+      <div className="container mx-auto px-4 py-8 space-y-8">
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
@@ -199,6 +225,7 @@ export default function StaffDashboard() {
           )}
         </div>
       </Card>
+      </div>
     </div>
   );
 }

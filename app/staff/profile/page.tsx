@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileForm } from '@/components/features/staff/ProfileForm';
 import { ActivityLog } from '@/components/features/staff/ActivityLog';
 import { KnowledgeStats } from '@/components/features/staff/KnowledgeStats';
+import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface StaffMember {
   staffId: string;
@@ -182,11 +183,12 @@ export default function StaffProfilePage() {
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <Link href="/games" className="inline-flex items-center gap-2 text-primary hover:text-primary/80">
               <ArrowLeft className="w-4 h-4" />
               Back to Games
             </Link>
+            <StaffMenu />
           </div>
           <div>
             <h1 className="text-3xl font-bold">My Profile</h1>

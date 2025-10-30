@@ -128,11 +128,11 @@ export async function getStaffList(): Promise<Array<{ id: string; name: string; 
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT stafflist_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
+      `SELECT staff_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
     );
 
     return result.rows.map(row => ({
-      id: row.stafflist_id, // Use stafflist_id (primary key used in changelog) not staff_id (Airtable ID)
+      id: row.staff_id, // Use staff_id - this is what staff_knowledge.staff_member_id links to
       name: row.staff_name,
       type: row.staff_type || 'Staff',
     }));

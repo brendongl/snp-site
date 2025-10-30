@@ -869,15 +869,15 @@ function GamesPageContent() {
                         <SelectItem value="all">All Staff</SelectItem>
                         {(() => {
                           const currentStaffName = localStorage.getItem('staff_name');
-                          const currentStaffRecordId = localStorage.getItem('staff_record_id'); // Use staff_record_id which matches stafflist_id
+                          const currentStaffId = localStorage.getItem('staff_id'); // Use staff_id which matches staff_knowledge.staff_member_id
                           const otherStaff = staffList
-                            .filter(s => s.id !== currentStaffRecordId && s.name)
+                            .filter(s => s.id !== currentStaffId && s.name)
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>
-                              {currentStaffRecordId && currentStaffName && (
-                                <SelectItem value={currentStaffRecordId}>{currentStaffName} (Me)</SelectItem>
+                              {currentStaffId && currentStaffName && (
+                                <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
                               )}
                               {otherStaff.map(staff => (
                                 <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
