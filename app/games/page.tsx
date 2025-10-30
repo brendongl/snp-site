@@ -174,9 +174,16 @@ function GamesPageContent() {
         if (!response.ok) return;
         const data = await response.json();
         const staff = data.staff || [];
+        console.log('📋 STAFF LIST DEBUG:');
+        console.log('  Fetched', staff.length, 'staff members');
+        if (staff.length > 0) {
+          console.log('  Sample staff entry:', staff[0]);
+        }
         // API returns { id, stafflistId, name, type }
         // id = staff_id (for display), stafflistId = for filtering (matches staff_knowledge.staff_member_id)
-        setStaffList(staff.map((s: any) => ({ id: s.id, stafflistId: s.stafflistId, name: s.name })));
+        const mappedStaff = staff.map((s: any) => ({ id: s.id, stafflistId: s.stafflistId, name: s.name }));
+        console.log('  Mapped staff list:', mappedStaff);
+        setStaffList(mappedStaff);
       } catch (err) {
         console.error('Error fetching staff list:', err);
       }
@@ -195,6 +202,11 @@ function GamesPageContent() {
         if (!response.ok) return;
         const data = await response.json();
         const knowledge = data.knowledge || [];
+        console.log('📚 STAFF KNOWLEDGE DEBUG:');
+        console.log('  Fetched', knowledge.length, 'knowledge records');
+        if (knowledge.length > 0) {
+          console.log('  Sample knowledge entry:', knowledge[0]);
+        }
         setAllStaffKnowledge(knowledge);
       } catch (err) {
         console.error('Error fetching all staff knowledge:', err);
@@ -425,6 +437,14 @@ function GamesPageContent() {
 
     // Staff Knowledge Filter (staff mode only)
     if (isStaff && selectedKnowledgeFilter !== 'all') {
+      console.log('🔍 STAFF FILTER DEBUG:');
+      console.log('  selectedStaffFilter:', selectedStaffFilter);
+      console.log('  selectedKnowledgeFilter:', selectedKnowledgeFilter);
+      console.log('  allStaffKnowledge count:', allStaffKnowledge.length);
+      if (allStaffKnowledge.length > 0) {
+        console.log('  Sample knowledge entry:', allStaffKnowledge[0]);
+      }
+
       filtered = filtered.filter(game => {
         const gameName = game.fields['Game Name'];
         if (!gameName) return false;
@@ -435,7 +455,12 @@ function GamesPageContent() {
         // If specific staff member selected, filter by that staff member
         let relevantKnowledge = gameKnowledge;
         if (selectedStaffFilter !== 'all') {
+          console.log(`  Filtering ${gameName}: gameKnowledge=${gameKnowledge.length}, checking staffMemberId against ${selectedStaffFilter}`);
+          if (gameKnowledge.length > 0) {
+            console.log(`    First knowledge entry staffMemberId: ${gameKnowledge[0].staffMemberId}`);
+          }
           relevantKnowledge = gameKnowledge.filter(k => k.staffMemberId === selectedStaffFilter);
+          console.log(`    After staff filter: ${relevantKnowledge.length} relevant entries`);
         }
 
         // Apply knowledge level filter
