@@ -12,6 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.15.0] - 2025-01-30
+
+### Changed
+- **Docker Image Optimization** - Reduced Docker image size by ~1.8GB
+  - Excluded `data/video-game-images/` (1.6GB) from Docker build
+  - Excluded `data/staff-ids/` (60MB) - sensitive data should never be in images
+  - Excluded `data/images/` (101MB) - images fetched on-demand and cached on volume
+  - Excluded `scripts/` directory - migration scripts not needed in production
+  - Excluded `.worktrees/` - git worktrees are development artifacts
+  - Updated docker-entrypoint.sh to handle missing seed data gracefully
+  - Images now fetched from Airtable/API and cached on persistent volume
+
+- **Documentation Cleanup** - Removed obsolete and redundant documentation
+  - Deleted 6 implemented feature docs (board-games-catalog, caching-system, content-checker, staff-mode, IMAGE_CACHING, DISCORD_NOTIFICATIONS)
+  - Deleted 6 plan documents from docs/plans/ (features fully implemented)
+  - Deleted 10 temporary files (bug reports, sync reports, progress tracking, logs)
+  - Retained only essential infrastructure docs (13 files in docs/)
+  - Reduced documentation maintenance burden
+
+### Technical
+- Updated `.dockerignore` to exclude large data directories and development artifacts
+- Modified Dockerfile to remove data-seed and scripts copying
+- Simplified docker-entrypoint.sh for optimized image without bundled data
+- Docker image now contains only runtime essentials (app code + node_modules)
+- All images and data managed via persistent volumes or on-demand caching
+
+### Benefits
+- **90% smaller Docker image** - Faster builds and deployments
+- **Better security** - No sensitive data (staff IDs) in container images
+- **Cleaner documentation** - Only current, relevant docs remain
+- **Lower bandwidth** - Smaller image pushes to Registry
+- **Faster cold starts** - Less to download and extract
+
 ## [1.14.2] - 2025-01-29
 
 ### Fixed

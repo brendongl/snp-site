@@ -39,7 +39,12 @@ Thumbs.db
 # Misc
 *.log
 .playwright-mcp
-docs
+
+# Migration and utility scripts not needed in production
+scripts/
+
+# Documentation (keep only essential docs via specific includes in Dockerfile if needed)
+docs/
 README.md
 *.md
 !package.json
@@ -50,8 +55,11 @@ README.md
 temp
 tmp
 
-# Note: Images are now included in the Docker build to ensure they're available
-# This increases image size but ensures images work without manual upload
-# Uncomment these lines if you have a separate upload process:
-# data/video-game-images/
-# data/images/
+# Exclude large data directories from Docker image
+# These should be stored on persistent volumes or uploaded separately
+data/video-game-images/
+data/staff-ids/
+data/images/
+
+# Exclude git worktrees (duplicates main repo)
+.worktrees/

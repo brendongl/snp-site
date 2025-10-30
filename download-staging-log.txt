@@ -1,1 +1,0 @@
-/usr/bin/bash: line 1: DATABASE_URL=postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway: No such file or directory

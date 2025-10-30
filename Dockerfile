@@ -70,12 +70,10 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy data directory including video game images
-# This includes both board game images and video game images
-COPY --from=builder --chown=nextjs:nodejs /app/data ./data-seed
-
-# Copy scripts directory for admin operations (image downloads, migrations, etc.)
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+# NOTE: data/ and scripts/ directories are intentionally excluded from Docker image
+# - data/ directories (images, video-game-images, staff-ids) should use persistent volumes
+# - scripts/ are migration scripts not needed in production runtime
+# See .dockerignore for excluded paths
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

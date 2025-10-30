@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Last Updated**: October 26, 2025
-**Current Version**: 1.4.7
+**Last Updated**: January 30, 2025
+**Current Version**: 1.15.0
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
 
@@ -449,7 +449,7 @@ Request for /api/games:
 - [CLAUDE.md](CLAUDE.md) - Development workflow (this file)
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 
-### Detailed Documentation → [docs/](docs/) directory
+### Detailed Documentation → [docs/](docs/) directory (13 essential docs)
 | File | Purpose |
 |------|---------|
 | [POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) | Complete migration overview |
@@ -457,12 +457,16 @@ Request for /api/games:
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Infrastructure setup |
 | [STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) | Staging environment |
 | [RAILWAY_PERSISTENT_VOLUME_SETUP.md](docs/RAILWAY_PERSISTENT_VOLUME_SETUP.md) | Persistent volume config |
+| [RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) | Railway-specific deployment |
 | [CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md) | Changelog feature details |
-| [IPOS_API_ENDPOINTS.md](docs/IPOS_API_ENDPOINTS.md) | **iPOS/Fabi POS API reference** - Real-time data (sales, tables, customers) |
+| [IPOS_API_ENDPOINTS.md](docs/IPOS_API_ENDPOINTS.md) | iPOS/Fabi POS API reference |
 | [AIRTABLE_POSTGRES_MIGRATION.md](docs/AIRTABLE_POSTGRES_MIGRATION.md) | Migration troubleshooting |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues & fixes |
-| [DOCKER.md](docs/DOCKER.md) | Build process reference |
 | [AIRTABLE_SCHEMA.md](docs/AIRTABLE_SCHEMA.md) | Airtable schema reference |
+| [DOCKER.md](docs/DOCKER.md) | Docker build reference |
+| [GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md) | CI/CD configuration |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues & fixes |
+
+**Note**: Feature documentation (board-games-catalog, caching-system, etc.) and plan documents have been removed as features are now fully implemented and documented in code.
 
 ### Documentation Hygiene Rules
 
