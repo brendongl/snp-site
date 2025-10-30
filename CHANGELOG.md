@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **All changes (minor/major) go to `staging` first** for testing. Changes are merged to `main` only after user confirmation via "push to main".
 
+## [1.15.2] - 2025-01-30
+
+### Fixed
+- **Content Check Database Compatibility** - Fixed "check_type column does not exist" error
+  - Made all content check queries backwards compatible with old schema
+  - Added runtime column detection for `check_type` field
+  - Content checks now work on databases without the check_type column
+  - Affects: `createCheck()`, `getChecksByGameId()`, `getChecksByInspector()`, `getLatestCheckForGame()`, `getAllChecks()`
+  - Migration script available: `scripts/add-check-type-column.js`
+
+### Technical
+- Updated `lib/services/content-checks-db-service.ts` with schema detection
+- All SELECT and INSERT queries check for column existence before using it
+- Backwards compatible with v1.10.x database schema
+- No breaking changes - works with both old and new schemas
+
+### Migration (Optional)
+To add the `check_type` column to your production database:
+```bash
+node scripts/add-check-type-column.js
+```
+This is optional - the app works without it.
+
 ## [1.15.1] - 2025-01-30
 
 ### Added

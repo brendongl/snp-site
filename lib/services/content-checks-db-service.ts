@@ -72,6 +72,16 @@ class ContentChecksDbService {
    */
   async getChecksByGameId(gameId: string): Promise<any[]> {
     try {
+      // Check if check_type column exists (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      const checkTypeSelect = hasCheckType ? 'cc.check_type,' : '';
+
       const result = await this.pool.query(
         `SELECT
           cc.id,
@@ -79,7 +89,7 @@ class ContentChecksDbService {
           cc.inspector_id,
           sl.staff_name AS inspector_name,
           cc.check_date,
-          cc.check_type,
+          ${checkTypeSelect}
           cc.status,
           cc.missing_pieces,
           cc.box_condition,
@@ -113,11 +123,24 @@ class ContentChecksDbService {
    */
   async getChecksByInspector(inspectorId: string): Promise<ContentCheck[]> {
     try {
+      // Check if check_type column exists (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      const selectClause = hasCheckType
+        ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`
+        : `id, game_id, inspector_id, check_date, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`;
+
       const result = await this.pool.query(
-        `SELECT
-          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at
+        `SELECT ${selectClause}
         FROM content_checks
         WHERE inspector_id = $1
         ORDER BY check_date DESC`,
@@ -136,11 +159,24 @@ class ContentChecksDbService {
    */
   async getLatestCheckForGame(gameId: string): Promise<ContentCheck | null> {
     try {
+      // Check if check_type column exists (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      const selectClause = hasCheckType
+        ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`
+        : `id, game_id, inspector_id, check_date, status, missing_pieces,
+           box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+           photos, created_at, updated_at`;
+
       const result = await this.pool.query(
-        `SELECT
-          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at
+        `SELECT ${selectClause}
         FROM content_checks
         WHERE game_id = $1
         ORDER BY check_date DESC
@@ -175,32 +211,71 @@ class ContentChecksDbService {
       // Photos is stored as TEXT[] - pass array directly (node-postgres handles it)
       const photosValue = Array.isArray(check.photos) ? check.photos : [];
 
-      const result = await this.pool.query(
-        `INSERT INTO content_checks (
-          id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
-        RETURNING id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
-          box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-          photos, created_at, updated_at`,
-        [
-          id,
-          check.gameId,
-          check.inspectorId,
-          check.checkDate,
-          check.checkType || 'regular',
-          statusValue,
-          check.missingPieces,
-          check.boxCondition,
-          check.cardCondition,
-          check.isFake,
-          check.notes,
-          check.sleeved,
+      // Check if check_type column exists (for backwards compatibility)
+      const columnsResult = await this.pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'content_checks' AND column_name = 'check_type'
+      `);
+      const hasCheckType = columnsResult.rows.length > 0;
+
+      let result;
+      if (hasCheckType) {
+        // New schema with check_type column
+        result = await this.pool.query(
+          `INSERT INTO content_checks (
+            id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+            photos, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+          RETURNING id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
+            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+            photos, created_at, updated_at`,
+          [
+            id,
+            check.gameId,
+            check.inspectorId,
+            check.checkDate,
+            check.checkType || 'regular',
+            statusValue,
+            check.missingPieces,
+            check.boxCondition,
+            check.cardCondition,
+            check.isFake,
+            check.notes,
+            check.sleeved,
           check.boxWrapped,
           photosValue,
         ]
       );
+      } else {
+        // Old schema without check_type column (backwards compatible)
+        result = await this.pool.query(
+          `INSERT INTO content_checks (
+            id, game_id, inspector_id, check_date, status, missing_pieces,
+            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+            photos, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+          RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
+            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
+            photos, created_at, updated_at`,
+          [
+            id,
+            check.gameId,
+            check.inspectorId,
+            check.checkDate,
+            statusValue,
+            check.missingPieces,
+            check.boxCondition,
+            check.cardCondition,
+            check.isFake,
+            check.notes,
+            check.sleeved,
+            check.boxWrapped,
+            photosValue,
+          ]
+        );
+      }
 
       return this.mapRowToCheck(result.rows[0]);
     } catch (error) {
