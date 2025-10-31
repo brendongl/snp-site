@@ -30,8 +30,14 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
       echo "🔄 Syncing video game images to persistent volume..."
       mkdir -p "$DATA_PATH/video-game-images"
 
-      # Copy all images from seed to volume, preserving structure
-      cp -r "$SEED_PATH"/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
+      # Copy images from switch subdirectory directly to volume root
+      # This flattens the structure so API can find them at /video-game-images/*.jpg
+      if [ -d "$SEED_PATH/switch" ]; then
+        cp "$SEED_PATH/switch"/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
+      else
+        # Fallback: copy everything if no switch subdirectory
+        cp -r "$SEED_PATH"/* "$DATA_PATH/video-game-images/" 2>/dev/null || true
+      fi
 
       SYNCED_COUNT=$(find "$DATA_PATH/video-game-images" -type f 2>/dev/null | wc -l)
       echo "✅ Synced $SYNCED_COUNT video game images to volume"
