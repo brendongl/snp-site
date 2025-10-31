@@ -70,10 +70,10 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy video game images into the container
-# These will be available at /app/data/video-game-images/switch/ in production
-# Railway will mount persistent volume at /app/data for other data (images, staff-ids)
-COPY --from=builder --chown=nextjs:nodejs /app/data/video-game-images ./data/video-game-images
+# Copy video game images into a separate seed location (not /app/data)
+# The entrypoint will copy these to the persistent volume if needed
+# This ensures images survive volume mounts and are synced to Railway storage
+COPY --from=builder --chown=nextjs:nodejs /app/data/video-game-images ./video-game-images-seed
 
 # NOTE: Other data/ directories (images, staff-ids) should use persistent volumes
 # - scripts/ are migration scripts not needed in production runtime
