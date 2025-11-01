@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // 11. Update database with national_id_hash
     try {
-      const success = await db.staff.updateStaffProfile(staff.staffId, {
+      const success = await db.staff.updateStaffProfile(staff.id, {
         nationalIdHash: hash
       });
 
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log(`[National ID Upload] Updated staff ${staff.staffId} with hash: ${hash}`);
+      console.log(`[National ID Upload] Updated staff ${staff.id} with hash: ${hash}`);
     } catch (error) {
       console.error('[National ID Upload] Database error:', error);
       return NextResponse.json(

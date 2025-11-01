@@ -14,7 +14,7 @@ interface DirectoryStats {
 }
 
 interface DirectoryEntry {
-  staffId: string;
+  id: string;
   name: string;
   nickname: string;
   contactPh: string;
@@ -240,7 +240,7 @@ export default function StaffDirectoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAndSortedStaff.map((staff) => (
               <div
-                key={staff.staffId}
+                key={staff.id}
                 className="border border-border rounded-lg bg-white hover:shadow-md transition-shadow overflow-hidden"
               >
                 {/* Card Header */}

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     // Map to public directory format (exclude sensitive fields)
     const directory = allStaffWithStats.map((staff) => ({
-      staffId: staff.staffId,
+      id: staff.id,
       name: staff.name,
       nickname: staff.nickname || staff.name.split(' ').pop(), // Default to last name
       contactPh: staff.contactPh,

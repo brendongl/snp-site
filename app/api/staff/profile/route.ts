@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     }
 
     // Get staff stats
-    const stats = await db.staff.getStaffStats(staff.staffId);
+    const stats = await db.staff.getStaffStats(staff.id);
 
     return NextResponse.json({
       profile: staff,
@@ -106,7 +106,7 @@ export async function PATCH(request: Request) {
 
     // Update profile
     const success = await db.staff.updateStaffProfile(
-      staff.staffId,
+      staff.id,
       filteredUpdates
     );
 

@@ -58,7 +58,7 @@ export async function GET(
     // 5. Security: Check if user is authorized to view this National ID
     if (staff.nationalIdHash !== hash) {
       console.warn(
-        `[National ID Access Denied] Staff ${staff.staffId} (${staff.email}) ` +
+        `[National ID Access Denied] Staff ${staff.id} (${staff.email}) ` +
         `attempted to access hash ${hash} (their hash: ${staff.nationalIdHash})`
       );
       return NextResponse.json(
@@ -126,7 +126,7 @@ export async function GET(
     });
 
     console.log(
-      `[National ID Served] Staff ${staff.staffId} (${staff.email}) ` +
+      `[National ID Served] Staff ${staff.id} (${staff.email}) ` +
       `accessed their National ID (hash: ${hash})`
     );
 
