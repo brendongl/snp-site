@@ -232,12 +232,18 @@ interface StaffMember {
   - This is a synced table (mirrors data from Sip N Play Staff table)
   - When to use: For any Airtable linkages within SNP Games List base
 
-**Example Flow**:
+**Example Flow (LEGACY - PostgreSQL now uses single UUID)**:
 1. User signs in with email → Query **Staff table** (Sip N Play base) for authentication
 2. Get the user's Airtable record ID from **Staff table**
 3. Also fetch the same user's record ID from **StaffList table** (SNP Games List base)
-4. Store both IDs in localStorage: `staff_id` (for auth info) and `staff_record_id` (for Play Logs linking)
-5. When creating Play Log → Use `staff_record_id` (from StaffList) for the "Logged By" link
+4. ~~Store both IDs in localStorage: `staff_id` (for auth info) and `staff_record_id` (for Play Logs linking)~~ **DEPRECATED**
+5. ~~When creating Play Log → Use `staff_record_id` (from StaffList) for the "Logged By" link~~ **DEPRECATED**
+
+**CURRENT IMPLEMENTATION (v1.19.0+)**:
+- PostgreSQL uses a single UUID primary key (`id`) in the `staff_list` table
+- Only `staff_id` is stored in localStorage (contains the UUID)
+- All staff-related operations use this single UUID field
+- See [POSTGRESQL_MIGRATION_SUMMARY.md](./POSTGRESQL_MIGRATION_SUMMARY.md) for migration details
 
 ## SNP Games List Base - Play Logs Table
 

@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 **Last Updated**: January 30, 2025
-**Current Version**: 1.15.0
+**Current Version**: 1.19.0
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
 
@@ -233,6 +233,33 @@ snp-site/
 - **Integration**: Mixpanel ([lib/analytics/mixpanel.ts](lib/analytics/mixpanel.ts))
 - **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
 - **Features**: Page views, user tracking, event logging
+
+### Staff UUID Migration (v1.19.0)
+**IMPORTANT ARCHITECTURAL CHANGE**: Migrated from dual-ID system to single UUID primary key.
+
+**Before (v1.18.x and earlier)**:
+- Two separate ID fields: `staff_id` (Airtable Sip N Play) and `stafflist_id` (Airtable SNP Games List)
+- Stored both in localStorage: `staff_id` and `staff_record_id`
+- Complex ID mapping required for foreign keys
+
+**After (v1.19.0+)**:
+- Single UUID primary key: `staff_list.id` (generated via `gen_random_uuid()`)
+- Only `staff_id` in localStorage (contains UUID)
+- All foreign keys reference this single UUID
+- Simplified architecture, no ID mapping needed
+
+**Migration Script**: [scripts/migrate-staff-to-uuid.js](scripts/migrate-staff-to-uuid.js)
+- Migrated 13 staff members
+- Updated 107 content checks
+- Updated 149 play logs
+- Updated 1179 staff knowledge records
+
+**Archived Scripts**: Old diagnostic scripts moved to [scripts/archive/](scripts/archive/) directory.
+
+**Documentation Updates**:
+- [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) - Updated with UUID usage examples
+- [docs/AIRTABLE_SCHEMA.md](docs/AIRTABLE_SCHEMA.md) - Marked dual-ID flow as deprecated
+- [docs/POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) - Updated table references
 
 ---
 

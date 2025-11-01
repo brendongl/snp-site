@@ -31,7 +31,7 @@ This document tracks the migration from Airtable-first to PostgreSQL-first archi
    - Stores confidence levels (0-100), can_teach flag, notes
 
 ### Existing Tables
-- `staff_list` - Updated with `stafflist_id` column for dual-table auth
+- `staff_list` - Now uses single UUID primary key (`id`) as of v1.19.0
 - `play_log_cache` - Kept for backward compatibility during transition
 
 ## Phase 2: Migration Scripts & Service Layer ✅

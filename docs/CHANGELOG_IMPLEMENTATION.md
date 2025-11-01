@@ -35,7 +35,7 @@ CREATE TABLE changelog (
   entity_name VARCHAR(255),         -- Name/description for display
   description TEXT,                 -- Human-readable change description
   staff_member VARCHAR(255),        -- Who made the change
-  staff_id VARCHAR(255),            -- Staff record ID for filtering
+  staff_id UUID,                    -- Staff UUID for filtering (v1.19.0+)
   metadata JSONB,                   -- Additional data (e.g., old_value, new_value, photo_count)
   created_at TIMESTAMP DEFAULT NOW()
 );
