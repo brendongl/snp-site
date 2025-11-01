@@ -2,6 +2,28 @@
 
 Quick reference for using PostgreSQL database services in API endpoints and components.
 
+## ⚠️ CRITICAL: Staff ID Reference
+
+**There are TWO different ID fields for staff members. Using the wrong one will cause bugs:**
+
+| Field Name | Source Table | Used For | localStorage Key | Description |
+|------------|--------------|----------|------------------|-------------|
+| `staff_id` | `staff_list` | Display only | `staff_id` | PostgreSQL primary key (internal use) |
+| `stafflist_id` | `staff_list` | **All database operations** | `staff_record_id` | Foreign key for content_checks, staff_knowledge, play_logs |
+
+**Key Rule**: When creating/updating records, **ALWAYS use `stafflist_id` (stored as `staff_record_id` in localStorage)**.
+
+**Example**:
+```typescript
+// ❌ WRONG - This will cause inspector/staff matching issues
+const inspectorId = localStorage.getItem('staff_id'); // WRONG!
+
+// ✅ CORRECT - Use stafflist_id for all database operations
+const inspectorId = localStorage.getItem('staff_record_id'); // CORRECT!
+```
+
+**Why This Matters**: The `staff_list` table caches data from TWO Airtable bases, each with different record IDs. The `stafflist_id` is used across all relational tables.
+
 ## Initialization
 
 ### In API Routes
@@ -88,7 +110,9 @@ const gameChecks = await db.contentChecks.getChecksByGameId('recABC123');
 
 ### Get Checks by Inspector
 ```typescript
-const staffChecks = await db.contentChecks.getChecksByInspector('recStaff123');
+// Note: Use stafflist_id (NOT staff_id) for inspector lookups
+const stafflistId = localStorage.getItem('staff_record_id');
+const staffChecks = await db.contentChecks.getChecksByInspector(stafflistId);
 // Returns: ContentCheck[]
 ```
 
@@ -101,9 +125,10 @@ const latest = await db.contentChecks.getLatestCheckForGame('recABC123');
 
 ### Create Content Check
 ```typescript
+// IMPORTANT: inspectorId must be stafflist_id (from staff_record_id in localStorage)
 const check = await db.contentChecks.createCheck({
   gameId: 'recABC123',
-  inspectorId: 'recStaff123',
+  inspectorId: localStorage.getItem('staff_record_id'), // Use stafflist_id!
   checkDate: new Date().toISOString(),
   status: ['Complete', 'Good Condition'],
   missingPieces: false,
@@ -228,7 +253,7 @@ const log = await db.playLogs.getLogById('recLog123');
 ```typescript
 const log = await db.playLogs.createLog({
   gameId: 'recGame123',
-  staffListId: 'recStaffList123', // NOT recStaff123 - must use StaffList ID!
+  staffListId: localStorage.getItem('staff_record_id'), // MUST use stafflist_id (staff_record_id in localStorage)
   sessionDate: new Date().toISOString(),
   notes: 'Fun game session with 4 players',
   durationHours: 2.5,
@@ -322,7 +347,7 @@ export async function POST(request: NextRequest) {
     // Create content check
     const check = await db.contentChecks.createCheck({
       gameId: body.gameId,
-      inspectorId: body.inspectorId,
+      inspectorId: body.inspectorId, // This should be stafflist_id from client
       checkDate: new Date().toISOString(),
       status: body.status || [],
       missingPieces: body.missingPieces || false,
@@ -365,7 +390,7 @@ export async function POST(request: NextRequest) {
 
     // Get staff member's StaffList ID
     // (Must use StaffList ID from SNP Games List base, not Staff ID!)
-    const staffListId = session.staffListId; // From session after auth
+    const staffListId = session.staffListId; // This is stafflist_id from auth
 
     // Create play log
     const log = await db.playLogs.createLog({

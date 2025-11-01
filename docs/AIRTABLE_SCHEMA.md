@@ -1,6 +1,12 @@
 # Airtable Base Schema Reference
 
-This document provides a reference for the Airtable base schema for the SNP Board Games catalog.
+> **⚠️ IMPORTANT**: This is **reference documentation only**. The application now uses **PostgreSQL as the primary database**. Airtable is only used for:
+> - Staff table sync (read-only, for authentication)
+> - Backfill operations during migration
+>
+> For current implementation details, see [POSTGRESQL_MIGRATION_SUMMARY.md](./POSTGRESQL_MIGRATION_SUMMARY.md) and [DATABASE_SERVICES_USAGE.md](./DATABASE_SERVICES_USAGE.md).
+
+This document provides a reference for the original Airtable base schema that the PostgreSQL database mirrors.
 
 ## Base Information
 - **Base ID**: `apppFvSDh2JBc0qAu`

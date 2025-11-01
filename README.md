@@ -18,7 +18,7 @@ A comprehensive customer portal website for Sip n Play Cafe - a board game and v
 
 - **Framework**: Next.js 15 with TypeScript (Turbopack)
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Database**: Airtable
+- **Database**: PostgreSQL (primary) + Airtable (staff sync only)
 - **Authentication**: NextAuth.js
 - **Caching**: Multi-layer cache (file-based + browser)
 - **Hosting**: Railway
@@ -31,6 +31,7 @@ A comprehensive customer portal website for Sip n Play Cafe - a board game and v
 1. Clone the repository
 2. Copy `.env.example` to `.env.local` and fill in credentials:
    ```bash
+   DATABASE_URL=postgresql://user:pass@host:port/database
    AIRTABLE_API_KEY=key_xxxxxxxxxxxxx
    ```
 3. Install dependencies:
@@ -67,7 +68,9 @@ sipnplay-portal/
 │   ├── layout/      # Layout components
 │   └── features/    # Feature-specific components
 ├── lib/             # Utilities and services
-│   ├── airtable/    # Airtable services
+│   ├── services/    # Database service layer
+│   ├── db/          # PostgreSQL connection
+│   ├── airtable/    # Airtable sync services (legacy)
 │   ├── auth/        # Authentication configuration
 │   └── integrations/# Third-party integrations
 ├── types/           # TypeScript type definitions
@@ -79,12 +82,13 @@ sipnplay-portal/
 ## Environment Variables
 
 See `.env.example` for required environment variables. Key integrations:
-- Airtable API for database
+- PostgreSQL for primary database
+- Airtable API for staff sync
 - NextAuth for authentication
 - Discord webhooks for updates
 - Facebook Graph API for events
 - n8n for chat integration
-- Redis for caching
+- Redis for caching (optional)
 
 ## Git Workflow
 
