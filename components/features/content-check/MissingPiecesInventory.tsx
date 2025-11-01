@@ -80,7 +80,7 @@ export default function MissingPiecesInventory() {
       }
 
       // 2. Get current staff member as inspector
-      const staffRecordId = localStorage.getItem('staff_record_id');
+      const staffRecordId = localStorage.getItem('staff_id');
       if (!staffRecordId) {
         addToast('Please log in as staff to mark pieces as found', 'error');
         return;

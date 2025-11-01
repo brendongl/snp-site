@@ -349,7 +349,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
         imageFormData.append('gameId', newGameId);
 
         // Add staff info for changelog tracking
-        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffIdValue = localStorage.getItem('staff_id') || 'system';
         const staffNameValue = localStorage.getItem('staff_name') || 'System';
         imageFormData.append('staffId', staffIdValue);
         imageFormData.append('staffName', staffNameValue);
@@ -375,7 +375,7 @@ export function AddGameDialog({ open, onClose, onSuccess }: AddGameDialogProps) 
       if (useCustomImages && newGameId) {
         const validUrls = customImageUrls.filter(url => url.trim() !== '');
         if (validUrls.length > 0) {
-          const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+          const staffIdValue = localStorage.getItem('staff_id') || 'system';
           const staffNameValue = localStorage.getItem('staff_name') || 'System';
 
           const urlResponse = await fetch(`/api/games/${newGameId}/images/from-url`, {

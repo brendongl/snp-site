@@ -40,7 +40,7 @@ export async function GET(request: Request) {
         sl.staff_name AS staff_name
       FROM staff_knowledge sk
       LEFT JOIN games g ON sk.game_id = g.id
-      LEFT JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+      LEFT JOIN staff_list sl ON sk.staff_member_id = sl.id
       ORDER BY sk.created_at DESC
     `);
 
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     // Get game and staff details for changelog
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
-      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [staffRecordId]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [staffRecordId]);
 
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;
@@ -189,7 +189,7 @@ export async function DELETE(request: Request) {
         SELECT g.name as game_name, sl.staff_name, sk.staff_member_id
         FROM staff_knowledge sk
         LEFT JOIN games g ON sk.game_id = g.id
-        LEFT JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON sk.staff_member_id = sl.id
         WHERE sk.id = $1
       `, [recordId]);
 

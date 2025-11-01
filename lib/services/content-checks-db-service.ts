@@ -102,7 +102,7 @@ class ContentChecksDbService {
           cc.created_at,
           cc.updated_at
         FROM content_checks cc
-        LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON cc.inspector_id = sl.id
         WHERE cc.game_id = $1
         ORDER BY cc.check_date DESC, cc.created_at DESC`,
         [gameId]
@@ -474,7 +474,7 @@ class ContentChecksDbService {
           cc.is_fake
         FROM content_checks cc
         LEFT JOIN games g ON cc.game_id = g.id
-        LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON cc.inspector_id = sl.id
         ORDER BY cc.check_date DESC
       `);
 

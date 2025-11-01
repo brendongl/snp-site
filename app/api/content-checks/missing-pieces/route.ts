@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         sl.staff_name as inspector_name
       FROM content_checks cc
       JOIN games g ON cc.game_id = g.id
-      LEFT JOIN staff_list sl ON cc.inspector_id = sl.stafflist_id
+      LEFT JOIN staff_list sl ON cc.inspector_id = sl.id
       WHERE cc.missing_pieces IS NOT NULL
         AND cc.missing_pieces != ''
       ORDER BY cc.check_date DESC

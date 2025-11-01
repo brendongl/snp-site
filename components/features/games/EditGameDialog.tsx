@@ -202,7 +202,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         imageFormData.append('gameId', game.id);
 
         // Add staff info for changelog tracking
-        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffIdValue = localStorage.getItem('staff_id') || 'system';
         const staffNameValue = localStorage.getItem('staff_name') || 'System';
         imageFormData.append('staffId', staffIdValue);
         imageFormData.append('staffName', staffNameValue);
@@ -225,7 +225,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
       // Step 2b: Process custom image URLs
       const validUrls = customImageUrls.filter(url => url.trim() !== '');
       if (validUrls.length > 0) {
-        const staffIdValue = localStorage.getItem('staff_record_id') || 'system';
+        const staffIdValue = localStorage.getItem('staff_id') || 'system';
         const staffNameValue = localStorage.getItem('staff_name') || 'System';
 
         const urlResponse = await fetch(`/api/games/${game.id}/images/from-url`, {
@@ -263,7 +263,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             deposit: formData.deposit ? parseInt(formData.deposit) : null,
             costPrice: formData.costPrice ? parseInt(formData.costPrice) : null,
             gameSize: formData.gameSize || null,
-            staffId: localStorage.getItem('staff_record_id') || 'system',
+            staffId: localStorage.getItem('staff_id') || 'system',
             staffName: localStorage.getItem('staff_name') || 'System',
           }),
         });

@@ -11,9 +11,9 @@ export async function GET() {
     // Fetch staff from PostgreSQL
     const staff = await getStaffList();
 
-    // Map to inspectors format (id = stafflist_id, name = staff_name)
+    // Map to inspectors format (id = UUID, name = staff_name)
     const inspectors = staff.map(member => ({
-      id: member.stafflistId, // stafflist_id from PostgreSQL - matches localStorage staff_record_id
+      id: member.id, // UUID primary key from PostgreSQL
       name: member.name, // staff_name from PostgreSQL
     }));
 

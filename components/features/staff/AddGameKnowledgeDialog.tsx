@@ -126,7 +126,7 @@ export function AddGameKnowledgeDialog({
 
       // Get staff info from localStorage
       const staffName = localStorage.getItem('staff_name');
-      const staffRecordId = localStorage.getItem('staff_record_id');
+      const staffRecordId = localStorage.getItem('staff_id');
 
       if (!staffName || !staffRecordId) {
         setError('Staff information not found. Please log in again.');

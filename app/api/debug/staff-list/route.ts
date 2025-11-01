@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     console.log('DEBUG: Querying PostgreSQL staff_list table...');
 
     const result = await client.query(`
-      SELECT staff_id, stafflist_id, staff_name, staff_email, staff_type, created_at
+      SELECT id, staff_name, staff_email, staff_type, created_at
       FROM staff_list
       ORDER BY staff_name ASC
     `);
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     // Log each row to debug
     result.rows.forEach(row => {
-      console.log(`DEBUG: ${row.staff_name}: staff_id=${row.staff_id}, stafflist_id=${row.stafflist_id}, email=${row.staff_email}`);
+      console.log(`DEBUG: ${row.staff_name}: id=${row.id}, email=${row.staff_email}`);
     });
 
     return NextResponse.json({
@@ -30,12 +30,11 @@ export async function GET(request: Request) {
       staff: result.rows.map(row => ({
         name: row.staff_name,
         email: row.staff_email,
-        staffId: row.staff_id,
-        staffListId: row.stafflist_id,
+        id: row.id,
         type: row.staff_type,
         createdAt: row.created_at,
       })),
-      columns: ['name', 'email', 'staffId', 'staffListId', 'type', 'createdAt'],
+      columns: ['name', 'email', 'id', 'type', 'createdAt'],
     });
   } catch (error) {
     console.error('Error querying staff_list table:', error);

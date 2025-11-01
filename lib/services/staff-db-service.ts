@@ -1,8 +1,7 @@
 import { Pool } from 'pg';
 
 export interface StaffMember {
-  staffId: string;
-  stafflistId: string;
+  id: string; // UUID primary key
   name: string;
   nickname: string | null;
   email: string;
@@ -72,8 +71,7 @@ class StaffDbService {
     try {
       const result = await client.query(
         `SELECT
-          staff_id as "staffId",
-          stafflist_id as "stafflistId",
+          id,
           staff_name as name,
           nickname,
           staff_email as email,
@@ -90,7 +88,7 @@ class StaffDbService {
           updated_at as "updatedAt",
           profile_updated_at as "profileUpdatedAt"
         FROM staff_list
-        WHERE staff_id = $1`,
+        WHERE id = $1`,
         [staffId]
       );
 
@@ -120,8 +118,7 @@ class StaffDbService {
     try {
       const result = await client.query(
         `SELECT
-          staff_id as "staffId",
-          stafflist_id as "stafflistId",
+          id,
           staff_name as name,
           nickname,
           staff_email as email,
@@ -220,7 +217,7 @@ class StaffDbService {
       const query = `
         UPDATE staff_list
         SET ${fields.join(', ')}
-        WHERE staff_id = $${paramIndex}
+        WHERE id = $${paramIndex}
       `;
 
       const result = await client.query(query, values);
@@ -242,8 +239,7 @@ class StaffDbService {
     try {
       const result = await client.query(
         `SELECT
-          staff_id as "staffId",
-          stafflist_id as "stafflistId",
+          id,
           staff_name as name,
           nickname,
           staff_email as email,
@@ -279,20 +275,7 @@ class StaffDbService {
     const client = await this.pool.connect();
 
     try {
-      // Get knowledge stats - staff_knowledge uses stafflist_id, not staff_id
-      // First get the stafflist_id for this staff member
-      const staffInfoResult = await client.query(
-        `SELECT stafflist_id FROM staff_list WHERE staff_id = $1`,
-        [staffId]
-      );
-
-      if (staffInfoResult.rows.length === 0) {
-        throw new Error('Staff member not found');
-      }
-
-      const stafflistId = staffInfoResult.rows[0].stafflist_id;
-
-      // Get knowledge stats using stafflist_id
+      // Get knowledge stats using staff UUID
       const knowledgeResult = await client.query(
         `SELECT
           COUNT(*) as total,
@@ -303,25 +286,25 @@ class StaffDbService {
           SUM(CASE WHEN can_teach = true THEN 1 ELSE 0 END) as can_teach
         FROM staff_knowledge
         WHERE staff_member_id = $1`,
-        [stafflistId]
+        [staffId]
       );
 
-      // Get play logs count - play_logs.staff_list_id contains stafflist_id values
+      // Get play logs count
       const playLogsResult = await client.query(
         `SELECT COUNT(*) as total
         FROM play_logs
         WHERE staff_list_id = $1`,
-        [stafflistId]
+        [staffId]
       );
 
-      // Get content checks count and last check date - content_checks uses inspector_id with stafflist_id values
+      // Get content checks count and last check date
       const contentChecksResult = await client.query(
         `SELECT
           COUNT(*) as total,
           MAX(check_date) as last_check_date
         FROM content_checks
         WHERE inspector_id = $1`,
-        [stafflistId]
+        [staffId]
       );
 
       const knowledge = knowledgeResult.rows[0];
@@ -358,8 +341,7 @@ class StaffDbService {
     try {
       const result = await client.query(`
         SELECT
-          sl.staff_id,
-          sl.stafflist_id,
+          sl.id,
           sl.staff_name,
           sl.nickname,
           sl.staff_email,
@@ -385,16 +367,18 @@ class StaffDbService {
           COUNT(DISTINCT cc.id) as total_content_checks,
           MAX(cc.check_date) as last_content_check_date
         FROM staff_list sl
-        LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.stafflist_id
-        LEFT JOIN play_logs pl ON pl.staff_list_id = sl.stafflist_id
-        LEFT JOIN content_checks cc ON cc.inspector_id = sl.stafflist_id
-        GROUP BY sl.staff_id
+        LEFT JOIN staff_knowledge sk ON sk.staff_member_id = sl.id
+        LEFT JOIN play_logs pl ON pl.staff_list_id = sl.id
+        LEFT JOIN content_checks cc ON cc.inspector_id = sl.id
+        GROUP BY sl.id, sl.staff_name, sl.nickname, sl.staff_email, sl.staff_type,
+                 sl.contact_ph, sl.bank_account_number, sl.bank_name, sl.national_id_hash,
+                 sl.home_address, sl.emergency_contact_name, sl.emergency_contact_ph,
+                 sl.date_of_hire, sl.created_at, sl.updated_at, sl.profile_updated_at
         ORDER BY sl.staff_name ASC
       `);
 
       return result.rows.map(row => ({
-        staffId: row.staff_id,
-        stafflistId: row.stafflist_id,
+        id: row.id,
         name: row.staff_name,
         nickname: row.nickname,
         email: row.staff_email,

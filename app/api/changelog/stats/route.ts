@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
         COUNT(*) as game_count
       FROM staff_knowledge sk
       INNER JOIN games g ON sk.game_id = g.id
-      INNER JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+      INNER JOIN staff_list sl ON sk.staff_member_id = sl.id
       GROUP BY sl.staff_name
       ORDER BY complexity_sum DESC
     `;

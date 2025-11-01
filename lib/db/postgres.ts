@@ -123,19 +123,19 @@ export async function getRecentPlayLogs(
 
 /**
  * Get all staff members from cache
- * Returns both staff_id (for display/primary key) and stafflist_id (for knowledge filtering)
+ * Returns staff with UUID primary keys
  */
-export async function getStaffList(): Promise<Array<{ id: string; stafflistId: string; name: string; type: string }>> {
+export async function getStaffList(): Promise<Array<{ id: string; name: string; type: string; email: string }>> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT staff_id, stafflist_id, staff_name, staff_type FROM staff_list ORDER BY staff_name ASC`
+      `SELECT id, staff_name, staff_email, staff_type FROM staff_list ORDER BY staff_name ASC`
     );
 
     return result.rows.map(row => ({
-      id: row.staff_id, // Primary key for display
-      stafflistId: row.stafflist_id, // Foreign key used in staff_knowledge.staff_member_id
+      id: row.id, // UUID primary key
       name: row.staff_name,
+      email: row.staff_email,
       type: row.staff_type || 'Staff',
     }));
   } finally {
@@ -145,13 +145,13 @@ export async function getStaffList(): Promise<Array<{ id: string; stafflistId: s
 
 /**
  * Get staff member by email
- * Returns both Staff ID (Sip N Play) and StaffList ID (SNP Games List)
+ * Returns staff with UUID primary key
  */
-export async function getStaffByEmail(email: string): Promise<{ id: string; staffListId: string; name: string; type: string } | null> {
+export async function getStaffByEmail(email: string): Promise<{ id: string; name: string; email: string; type: string } | null> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT staff_id, stafflist_id, staff_name, staff_type FROM staff_list WHERE staff_email = $1`,
+      `SELECT id, staff_name, staff_email, staff_type FROM staff_list WHERE LOWER(staff_email) = LOWER($1)`,
       [email]
     );
 
@@ -161,9 +161,9 @@ export async function getStaffByEmail(email: string): Promise<{ id: string; staf
 
     const row = result.rows[0];
     return {
-      id: row.staff_id,
-      staffListId: row.stafflist_id,
+      id: row.id, // UUID primary key
       name: row.staff_name,
+      email: row.staff_email,
       type: row.staff_type || 'Staff',
     };
   } finally {
@@ -172,24 +172,26 @@ export async function getStaffByEmail(email: string): Promise<{ id: string; staf
 }
 
 /**
- * Sync staff list from Airtable to cache
- * Stores both Staff ID (Sip N Play) and StaffList ID (SNP Games List)
+ * Sync staff list from Airtable to PostgreSQL
+ * Creates or updates staff records using email as the unique identifier
  */
-export async function syncStaffListFromAirtable(staffData: Array<{ staffId: string; staffListId: string; name: string; email: string; type: string }>): Promise<boolean> {
+export async function syncStaffListFromAirtable(staffData: Array<{ name: string; email: string; type: string }>): Promise<boolean> {
   const client = await pool.connect();
   try {
-    // Clear existing data
-    await client.query('DELETE FROM staff_list');
-
-    // Insert new data
+    // Use UPSERT to create or update staff records
     for (const staff of staffData) {
       await client.query(
-        `INSERT INTO staff_list (staff_id, stafflist_id, staff_name, staff_email, staff_type) VALUES ($1, $2, $3, $4, $5)`,
-        [staff.staffId, staff.staffListId, staff.name, staff.email, staff.type]
+        `INSERT INTO staff_list (staff_name, staff_email, staff_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (staff_email) DO UPDATE
+         SET staff_name = EXCLUDED.staff_name,
+             staff_type = EXCLUDED.staff_type,
+             updated_at = CURRENT_TIMESTAMP`,
+        [staff.name, staff.email, staff.type]
       );
     }
 
-    console.log(`Synced ${staffData.length} staff members to database with both Staff and StaffList IDs`);
+    console.log(`Synced ${staffData.length} staff members to database`);
     return true;
   } catch (error) {
     console.error('Error syncing staff list:', error);

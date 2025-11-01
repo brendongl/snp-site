@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
     // Get staff name first
     const staffResult = await db.pool.query(
-      'SELECT staff_name FROM staff_list WHERE stafflist_id = $1 LIMIT 1',
+      'SELECT staff_name FROM staff_list WHERE id = $1 LIMIT 1',
       [staffMemberId]
     );
     const staffName = staffResult.rows[0]?.staff_name || 'Unknown Staff';

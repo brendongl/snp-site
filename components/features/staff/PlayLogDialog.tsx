@@ -46,8 +46,7 @@ export function PlayLogDialog({
       setIsLoading(true);
 
       // Get staff info from localStorage
-      // CRITICAL: Use staff_record_id (StaffList) for Play Logs linking, NOT staff_id
-      const staffRecordId = localStorage.getItem('staff_record_id'); // StaffList record ID (SNP Games List base)
+      const staffId = localStorage.getItem('staff_id'); // UUID primary key
       const staffName = localStorage.getItem('staff_name');
 
       if (!staffName) {
@@ -55,8 +54,8 @@ export function PlayLogDialog({
         return;
       }
 
-      if (!staffRecordId) {
-        setError('Staff record ID not found. Please log in again.');
+      if (!staffId) {
+        setError('Staff ID not found. Please log in again.');
         return;
       }
 
@@ -66,7 +65,7 @@ export function PlayLogDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           gameId,
-          staffListId: staffRecordId, // Must be StaffList record ID from SNP Games List base
+          staffListId: staffId, // UUID primary key
           sessionDate: new Date(sessionDate).toISOString(),
           notes: notes.trim() || '',
         }),

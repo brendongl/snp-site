@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
         COUNT(*) as can_teach_count
       FROM staff_knowledge sk
       INNER JOIN games g ON sk.game_id = g.id
-      INNER JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+      INNER JOIN staff_list sl ON sk.staff_member_id = sl.id
       WHERE sk.can_teach = true AND g.base_game_id IS NULL
       GROUP BY sl.staff_name
       ORDER BY can_teach_count DESC
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
           COUNT(*) as category_count
         FROM staff_knowledge sk
         INNER JOIN games g ON sk.game_id = g.id
-        INNER JOIN staff_list sl ON sk.staff_member_id = sl.stafflist_id
+        INNER JOIN staff_list sl ON sk.staff_member_id = sl.id
         WHERE g.categories IS NOT NULL AND array_length(g.categories, 1) > 0
         GROUP BY sl.staff_name, UNNEST(g.categories)
       ),

@@ -18,10 +18,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('Starting dual-table staff list sync from Airtable...');
+    console.log('Starting staff list sync from Airtable...');
 
-    // Step 1: Fetch all staff from Sip N Play Staff table (original source with emails)
-    console.log('📋 Fetching from Sip N Play Staff table (original source)...');
+    // Fetch staff from Sip N Play Staff table
+    console.log('📋 Fetching from Sip N Play Staff table...');
     const staffResponse = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_SIP_N_PLAY_BASE_ID}/${AIRTABLE_STAFF_TABLE_ID}`,
       {
@@ -38,70 +38,23 @@ export async function POST(request: Request) {
     const staffData = await staffResponse.json();
     console.log(`✓ Fetched ${staffData.records.length} records from Staff table`);
 
-    // Step 2: Fetch all staff from SNP Games List StaffList table (for Play Logs linking IDs)
-    console.log('📋 Fetching from SNP Games List StaffList table (synced copy)...');
-    const staffListResponse = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_GAMES_BASE_ID}/${AIRTABLE_STAFFLIST_TABLE_ID}`,
-      {
-        headers: {
-          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-        },
-      }
-    );
+    // Map to simple staff data structure
+    const staffToSync = staffData.records
+      .filter((record: any) => record.fields['Email']) // Only sync staff with emails
+      .map((record: any) => ({
+        name: record.fields['Name'] || 'Unknown',
+        email: record.fields['Email'],
+        type: record.fields['Type'] || 'Staff',
+      }));
 
-    if (!staffListResponse.ok) {
-      throw new Error(`Failed to fetch StaffList table: ${staffListResponse.statusText}`);
+    console.log(`\n✅ Prepared ${staffToSync.length} staff records for sync`);
+
+    if (staffToSync.length === 0) {
+      throw new Error('No staff records with emails found');
     }
 
-    const staffListData = await staffListResponse.json();
-    console.log(`✓ Fetched ${staffListData.records.length} records from StaffList table`);
-
-    // Step 3: Create map of email → Staff data (Sip N Play Staff)
-    console.log('🔗 Correlating records by email...');
-    const staffMap = new Map<string, any>();
-
-    staffData.records.forEach((record: any) => {
-      const email = record.fields['Email'];
-      const name = record.fields['Name'] || 'Unknown';
-
-      if (email) {
-        const emailLower = email.toLowerCase();
-        staffMap.set(emailLower, {
-          staffId: record.id,  // Sip N Play Staff ID
-          name,
-          email,
-          type: record.fields['Type'] || 'Staff',
-          staffListId: null,   // Will be populated from StaffList query
-        });
-      }
-    });
-
-    // Step 4: Match StaffList IDs by email and populate the map
-    staffListData.records.forEach((record: any) => {
-      const email = record.fields['Email'];
-      if (email) {
-        const emailLower = email.toLowerCase();
-        if (staffMap.has(emailLower)) {
-          const staffRecord = staffMap.get(emailLower);
-          staffRecord.staffListId = record.id;  // SNP Games List StaffList ID
-          console.log(`   ✓ ${staffRecord.name}: Staff=${staffRecord.staffId} StaffList=${staffRecord.staffListId}`);
-        }
-      }
-    });
-
-    // Step 5: Filter to only records with both IDs
-    const completeStaff = Array.from(staffMap.values()).filter(
-      (s: any) => s.staffId && s.staffListId && s.email
-    );
-
-    console.log(`\n✅ Correlated ${completeStaff.length} staff records with both IDs`);
-
-    if (completeStaff.length === 0) {
-      throw new Error('No staff records could be correlated between Staff and StaffList tables');
-    }
-
-    // Step 6: Sync to PostgreSQL
-    const success = await syncStaffListFromAirtable(completeStaff);
+    // Sync to PostgreSQL (UUIDs will be generated automatically or preserved if existing)
+    const success = await syncStaffListFromAirtable(staffToSync);
 
     if (!success) {
       throw new Error('Failed to sync staff list to database');
@@ -109,10 +62,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${completeStaff.length} staff members with both Staff and StaffList IDs`,
-      count: completeStaff.length,
-      staffCount: staffData.records.length,
-      staffListCount: staffListData.records.length,
+      message: `Synced ${staffToSync.length} staff members to PostgreSQL`,
+      count: staffToSync.length,
     });
   } catch (error) {
     console.error('Error syncing staff list:', error);

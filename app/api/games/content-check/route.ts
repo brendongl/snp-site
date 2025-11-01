@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Get game and staff details for changelog
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
-      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [inspector]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [inspector]);
 
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;

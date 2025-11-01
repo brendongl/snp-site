@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     // Get game and staff details for changelog
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
-      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE stafflist_id = $1', [staffListId]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [staffListId]);
 
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;
@@ -148,10 +148,10 @@ export async function DELETE(request: Request) {
     let staffId = '';
     try {
       const logDetails = await db.pool.query(`
-        SELECT g.name as game_name, sl.staff_name, sl.staff_id
+        SELECT g.name as game_name, sl.staff_name, sl.id as staff_id
         FROM play_logs pl
         LEFT JOIN games g ON pl.game_id = g.id
-        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.stafflist_id
+        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
         WHERE pl.id = $1
       `, [recordId]);
 

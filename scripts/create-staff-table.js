@@ -18,16 +18,15 @@ async function createTables() {
     console.log('\n1️⃣  Creating staff_list table...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS staff_list (
-        staff_id VARCHAR(50) PRIMARY KEY,
-        stafflist_id VARCHAR(50) NOT NULL,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         staff_name VARCHAR(255) NOT NULL,
-        staff_email VARCHAR(255) NOT NULL,
+        staff_email VARCHAR(255) NOT NULL UNIQUE,
         staff_type VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('   ✓ Table created');
+    console.log('   ✓ Table created (UUID primary key)');
 
     console.log('   Creating index on staff_name...');
     await client.query(`
@@ -41,15 +40,9 @@ async function createTables() {
     `);
     console.log('   ✓ Email index created');
 
-    console.log('   Creating index on stafflist_id...');
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_stafflist_id ON staff_list(stafflist_id);
-    `);
-    console.log('   ✓ StaffList ID index created');
-
     console.log('   Adding table comment...');
     await client.query(`
-      COMMENT ON TABLE staff_list IS 'Cache of staff members from Airtable Staff table. Synced daily via POST /api/staff-list/sync';
+      COMMENT ON TABLE staff_list IS 'Staff members with PostgreSQL-native UUID primary keys. Synced from Airtable via POST /api/staff-list/sync';
     `);
     console.log('   ✓ Table comment added\n');
 
