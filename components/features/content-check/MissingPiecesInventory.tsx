@@ -80,8 +80,8 @@ export default function MissingPiecesInventory() {
       }
 
       // 2. Get current staff member as inspector
-      const staffRecordId = localStorage.getItem('staff_id');
-      if (!staffRecordId) {
+      const staffId = localStorage.getItem('staff_id');
+      if (!staffId) {
         addToast('Please log in as staff to mark pieces as found', 'error');
         return;
       }
@@ -98,7 +98,7 @@ export default function MissingPiecesInventory() {
         },
         body: JSON.stringify({
           gameId: piece.game_id,
-          inspector: staffRecordId,
+          inspector: staffId,
           status: previousCheck.status,
           boxCondition: previousCheck.box_condition,
           cardCondition: previousCheck.card_condition,

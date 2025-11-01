@@ -84,16 +84,16 @@ export async function POST(request: Request) {
 
     const {
       gameId,
-      staffRecordId,
+      staffId,
       confidenceLevel,
       taughtBy,
       notes,
     } = await request.json();
 
     // Validate required fields
-    if (!gameId || !staffRecordId || !confidenceLevel) {
+    if (!gameId || !staffId || !confidenceLevel) {
       return NextResponse.json(
-        { error: 'Missing required fields: gameId, staffRecordId, confidenceLevel' },
+        { error: 'Missing required fields: gameId, staffId, confidenceLevel' },
         { status: 400 }
       );
     }
@@ -108,10 +108,10 @@ export async function POST(request: Request) {
     const confidenceLevelNum = confidenceLevelMap[confidenceLevel] || 1;
 
     // Create knowledge entry
-    console.log(`[staff-knowledge POST] Creating knowledge: game=${gameId}, staff=${staffRecordId}`);
+    console.log(`[staff-knowledge POST] Creating knowledge: game=${gameId}, staff=${staffId}`);
 
     const knowledge = await db.staffKnowledge.createKnowledge({
-      staffMemberId: staffRecordId,
+      staffMemberId: staffId,
       gameId,
       confidenceLevel: confidenceLevelNum,
       canTeach: confidenceLevel === 'Expert' || confidenceLevel === 'Instructor',
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     // Get game and staff details for changelog
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
-      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [staffRecordId]);
+      const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [staffId]);
 
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
           knowledge.id,
           gameName,
           staffName,
-          staffRecordId,
+          staffId,
           confidenceLevel,
           knowledge.canTeach
         );

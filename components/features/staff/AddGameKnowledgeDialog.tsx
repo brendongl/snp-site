@@ -126,9 +126,9 @@ export function AddGameKnowledgeDialog({
 
       // Get staff info from localStorage
       const staffName = localStorage.getItem('staff_name');
-      const staffRecordId = localStorage.getItem('staff_id');
+      const staffId = localStorage.getItem('staff_id');
 
-      if (!staffName || !staffRecordId) {
+      if (!staffName || !staffId) {
         setError('Staff information not found. Please log in again.');
         return;
       }
@@ -141,7 +141,7 @@ export function AddGameKnowledgeDialog({
           gameId,
           gameName,
           staffName,
-          staffRecordId,
+          staffId,
           confidenceLevel,
           taughtBy: taughtBy || null,
           notes: notes.trim() || null,
