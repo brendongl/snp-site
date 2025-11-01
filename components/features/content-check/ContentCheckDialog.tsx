@@ -70,20 +70,28 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       const staffId = localStorage.getItem('staff_id');
       const staffName = localStorage.getItem('staff_name');
 
+      // Validate UUID format (simple check)
+      const isValidUUID = staffId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId);
+
+      if (!isValidUUID) {
+        console.error('❌ Invalid or missing staff UUID in localStorage. Please log in again.');
+        console.log('Current staff_id value:', staffId);
+        alert('Staff session expired or invalid. Please log in again using the Staff Login button.');
+        return;
+      }
+
       if (staffId) {
         // Verify the ID exists in the inspectors list
         const matchingInspector = inspectors.find((insp) => insp.id === staffId);
 
         if (matchingInspector) {
           setInspector(matchingInspector.id);
-          console.log('Auto-selected inspector by ID:', matchingInspector.name, `(${staffId})`);
+          console.log('✅ Auto-selected inspector:', matchingInspector.name, `(UUID: ${staffId.substring(0, 8)}...)`);
         } else {
-          console.warn('staff_id from localStorage not found in inspectors:', staffId);
-          console.log('Available inspectors:', inspectors.map(i => `${i.name} (${i.id})`));
+          console.error('❌ staff_id not found in inspectors list:', staffId);
+          console.log('Available inspectors:', inspectors.map(i => `${i.name} (${i.id.substring(0, 8)}...)`));
+          alert('Staff member not found in system. Please log in again or contact an administrator.');
         }
-      } else {
-        console.warn('No staff_id found in localStorage. Staff member not logged in?');
-        console.log('localStorage keys:', Object.keys(localStorage));
       }
     }
   }, [open, inspectors, inspector]);

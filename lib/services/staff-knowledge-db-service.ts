@@ -123,28 +123,52 @@ class StaffKnowledgeDbService {
       // Generate unique ID for the knowledge record
       const id = `skn_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
-      const result = await this.pool.query(
-        `INSERT INTO staff_knowledge (
-          id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        ON CONFLICT (staff_member_id, game_id) DO UPDATE SET
-          confidence_level = $4,
-          can_teach = $5,
-          taught_by = $6,
-          notes = $7,
-          updated_at = NOW()
-        RETURNING id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
-          created_at, updated_at`,
-        [
-          id,
-          knowledge.staffMemberId,
-          knowledge.gameId,
-          knowledge.confidenceLevel,
-          knowledge.canTeach,
-          knowledge.taughtBy,
-          knowledge.notes,
-        ]
+      // Check if knowledge entry already exists for this staff/game combo
+      const existing = await this.pool.query(
+        `SELECT id FROM staff_knowledge WHERE staff_member_id = $1 AND game_id = $2`,
+        [knowledge.staffMemberId, knowledge.gameId]
       );
+
+      // If exists, update it; otherwise, create new
+      let result;
+      if (existing.rows.length > 0) {
+        const existingId = existing.rows[0].id;
+        result = await this.pool.query(
+          `UPDATE staff_knowledge SET
+            confidence_level = $2,
+            can_teach = $3,
+            taught_by = $4,
+            notes = $5,
+            updated_at = NOW()
+          WHERE id = $1
+          RETURNING id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
+            created_at, updated_at`,
+          [
+            existingId,
+            knowledge.confidenceLevel,
+            knowledge.canTeach,
+            knowledge.taughtBy,
+            knowledge.notes,
+          ]
+        );
+      } else {
+        result = await this.pool.query(
+          `INSERT INTO staff_knowledge (
+            id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          RETURNING id, staff_member_id, game_id, confidence_level, can_teach, taught_by, notes,
+            created_at, updated_at`,
+          [
+            id,
+            knowledge.staffMemberId,
+            knowledge.gameId,
+            knowledge.confidenceLevel,
+            knowledge.canTeach,
+            knowledge.taughtBy,
+            knowledge.notes,
+          ]
+        );
+      }
 
       return this.mapRowToKnowledge(result.rows[0]);
     } catch (error) {

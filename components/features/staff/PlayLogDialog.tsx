@@ -49,13 +49,17 @@ export function PlayLogDialog({
       const staffId = localStorage.getItem('staff_id'); // UUID primary key
       const staffName = localStorage.getItem('staff_name');
 
+      // Validate UUID format
+      const isValidUUID = staffId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId);
+
       if (!staffName) {
         setError('Staff information not found. Please log in again.');
         return;
       }
 
-      if (!staffId) {
-        setError('Staff ID not found. Please log in again.');
+      if (!staffId || !isValidUUID) {
+        setError('Invalid staff session. Please log in again using the Staff Login button.');
+        console.error('❌ Invalid or missing staff UUID:', staffId);
         return;
       }
 

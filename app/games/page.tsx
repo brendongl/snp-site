@@ -62,6 +62,25 @@ function GamesPageContent() {
     quickFilter: undefined,
   });
 
+  // Clean up old localStorage data from pre-UUID migration
+  useEffect(() => {
+    // Remove old staff_record_id if it exists
+    if (localStorage.getItem('staff_record_id')) {
+      console.log('🧹 Cleaning up old staff_record_id from localStorage');
+      localStorage.removeItem('staff_record_id');
+    }
+
+    // Validate staff_id is a valid UUID if it exists
+    const staffId = localStorage.getItem('staff_id');
+    if (staffId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId)) {
+      console.warn('⚠️ Invalid staff_id format detected. Clearing staff session.');
+      localStorage.removeItem('staff_id');
+      localStorage.removeItem('staff_name');
+      localStorage.removeItem('staff_email');
+      localStorage.removeItem('staff_type');
+    }
+  }, []);
+
   // Load collapse preference from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('headerCollapsed');
@@ -890,7 +909,10 @@ function GamesPageContent() {
 
                     <Select
                       value={selectedStaffFilter}
-                      onValueChange={(value: string) => setSelectedStaffFilter(value)}
+                      onValueChange={(value: string) => {
+                        console.log('🔍 Staff filter changed to:', value);
+                        setSelectedStaffFilter(value);
+                      }}
                     >
                       <SelectTrigger className="w-[140px] sm:w-[180px]">
                         <SelectValue placeholder="All Staff" />
@@ -901,13 +923,20 @@ function GamesPageContent() {
                           const currentStaffName = localStorage.getItem('staff_name');
                           const currentStaffId = localStorage.getItem('staff_id');
 
+                          // Validate current staff UUID
+                          const isValidUUID = currentStaffId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentStaffId);
+
+                          // Filter out staff with invalid UUIDs and exclude current user
                           const otherStaff = staffList
-                            .filter(s => s.id !== currentStaffId && s.name)
+                            .filter(s => {
+                              const hasValidId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.id);
+                              return hasValidId && s.id !== currentStaffId && s.name;
+                            })
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
                           return (
                             <>
-                              {currentStaffId && currentStaffName && (
+                              {isValidUUID && currentStaffName && (
                                 <SelectItem value={currentStaffId}>{currentStaffName} (Me)</SelectItem>
                               )}
                               {otherStaff.map(staff => (

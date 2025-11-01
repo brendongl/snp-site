@@ -44,11 +44,17 @@ export function StaffLoginDialog({ isOpen, onClose, onLoginSuccess }: StaffLogin
         return;
       }
 
-      // Success - store in localStorage
+      // Success - clear old data and store new UUID-based data
+      // Clear any old staff data from pre-UUID migration
+      localStorage.removeItem('staff_record_id'); // Old Airtable ID
+
+      // Store new UUID-based data
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', verifyData.staffName);
       localStorage.setItem('staff_id', verifyData.staffId); // UUID primary key
       localStorage.setItem('staff_type', verifyData.type || 'Staff');
+
+      console.log('✅ Staff login successful - stored UUID:', verifyData.staffId);
 
       // Close dialog and trigger success (which reloads the page)
       setEmail('');

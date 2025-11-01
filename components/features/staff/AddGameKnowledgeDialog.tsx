@@ -128,8 +128,17 @@ export function AddGameKnowledgeDialog({
       const staffName = localStorage.getItem('staff_name');
       const staffId = localStorage.getItem('staff_id');
 
+      // Validate UUID format
+      const isValidUUID = staffId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId);
+
       if (!staffName || !staffId) {
         setError('Staff information not found. Please log in again.');
+        return;
+      }
+
+      if (!isValidUUID) {
+        setError('Invalid staff session. Please log in again using the Staff Login button.');
+        console.error('❌ Invalid staff UUID:', staffId);
         return;
       }
 
