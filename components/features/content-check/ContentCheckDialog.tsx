@@ -50,10 +50,11 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   const [status, setStatus] = useState<string>('');
   const [boxCondition, setBoxCondition] = useState<string>('');
   const [cardCondition, setCardCondition] = useState<string>('');
-  const [missingPieces, setMissingPieces] = useState<string>('');
+  const [missingPieces, setMissingPieces] = useState<string>(''); // Renamed from missingPieces, now "issue description"
   const [notes, setNotes] = useState<string>('');
   const [sleevedAtCheck, setSleevedAtCheck] = useState(false);
   const [boxWrappedAtCheck, setBoxWrappedAtCheck] = useState(false);
+  const [hasIssueToggle, setHasIssueToggle] = useState(false); // v1.2.0: Issue tracking toggle
 
   // Load inspectors and auto-select current staff member when dialog opens
   useEffect(() => {
@@ -96,6 +97,16 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
     }
   }, [open, inspectors, inspector]);
 
+  // v1.2.0: Control hasIssueToggle based on selected status
+  useEffect(() => {
+    if (status === 'Perfect Condition') {
+      setHasIssueToggle(false); // Force OFF for perfect condition
+    } else if (status === 'Major Issues' || status === 'Unplayable') {
+      setHasIssueToggle(true); // Lock ON for severe issues
+    }
+    // For 'Minor Issues', toggle remains in current state (manual control)
+  }, [status]);
+
   const loadInspectors = async () => {
     setLoadingInspectors(true);
     try {
@@ -123,11 +134,25 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       return;
     }
 
+    // v1.2.0: Validate issue toggle logic
+    if (status === 'Perfect Condition' && hasIssueToggle) {
+      alert('Cannot have issues with Perfect Condition status');
+      return;
+    }
+
+    if ((status === 'Major Issues' || status === 'Unplayable') && (!missingPieces || !missingPieces.trim())) {
+      alert('Issue description required for Major Issues or Unplayable status');
+      return;
+    }
+
     // If inspector is not set (auto-selection failed), show specific error
     if (!inspector) {
       alert('Unable to identify inspector. Please ensure you are logged in as staff.');
       return;
     }
+
+    // v1.2.0: Calculate has_issue flag
+    const hasIssue = hasIssueToggle && missingPieces.trim().length > 0;
 
     setLoading(true);
     try {
@@ -142,10 +167,11 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
           status,
           boxCondition,
           cardCondition,
-          missingPieces,
+          missingPieces: hasIssueToggle ? missingPieces : null, // Only send if toggle enabled
           notes,
           sleevedAtCheck,
           boxWrappedAtCheck,
+          hasIssue, // v1.2.0: Issue tracking flag
         }),
       });
 
@@ -210,6 +236,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
     setNotes('');
     setSleevedAtCheck(false);
     setBoxWrappedAtCheck(false);
+    setHasIssueToggle(false); // v1.2.0
   };
 
   const handleClose = () => {
@@ -326,18 +353,47 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
             </Select>
           </div>
 
-          {/* Missing Pieces */}
-          <div className="space-y-2">
-            <Label htmlFor="missingPieces">
-              Missing Pieces (optional)
-            </Label>
-            <Textarea
-              id="missingPieces"
-              value={missingPieces}
-              onChange={(e) => setMissingPieces(e.target.value)}
-              placeholder="List any missing pieces, or write 'None' if complete"
-              className="min-h-[80px]"
-            />
+          {/* v1.2.0: Issue Toggle + Description */}
+          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hasIssue" className="text-base font-semibold">
+                Report an Issue
+              </Label>
+              <Checkbox
+                id="hasIssue"
+                checked={hasIssueToggle}
+                onCheckedChange={(checked) => setHasIssueToggle(checked as boolean)}
+                disabled={status === 'Perfect Condition' || status === 'Major Issues' || status === 'Unplayable'}
+                className={status === 'Perfect Condition' ? 'opacity-50 cursor-not-allowed' : ''}
+              />
+            </div>
+
+            {status === 'Perfect Condition' && (
+              <p className="text-xs text-muted-foreground">
+                Cannot report issues for Perfect Condition
+              </p>
+            )}
+
+            {(status === 'Major Issues' || status === 'Unplayable') && (
+              <p className="text-xs text-amber-600 font-medium">
+                Issue description required for this status
+              </p>
+            )}
+
+            {hasIssueToggle && (
+              <div className="space-y-2">
+                <Label htmlFor="issueDescription">
+                  Issue Description {(status === 'Major Issues' || status === 'Unplayable') && <span className="text-red-500">*</span>}
+                </Label>
+                <Textarea
+                  id="issueDescription"
+                  value={missingPieces}
+                  onChange={(e) => setMissingPieces(e.target.value)}
+                  placeholder="Describe the issue (e.g., missing 1 white road, broken sleeves, damaged box corner)"
+                  className="min-h-[80px]"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}

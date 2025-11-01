@@ -201,7 +201,7 @@ export interface GameFilters {
   playerCount?: { min?: number; max?: number };
   complexity?: { min?: number; max?: number };
   playtime?: number; // Filter by single playtime value (shows games that fit within this time)
-  quickFilter?: 'sixPlus' | 'couples' | 'social' | 'noChecks';
+  quickFilter?: 'sixPlus' | 'couples' | 'social' | 'noChecks' | 'hasIssues'; // v1.2.0: Added hasIssues
   bestPlayerCount?: number;
 }
 

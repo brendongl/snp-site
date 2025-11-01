@@ -30,9 +30,19 @@ interface Activity {
   description?: string;
 }
 
+// v1.2.0: Games with issues interface
+interface GameWithIssue {
+  game_id: string;
+  game_name: string;
+  issue_description: string;
+  reported_by: string;
+  reported_date: string;
+}
+
 export default function StaffDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
+  const [gamesWithIssues, setGamesWithIssues] = useState<GameWithIssue[]>([]); // v1.2.0
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,9 +52,11 @@ export default function StaffDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, actionsRes, activityRes] = await Promise.all([
+      // v1.2.0: Added games with issues fetch
+      const [statsRes, actionsRes, issuesRes, activityRes] = await Promise.all([
         fetch('/api/staff/dashboard/stats'),
         fetch('/api/staff/dashboard/priority-actions?limit=5'),
+        fetch('/api/content-checks/needs-attention'),
         fetch('/api/staff/dashboard/recent-activity?limit=10'),
       ]);
 
@@ -56,6 +68,12 @@ export default function StaffDashboard() {
       if (actionsRes.ok) {
         const actionsData = await actionsRes.json();
         setPriorityActions(actionsData.actions);
+      }
+
+      // v1.2.0: Fetch games with issues
+      if (issuesRes.ok) {
+        const issuesData = await issuesRes.json();
+        setGamesWithIssues(issuesData.issues || []);
       }
 
       if (activityRes.ok) {
@@ -169,6 +187,41 @@ export default function StaffDashboard() {
           </Link>
         </Card>
       </div>
+
+      {/* v1.2.0: Games Needing Attention */}
+      {gamesWithIssues.length > 0 && (
+        <Card className="p-6 border-red-200 bg-red-50/50">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-red-700">⚠️ Games Needing Attention</h2>
+            <span className="text-sm text-red-600 font-medium">{gamesWithIssues.length} issue{gamesWithIssues.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-2">
+            {gamesWithIssues.map((issue) => (
+              <div
+                key={issue.game_id}
+                className="flex items-center justify-between p-3 border border-red-200 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-red-900">{issue.game_name}</div>
+                  <div className="text-sm text-red-700 mt-1">
+                    <span className="font-medium">Issue:</span> {issue.issue_description}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    Reported by {issue.reported_by} on{' '}
+                    {new Date(issue.reported_date).toLocaleDateString()}
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="ml-4 border-red-300 text-red-700 hover:bg-red-100" asChild>
+                  <Link href={`/games?openGame=${issue.game_id}`}>
+                    Resolve
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Priority Actions */}
       <Card className="p-6">

@@ -14,6 +14,10 @@ interface AddGameKnowledgeDialogProps {
   gameId: string;
   gameName: string;
   onSuccess?: () => void; // Callback to refresh parent data after successful knowledge addition
+  // v1.2.0: Edit mode props
+  existingKnowledgeId?: string; // If provided, dialog is in edit mode
+  existingConfidenceLevel?: string;
+  existingNotes?: string;
 }
 
 interface StaffMember {
@@ -30,12 +34,17 @@ export function AddGameKnowledgeDialog({
   gameId,
   gameName,
   onSuccess,
+  existingKnowledgeId,
+  existingConfidenceLevel,
+  existingNotes,
 }: AddGameKnowledgeDialogProps) {
   const router = useRouter();
+  const isEditMode = !!existingKnowledgeId; // v1.2.0: Determine if in edit mode
   const [confidenceLevel, setConfidenceLevel] = useState<string>('');
   const [taughtBy, setTaughtBy] = useState('Myself'); // Default to "Myself"
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // v1.2.0: Delete state
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingConfidenceLevel, setPendingConfidenceLevel] = useState<string | null>(null);
@@ -90,6 +99,14 @@ export function AddGameKnowledgeDialog({
     fetchStaff();
   }, [isOpen]);
 
+  // v1.2.0: Populate form with existing values when in edit mode
+  useEffect(() => {
+    if (isOpen && isEditMode) {
+      if (existingConfidenceLevel) setConfidenceLevel(existingConfidenceLevel);
+      if (existingNotes) setNotes(existingNotes);
+    }
+  }, [isOpen, isEditMode, existingConfidenceLevel, existingNotes]);
+
   const handleConfidenceLevelChange = (level: string) => {
     if (REQUIRES_CONFIRMATION.includes(level)) {
       setPendingConfidenceLevel(level);
@@ -110,6 +127,39 @@ export function AddGameKnowledgeDialog({
   const handleCancelConfirmation = () => {
     setPendingConfidenceLevel(null);
     setShowConfirmation(false);
+  };
+
+  // v1.2.0: Delete knowledge handler
+  const handleDelete = async () => {
+    if (!existingKnowledgeId) return;
+
+    const confirmed = window.confirm('Are you sure you want to delete this knowledge entry? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      const response = await fetch(`/api/staff-knowledge?id=${existingKnowledgeId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete knowledge');
+        return;
+      }
+
+      // Close dialog and trigger refresh
+      onClose();
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete knowledge');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,19 +192,29 @@ export function AddGameKnowledgeDialog({
         return;
       }
 
-      // Create knowledge entry
+      // v1.2.0: Create or update knowledge entry
       const response = await fetch('/api/staff-knowledge', {
-        method: 'POST',
+        method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameId,
-          gameName,
-          staffName,
-          staffId,
-          confidenceLevel,
-          taughtBy: taughtBy || null,
-          notes: notes.trim() || null,
-        }),
+        body: JSON.stringify(
+          isEditMode
+            ? {
+                // Update mode: only send ID, confidence level, and notes
+                id: existingKnowledgeId,
+                confidenceLevel,
+                notes: notes.trim() || null,
+              }
+            : {
+                // Create mode: send all fields
+                gameId,
+                gameName,
+                staffName,
+                staffId,
+                confidenceLevel,
+                taughtBy: taughtBy || null,
+                notes: notes.trim() || null,
+              }
+        ),
       });
 
       // Read the response body as text first (to avoid "body already consumed" error)
@@ -185,8 +245,10 @@ export function AddGameKnowledgeDialog({
         onSuccess();
       }
 
-      // Redirect to Staff Knowledge page with fromAdd parameter to auto-check "My Knowledge Only"
-      router.push('/staff/knowledge?fromAdd=true');
+      // v1.2.0: Only redirect to knowledge page in create mode, not edit mode
+      if (!isEditMode) {
+        router.push('/staff/knowledge?fromAdd=true');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add game knowledge');
     } finally {
@@ -199,9 +261,9 @@ export function AddGameKnowledgeDialog({
       <Dialog open={isOpen && !showConfirmation} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Game Knowledge</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Game Knowledge' : 'Add Game Knowledge'}</DialogTitle>
             <DialogDescription>
-              Recording your knowledge for <span className="font-medium text-foreground">{gameName}</span>
+              {isEditMode ? 'Update' : 'Recording'} your knowledge for <span className="font-medium text-foreground">{gameName}</span>
             </DialogDescription>
           </DialogHeader>
 
@@ -230,26 +292,28 @@ export function AddGameKnowledgeDialog({
               </div>
             </div>
 
-            {/* Was Taught By - Dropdown */}
-            <div>
-              <label htmlFor="taught-by" className="block text-sm font-medium mb-2">
-                Was Taught By <span className="text-muted-foreground">(Optional)</span>
-              </label>
-              <select
-                id="taught-by"
-                value={taughtBy}
-                onChange={(e) => setTaughtBy(e.target.value)}
-                disabled={isLoading || loadingStaff}
-                className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="Myself">Myself</option>
-                {staffMembers.map((staff) => (
-                  <option key={staff.id} value={staff.name}>
-                    {staff.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Was Taught By - Dropdown (v1.2.0: Hidden in edit mode) */}
+            {!isEditMode && (
+              <div>
+                <label htmlFor="taught-by" className="block text-sm font-medium mb-2">
+                  Was Taught By <span className="text-muted-foreground">(Optional)</span>
+                </label>
+                <select
+                  id="taught-by"
+                  value={taughtBy}
+                  onChange={(e) => setTaughtBy(e.target.value)}
+                  disabled={isLoading || loadingStaff}
+                  className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="Myself">Myself</option>
+                  {staffMembers.map((staff) => (
+                    <option key={staff.id} value={staff.name}>
+                      {staff.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Notes */}
             <div>
@@ -275,30 +339,52 @@ export function AddGameKnowledgeDialog({
               </div>
             )}
 
-            {/* Buttons */}
-            <div className="flex gap-2 justify-end pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="min-w-24"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Knowledge'
-                )}
-              </Button>
+            {/* Buttons (v1.2.0: Add Delete button in edit mode) */}
+            <div className="flex gap-2 justify-between pt-2">
+              {/* Left side: Delete button (edit mode only) */}
+              {isEditMode && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isLoading || isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </Button>
+              )}
+
+              {/* Right side: Cancel and Save buttons */}
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isLoading || isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading || isDeleting}
+                  className="min-w-24"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isEditMode ? 'Updating...' : 'Saving...'}
+                    </>
+                  ) : (
+                    isEditMode ? 'Update Knowledge' : 'Save Knowledge'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>

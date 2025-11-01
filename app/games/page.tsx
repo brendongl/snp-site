@@ -10,6 +10,7 @@ import { GameDetailModal } from '@/components/features/games/GameDetailModal';
 import { SpinnerWheel } from '@/components/features/games/SpinnerWheel';
 import { AddGameDialog } from '@/components/features/games/AddGameDialog';
 import { StaffLoginDialog } from '@/components/features/staff/StaffLoginDialog';
+import { AddGameKnowledgeDialog } from '@/components/features/staff/AddGameKnowledgeDialog'; // v1.2.0
 import { BoardGame, GameFilters as FilterType, SortOption } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +48,9 @@ function GamesPageContent() {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
   const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
+  // v1.2.0: Knowledge dialog state
+  const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
+  const [knowledgeDialogGame, setKnowledgeDialogGame] = useState<BoardGame | null>(null);
 
   // Track which game ID was auto-opened from query param to prevent re-opening
   const autoOpenedGameId = useRef<string | null>(null);
@@ -453,6 +457,11 @@ function GamesPageContent() {
         // Show games with no checks (undefined, 0, or null)
         return !totalChecks || totalChecks === 0;
       });
+    } else if (filters.quickFilter === 'hasIssues') {
+      // v1.2.0: Filter to show only games where latest check has hasIssue=true
+      filtered = filtered.filter(game => {
+        return (game as any).latestCheck?.hasIssue === true;
+      });
     }
 
     // Staff Knowledge Filter (staff mode only)
@@ -505,6 +514,17 @@ function GamesPageContent() {
     const activeSortOption = staffSortOption || sortOption;
 
     filtered.sort((a, b) => {
+      // v1.2.0: Auto-float games with issues to top when using default sort (staff mode only)
+      if (isStaff && activeSortOption === 'dateAcquired') {
+        const aHasIssue = (a as any).latestCheck?.hasIssue === true;
+        const bHasIssue = (b as any).latestCheck?.hasIssue === true;
+
+        // If one has issue and the other doesn't, prioritize the one with issue
+        if (aHasIssue && !bHasIssue) return -1; // a comes first
+        if (!aHasIssue && bHasIssue) return 1;  // b comes first
+        // If both have issues or both don't, continue to regular sort
+      }
+
       const nameA = a.fields['Game Name'] || '';
       const nameB = b.fields['Game Name'] || '';
 
@@ -558,7 +578,7 @@ function GamesPageContent() {
   };
 
   // Handle quick filter
-  const handleQuickFilter = (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | null) => {
+  const handleQuickFilter = (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | 'hasIssues' | null) => {
     setFilters(prev => ({ ...prev, quickFilter: filter || undefined }));
   };
 
@@ -638,6 +658,12 @@ function GamesPageContent() {
     setSelectedGame(game);
     // Track game view
     trackGameViewed(game.id, game.fields['Game Name'] || 'Unknown');
+  };
+
+  // v1.2.0: Handle knowledge badge click
+  const handleKnowledgeBadgeClick = (game: BoardGame) => {
+    setKnowledgeDialogGame(game);
+    setShowKnowledgeDialog(true);
   };
 
   if (loading) {
@@ -1052,6 +1078,7 @@ function GamesPageContent() {
               isStaff={isStaff}
               picturesOnlyMode={picturesOnlyMode}
               staffKnowledgeLevel={staffKnowledge.get(game.id)}
+              onKnowledgeBadgeClick={() => handleKnowledgeBadgeClick(game)} // v1.2.0
             />
           ))}
         </div>
@@ -1105,6 +1132,23 @@ function GamesPageContent() {
         onClose={() => setShowStaffLogin(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+
+      {/* v1.2.0: Knowledge Dialog for editing existing knowledge */}
+      {knowledgeDialogGame && (
+        <AddGameKnowledgeDialog
+          isOpen={showKnowledgeDialog}
+          onClose={() => {
+            setShowKnowledgeDialog(false);
+            setKnowledgeDialogGame(null);
+          }}
+          gameId={knowledgeDialogGame.id}
+          gameName={knowledgeDialogGame.fields['Game Name']}
+          onSuccess={handleRefresh}
+          existingKnowledgeId={`${knowledgeDialogGame.id}-${localStorage.getItem('staff_id')}`}
+          existingConfidenceLevel={staffKnowledge.get(knowledgeDialogGame.id)}
+          existingNotes=""
+        />
+      )}
 
       {/* Floating Back to Top Button */}
       <ScrollToTopButton />

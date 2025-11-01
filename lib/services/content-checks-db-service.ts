@@ -15,6 +15,9 @@ export interface ContentCheck {
   sleeved: boolean;
   boxWrapped: boolean;
   photos: string[];
+  hasIssue: boolean; // v1.2.0: TRUE if toggle enabled + issue text exists
+  resolvedById: string | null; // v1.2.0: Staff UUID who resolved the issue
+  resolvedFromCheckId: string | null; // v1.2.0: Links to original check that had the issue
   createdAt: string;
   updatedAt: string;
 }
@@ -49,10 +52,10 @@ class ContentChecksDbService {
       const selectClause = hasCheckType
         ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`
         : `id, game_id, inspector_id, check_date, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`;
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`;
 
       const result = await this.pool.query(`
         SELECT ${selectClause}
@@ -99,6 +102,9 @@ class ContentChecksDbService {
           cc.sleeved_at_check,
           cc.box_wrapped_at_check,
           cc.photos,
+          cc.has_issue,
+          cc.resolved_by_id,
+          cc.resolved_from_check_id,
           cc.created_at,
           cc.updated_at
         FROM content_checks cc
@@ -134,10 +140,10 @@ class ContentChecksDbService {
       const selectClause = hasCheckType
         ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`
         : `id, game_id, inspector_id, check_date, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`;
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`;
 
       const result = await this.pool.query(
         `SELECT ${selectClause}
@@ -170,10 +176,10 @@ class ContentChecksDbService {
       const selectClause = hasCheckType
         ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`
         : `id, game_id, inspector_id, check_date, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`;
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`;
 
       const result = await this.pool.query(
         `SELECT ${selectClause}
@@ -211,10 +217,10 @@ class ContentChecksDbService {
       const selectClause = hasCheckType
         ? `id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`
         : `id, game_id, inspector_id, check_date, status, missing_pieces,
            box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-           photos, created_at, updated_at`;
+           photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`;
 
       const result = await this.pool.query(
         `SELECT ${selectClause}
@@ -265,11 +271,11 @@ class ContentChecksDbService {
           `INSERT INTO content_checks (
             id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
             box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-            photos, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+            photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
           RETURNING id, game_id, inspector_id, check_date, check_type, status, missing_pieces,
             box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-            photos, created_at, updated_at`,
+            photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`,
           [
             id,
             check.gameId,
@@ -283,8 +289,11 @@ class ContentChecksDbService {
             check.isFake,
             check.notes,
             check.sleeved,
-          check.boxWrapped,
-          photosValue,
+            check.boxWrapped,
+            photosValue,
+            check.hasIssue || false,
+            check.resolvedById || null,
+            check.resolvedFromCheckId || null,
         ]
       );
       } else {
@@ -293,11 +302,11 @@ class ContentChecksDbService {
           `INSERT INTO content_checks (
             id, game_id, inspector_id, check_date, status, missing_pieces,
             box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-            photos, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+            photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())
           RETURNING id, game_id, inspector_id, check_date, status, missing_pieces,
             box_condition, card_condition, is_fake, notes, sleeved_at_check, box_wrapped_at_check,
-            photos, created_at, updated_at`,
+            photos, has_issue, resolved_by_id, resolved_from_check_id, created_at, updated_at`,
           [
             id,
             check.gameId,
@@ -312,6 +321,9 @@ class ContentChecksDbService {
             check.sleeved,
             check.boxWrapped,
             photosValue,
+            check.hasIssue || false,
+            check.resolvedById || null,
+            check.resolvedFromCheckId || null,
           ]
         );
       }
@@ -385,6 +397,18 @@ class ContentChecksDbService {
         // Photos is TEXT[] - pass array directly
         const photosValue = Array.isArray(updates.photos) ? updates.photos : [];
         values.push(photosValue);
+      }
+      if (updates.hasIssue !== undefined) {
+        setClauses.push(`has_issue = $${paramCount++}`);
+        values.push(updates.hasIssue);
+      }
+      if (updates.resolvedById !== undefined) {
+        setClauses.push(`resolved_by_id = $${paramCount++}`);
+        values.push(updates.resolvedById);
+      }
+      if (updates.resolvedFromCheckId !== undefined) {
+        setClauses.push(`resolved_from_check_id = $${paramCount++}`);
+        values.push(updates.resolvedFromCheckId);
       }
 
       if (setClauses.length === 0) {
@@ -554,6 +578,9 @@ class ContentChecksDbService {
       sleeved: row.sleeved_at_check || false,
       boxWrapped: row.box_wrapped_at_check || false,
       photos: parsePhotos(row.photos),
+      hasIssue: row.has_issue || false, // v1.2.0
+      resolvedById: row.resolved_by_id || null, // v1.2.0
+      resolvedFromCheckId: row.resolved_from_check_id || null, // v1.2.0
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

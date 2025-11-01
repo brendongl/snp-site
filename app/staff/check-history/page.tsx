@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { EditContentCheckDialog } from '@/components/features/content-check/EditContentCheckDialog';
-import MissingPiecesInventory from '@/components/features/content-check/MissingPiecesInventory';
+import IssuesMissingReport from '@/components/features/content-check/IssuesMissingReport';
 import { Button } from '@/components/ui/button';
 import type { ContentCheck } from '@/types';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
@@ -306,9 +306,9 @@ export default function CheckHistoryPage() {
           </div>
         </div>
 
-        {/* Missing Pieces Inventory */}
+        {/* Issues/Missing Report */}
         <div className="mb-6">
-          <MissingPiecesInventory />
+          <IssuesMissingReport />
         </div>
 
         {/* Results Count */}

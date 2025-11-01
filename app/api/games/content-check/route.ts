@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
       notes,
       sleevedAtCheck,
       boxWrappedAtCheck,
+      hasIssue, // v1.2.0
+      resolvedById, // v1.2.0
+      resolvedFromCheckId, // v1.2.0
     } = body;
 
     // Validation - missingPieces and notes are optional
@@ -71,6 +74,9 @@ export async function POST(request: NextRequest) {
       sleeved: sleevedAtCheck || false,
       boxWrapped: boxWrappedAtCheck || false,
       photos: [],
+      hasIssue: hasIssue || false, // v1.2.0
+      resolvedById: resolvedById || null, // v1.2.0
+      resolvedFromCheckId: resolvedFromCheckId || null, // v1.2.0
     });
 
     logger.info('Content Check', 'Content check created successfully in PostgreSQL', {

@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
       sleeved: false,
       boxWrapped: false,
       photos: [],
+      hasIssue: false, // v1.2.0: Pieces recovered, no issue
+      resolvedById: inspector_id, // v1.2.0: Staff who found the pieces
+      resolvedFromCheckId: check_id, // v1.2.0: Link to original check
     });
 
     return NextResponse.json({

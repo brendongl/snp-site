@@ -20,7 +20,7 @@ import { GameFilters as FilterType } from '@/types';
 
 interface GameFiltersProps {
   filters: FilterType;
-  onQuickFilter: (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | null) => void;
+  onQuickFilter: (filter: 'sixPlus' | 'couples' | 'social' | 'noChecks' | 'hasIssues' | null) => void;
   onOpenAdvancedFilter: () => void;
   onClearAll: () => void;
   activeFiltersCount: number;
@@ -42,6 +42,7 @@ export function GameFilters({
     if (filters.quickFilter === 'couples') return 'Couples';
     if (filters.quickFilter === 'social') return 'Social';
     if (filters.quickFilter === 'noChecks') return 'Games w/ No Checks';
+    if (filters.quickFilter === 'hasIssues') return 'Has Issues'; // v1.2.0
     return 'None';
   };
 
@@ -58,7 +59,7 @@ export function GameFilters({
                 if (value === 'none') {
                   onQuickFilter(null);
                 } else {
-                  onQuickFilter(value as 'sixPlus' | 'couples' | 'social' | 'noChecks');
+                  onQuickFilter(value as 'sixPlus' | 'couples' | 'social' | 'noChecks' | 'hasIssues');
                 }
               }}
             >
@@ -90,6 +91,12 @@ export function GameFilters({
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     Games w/ No Checks
+                  </div>
+                </SelectItem>
+                <SelectItem value="hasIssues">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    Has Issues
                   </div>
                 </SelectItem>
               </SelectContent>
