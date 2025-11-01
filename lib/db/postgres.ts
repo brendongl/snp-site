@@ -2,9 +2,13 @@
 
 import { Pool } from 'pg';
 
-// Create a connection pool
+// Create a connection pool with optimized settings
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:mkzYUwOIMzDrOMFTLeRUlxLXtQsIQmST@shuttle.proxy.rlwy.net:38585/railway',
+  max: 20, // Maximum pool size (default is 10)
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return error if connection takes >10s
+  statement_timeout: 30000, // Terminate queries that run longer than 30 seconds
 });
 
 // Initialize pool error handler
@@ -107,8 +111,9 @@ export async function getRecentPlayLogs(
     const result = await client.query(
       `SELECT game_id, staff_name, logged_at
        FROM play_log_cache
-       WHERE logged_at > NOW() - INTERVAL '${limitMinutes} minutes'
-       ORDER BY logged_at DESC`
+       WHERE logged_at > NOW() - INTERVAL '1 minute' * $1
+       ORDER BY logged_at DESC`,
+      [limitMinutes]
     );
 
     return result.rows.map((row) => ({
@@ -174,10 +179,14 @@ export async function getStaffByEmail(email: string): Promise<{ id: string; name
 /**
  * Sync staff list from Airtable to PostgreSQL
  * Creates or updates staff records using email as the unique identifier
+ * Uses a transaction for atomicity and better performance
  */
 export async function syncStaffListFromAirtable(staffData: Array<{ name: string; email: string; type: string }>): Promise<boolean> {
   const client = await pool.connect();
   try {
+    // Begin transaction for atomicity and performance
+    await client.query('BEGIN');
+
     // Use UPSERT to create or update staff records
     for (const staff of staffData) {
       await client.query(
@@ -191,10 +200,14 @@ export async function syncStaffListFromAirtable(staffData: Array<{ name: string;
       );
     }
 
-    console.log(`Synced ${staffData.length} staff members to database`);
+    // Commit transaction
+    await client.query('COMMIT');
+    console.log(`✅ Synced ${staffData.length} staff members to database`);
     return true;
   } catch (error) {
-    console.error('Error syncing staff list:', error);
+    // Rollback on error
+    await client.query('ROLLBACK');
+    console.error('❌ Error syncing staff list:', error);
     return false;
   } finally {
     client.release();
