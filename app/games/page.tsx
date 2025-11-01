@@ -414,18 +414,20 @@ function GamesPageContent() {
     } else if (filters.quickFilter === 'social') {
       filtered = filtered.filter(game => {
         const minPlayersStr = game.fields['Min Players'];
+        const maxPlayersStr = game.fields['Max. Players'];
         const categories = game.fields['Categories'] || [];
 
-        if (!minPlayersStr) return false;
+        if (!minPlayersStr || !maxPlayersStr) return false;
 
         const minPlayers = parseInt(minPlayersStr);
+        const maxPlayers = maxPlayersStr === 'No Limit' ? 999 : parseInt(maxPlayersStr);
 
-        // Min must be at least 2, any max, and must have ANY of: Party, Deduction, or Social categories
+        // Min must be at least 2, max must be at least 4, and must have ANY of: Party, Deduction, or Social categories
         const hasSocialCategory = categories.some(cat =>
           cat === 'Party' || cat === 'Deduction' || cat === 'Social'
         );
 
-        return minPlayers >= 2 && hasSocialCategory;
+        return minPlayers >= 2 && maxPlayers >= 4 && hasSocialCategory;
       });
     } else if (filters.quickFilter === 'noChecks') {
       filtered = filtered.filter(game => {

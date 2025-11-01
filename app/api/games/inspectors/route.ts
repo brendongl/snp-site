@@ -13,7 +13,7 @@ export async function GET() {
 
     // Map to inspectors format (id = stafflist_id, name = staff_name)
     const inspectors = staff.map(member => ({
-      id: member.id, // stafflist_id from PostgreSQL
+      id: member.stafflistId, // stafflist_id from PostgreSQL - matches localStorage staff_record_id
       name: member.name, // staff_name from PostgreSQL
     }));
 

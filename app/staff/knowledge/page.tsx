@@ -6,13 +6,6 @@ import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronDown, ChevronRight, ChevronLeft, Trash2, Edit2, X } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
-import LearningOpportunityTool from '@/components/features/staff/LearningOpportunityTool';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 interface StaffKnowledgeEntry {
   id: string;
@@ -48,15 +41,12 @@ export default function KnowledgePage() {
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [gameNameSearch, setGameNameSearch] = useState<string>('');
   const [showKnowledgeGaps, setShowKnowledgeGaps] = useState(false);
-  const [showLearningOpportunitiesModal, setShowLearningOpportunitiesModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{ confidenceLevel: string; notes: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
-  const [mounted, setMounted] = useState(false);
-  const [isLearningToolCollapsed, setIsLearningToolCollapsed] = useState(true);
 
   // Check authentication and set default filter
   useEffect(() => {
@@ -450,12 +440,12 @@ export default function KnowledgePage() {
             >
               📚 Knowledge Gaps
             </button>
-            <button
-              onClick={() => setShowLearningOpportunitiesModal(true)}
-              className="flex-1 px-3 py-1 rounded-lg text-xs border border-border bg-background text-muted-foreground hover:bg-muted/50 transition-all"
+            <Link
+              href="/staff/learning-opportunities"
+              className="flex-1 px-3 py-1 rounded-lg text-xs border border-border bg-background text-muted-foreground hover:bg-muted/50 transition-all text-center"
             >
               🎯 Learning Opportunities
-            </button>
+            </Link>
           </div>
 
           {/* Small info text */}
@@ -747,20 +737,6 @@ export default function KnowledgePage() {
           </div>
         )}
       </div>
-
-      {/* Learning Opportunities Modal */}
-      <Dialog open={showLearningOpportunitiesModal} onOpenChange={setShowLearningOpportunitiesModal}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              🎯 Learning Opportunities
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <LearningOpportunityTool />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
