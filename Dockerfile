@@ -69,19 +69,18 @@ RUN apt-get update && apt-get install -y gosu && \
 
 COPY --from=builder /app/public ./public
 
-# Only copy Playwright if enabled
+# Copy Playwright if enabled
 RUN if [ "$ENABLE_IPOS" = "true" ]; then \
       mkdir -p /root/.cache/ms-playwright; \
     fi
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/server.js ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/package.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/node_modules ./node_modules
+
+# Automatically leverage output traces to reduce image size
+# Copy the entire standalone directory which includes the correct .next structure
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Create necessary directories (data will be mounted at runtime)
-RUN mkdir -p .next data && \
-    chown -R nextjs:nodejs .next data
-
+# Create data directory (will be mounted at runtime from persistent volume)
+RUN mkdir -p data && chown -R nextjs:nodejs data
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
