@@ -1,27 +1,58 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import GamesDbService from '@/lib/services/games-db-service';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 
 export async function GET() {
   try {
-    // Games needing check (30 day threshold)
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - 30);
-    const gamesNeedingCheckResult = await pool.query(
-      `
-      WITH latest_checks AS (
-        SELECT game_id, MAX(check_date) as last_checked
-        FROM content_checks
-        GROUP BY game_id
-      )
-      SELECT COUNT(*) as count
-      FROM games g
-      LEFT JOIN latest_checks lc ON g.id = lc.game_id
-      WHERE lc.last_checked IS NULL OR lc.last_checked < $1
-      `,
-      [thresholdDate.toISOString()]
-    );
+    // v1.3.0: Calculate games needing check using intelligent criteria
+    // Fetch all games with their latest check data
+    const gamesResult = await pool.query(`
+      SELECT
+        id,
+        name,
+        date_of_acquisition,
+        latest_check_date
+      FROM games
+    `);
+
+    // Fetch all play logs grouped by game
+    const playLogsResult = await pool.query(`
+      SELECT
+        game_id,
+        played_at,
+        created_at
+      FROM play_logs
+      ORDER BY game_id, played_at DESC
+    `);
+
+    // Group play logs by game_id
+    const playLogsByGame = playLogsResult.rows.reduce((acc, log) => {
+      if (!acc[log.game_id]) {
+        acc[log.game_id] = [];
+      }
+      acc[log.game_id].push(log);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Calculate needs checking for each game
+    let gamesNeedingCheckCount = 0;
+    for (const game of gamesResult.rows) {
+      const gameData = {
+        fields: {
+          'Date of Aquisition': game.date_of_acquisition,
+          'Latest Check Date': game.latest_check_date,
+        },
+      };
+
+      const playLogs = playLogsByGame[game.id] || [];
+      const needsCheckingInfo = GamesDbService.calculateNeedsChecking(gameData, playLogs);
+
+      if (needsCheckingInfo.needsChecking) {
+        gamesNeedingCheckCount++;
+      }
+    }
 
     // Play logs today
     const today = new Date().toISOString().split('T')[0];
@@ -50,7 +81,7 @@ export async function GET() {
     `);
 
     return NextResponse.json({
-      gamesNeedingCheck: parseInt(gamesNeedingCheckResult.rows[0].count),
+      gamesNeedingCheck: gamesNeedingCheckCount, // v1.3.0: Now uses intelligent criteria
       playLogsToday: parseInt(playLogsTodayResult.rows[0].count),
       playLogsThisWeek: parseInt(playLogsWeekResult.rows[0].count),
       knowledgeGaps: parseInt(knowledgeGapsResult.rows[0].count),

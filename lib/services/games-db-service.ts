@@ -667,6 +667,160 @@ class GamesDbService {
   }
 
   /**
+   * v1.3.0: Calculate if a game needs checking based on play activity and check history
+   *
+   * Criteria (in priority order):
+   * 1. 🔴 Recently active (played in last 30 days, not checked in 60+ days)
+   * 2. 🟠 High play count (10+ plays since last check)
+   * 3. 🟡 Routine maintenance (has plays, last check 120+ days ago)
+   * 4. 🟢 First check needed (never checked, acquired 60+ days ago)
+   * 5. 🔵 Annual audit (not checked in 365+ days)
+   */
+  static calculateNeedsChecking(game: any, playLogs: any[] = []): import('@/types').NeedsCheckingInfo {
+    const now = new Date();
+
+    // Calculate date-based metrics
+    const dateAcquired = game.fields?.['Date of Aquisition'] ? new Date(game.fields['Date of Aquisition']) : null;
+    const lastCheckDate = game.fields?.['Latest Check Date'] ? new Date(game.fields['Latest Check Date']) : null;
+
+    const daysSinceAcquired = dateAcquired
+      ? Math.floor((now.getTime() - dateAcquired.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    const daysSinceLastCheck = lastCheckDate
+      ? Math.floor((now.getTime() - lastCheckDate.getTime()) / (1000 * 60 * 60 * 24))
+      : Infinity;
+
+    // Calculate play-based metrics
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const recentPlays = playLogs.filter(log => {
+      const logDate = new Date(log.played_at || log.created_at);
+      return logDate >= thirtyDaysAgo;
+    }).length;
+
+    const playsSinceLastCheck = lastCheckDate
+      ? playLogs.filter(log => {
+          const logDate = new Date(log.played_at || log.created_at);
+          return logDate > lastCheckDate;
+        }).length
+      : playLogs.length;
+
+    const totalPlays = playLogs.length;
+
+    const lastPlayedDate = playLogs.length > 0
+      ? new Date(Math.max(...playLogs.map(log => new Date(log.played_at || log.created_at).getTime())))
+      : null;
+
+    // Calculate sort priority (higher = more urgent within criterion)
+    // Composite score: (recent plays * 10000) + (total plays * 100) + (days since last play inverted)
+    const daysSinceLastPlay = lastPlayedDate
+      ? Math.floor((now.getTime() - lastPlayedDate.getTime()) / (1000 * 60 * 60 * 24))
+      : 999999;
+
+    const sortPriority = (recentPlays * 10000) + (totalPlays * 100) + (999999 - daysSinceLastPlay);
+
+    // Criterion 1: 🔴 Recently active (played in last 30 days, not checked in 60+ days)
+    if (recentPlays > 0 && daysSinceLastCheck > 60) {
+      return {
+        needsChecking: true,
+        criterion: 1,
+        criterionLabel: '🔴 Urgent - Recently played',
+        criterionColor: '🔴',
+        recentPlays,
+        totalPlays,
+        playsSinceLastCheck,
+        lastPlayedDate,
+        daysSinceLastCheck,
+        daysSinceAcquired,
+        sortPriority,
+      };
+    }
+
+    // Criterion 2: 🟠 High play count (10+ plays since last check)
+    if (playsSinceLastCheck >= 10) {
+      return {
+        needsChecking: true,
+        criterion: 2,
+        criterionLabel: '🟠 High Play Count',
+        criterionColor: '🟠',
+        recentPlays,
+        totalPlays,
+        playsSinceLastCheck,
+        lastPlayedDate,
+        daysSinceLastCheck,
+        daysSinceAcquired,
+        sortPriority,
+      };
+    }
+
+    // Criterion 3: 🟡 Routine maintenance (has plays, last check 120+ days ago)
+    if (totalPlays > 0 && daysSinceLastCheck > 120) {
+      return {
+        needsChecking: true,
+        criterion: 3,
+        criterionLabel: '🟡 Routine Maintenance',
+        criterionColor: '🟡',
+        recentPlays,
+        totalPlays,
+        playsSinceLastCheck,
+        lastPlayedDate,
+        daysSinceLastCheck,
+        daysSinceAcquired,
+        sortPriority,
+      };
+    }
+
+    // Criterion 4: 🟢 First check needed (never checked, acquired 60+ days ago)
+    if (!lastCheckDate && daysSinceAcquired > 60) {
+      return {
+        needsChecking: true,
+        criterion: 4,
+        criterionLabel: '🟢 First Check Needed',
+        criterionColor: '🟢',
+        recentPlays,
+        totalPlays,
+        playsSinceLastCheck,
+        lastPlayedDate,
+        daysSinceLastCheck: Infinity,
+        daysSinceAcquired,
+        sortPriority,
+      };
+    }
+
+    // Criterion 5: 🔵 Annual audit (not checked in 365+ days)
+    if (daysSinceLastCheck > 365) {
+      return {
+        needsChecking: true,
+        criterion: 5,
+        criterionLabel: '🔵 Annual Audit',
+        criterionColor: '🔵',
+        recentPlays,
+        totalPlays,
+        playsSinceLastCheck,
+        lastPlayedDate,
+        daysSinceLastCheck,
+        daysSinceAcquired,
+        sortPriority,
+      };
+    }
+
+    // Does not need checking
+    return {
+      needsChecking: false,
+      criterion: null,
+      criterionLabel: '',
+      criterionColor: null,
+      recentPlays,
+      totalPlays,
+      playsSinceLastCheck,
+      lastPlayedDate,
+      daysSinceLastCheck,
+      daysSinceAcquired,
+      sortPriority: 0,
+    };
+  }
+
+  /**
    * Close the connection pool
    */
   async close(): Promise<void> {

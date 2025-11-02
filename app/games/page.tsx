@@ -529,6 +529,28 @@ function GamesPageContent() {
       const nameB = b.fields['Game Name'] || '';
 
       switch (activeSortOption) {
+        case 'needsChecking': {
+          // v1.3.0: Sort by needs checking criteria
+          const aInfo = (a as any).needsCheckingInfo;
+          const bInfo = (b as any).needsCheckingInfo;
+
+          // Games that need checking come first
+          if (aInfo?.needsChecking && !bInfo?.needsChecking) return -1;
+          if (!aInfo?.needsChecking && bInfo?.needsChecking) return 1;
+
+          // If both need checking (or both don't), sort by criterion priority
+          if (aInfo?.needsChecking && bInfo?.needsChecking) {
+            // Lower criterion number = higher priority (1 is most urgent)
+            if (aInfo.criterion !== bInfo.criterion) {
+              return (aInfo.criterion || 999) - (bInfo.criterion || 999);
+            }
+            // Within same criterion, sort by sortPriority (higher = more urgent)
+            return (bInfo.sortPriority || 0) - (aInfo.sortPriority || 0);
+          }
+
+          // If neither needs checking, sort alphabetically
+          return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+        }
         case 'alphabetical':
           // Use localeCompare with numeric option to handle numbers properly
           return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
@@ -705,15 +727,21 @@ function GamesPageContent() {
               </div>
             )}
 
-            {/* Collapsed view - Just version */}
+            {/* Collapsed view - Version + Priority legend (v1.3.0) */}
             {isHeaderCollapsed && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div
                   className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
                   title={`Build date: ${BUILD_DATE}`}
                 >
                   v{VERSION}
                 </div>
+                {/* v1.3.0: Needs Checking Priority Legend (staff-only) */}
+                {isStaff && (
+                  <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                    📚 Priority: <span className="font-medium">🔴 Urgent → 🟠 High → 🟡 Routine → 🟢 New → 🔵 Annual</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -893,8 +921,8 @@ function GamesPageContent() {
                 <Select
                   value={staffSortOption || sortOption}
                   onValueChange={(value: SortOption) => {
-                    // Check if it's a staff-only sort option
-                    if (['lastChecked', 'lastCheckedDesc', 'totalChecks', 'totalChecksDesc'].includes(value)) {
+                    // Check if it's a staff-only sort option (v1.3.0: added needsChecking)
+                    if (['needsChecking', 'lastChecked', 'lastCheckedDesc', 'totalChecks', 'totalChecksDesc'].includes(value)) {
                       setStaffSortOption(value);
                       setSortOption('dateAcquired'); // Reset regular sort to default
                     } else {
@@ -916,8 +944,13 @@ function GamesPageContent() {
                     {isStaff && (
                       <>
                         <div className="h-px bg-border my-1" />
+                        <SelectItem value="needsChecking">📚 Needs Checking</SelectItem>
                         <SelectItem value="lastChecked">Last Checked (Recent)</SelectItem>
                         <SelectItem value="lastCheckedDesc">Last Checked (Oldest)</SelectItem>
+                      </>
+                    )}
+                    {isAdmin && (
+                      <>
                         <SelectItem value="totalChecks">Total Checks (Most)</SelectItem>
                         <SelectItem value="totalChecksDesc">Total Checks (Least)</SelectItem>
                       </>

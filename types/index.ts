@@ -205,7 +205,22 @@ export interface GameFilters {
   bestPlayerCount?: number;
 }
 
-export type SortOption = 'alphabetical' | 'alphabeticalDesc' | 'year' | 'maxPlayers' | 'complexity' | 'dateAcquired' | 'lastChecked' | 'lastCheckedDesc' | 'totalChecks' | 'totalChecksDesc';
+export type SortOption = 'alphabetical' | 'alphabeticalDesc' | 'year' | 'maxPlayers' | 'complexity' | 'dateAcquired' | 'lastChecked' | 'lastCheckedDesc' | 'totalChecks' | 'totalChecksDesc' | 'needsChecking';
+
+// v1.3.0: Needs Checking criteria metadata
+export interface NeedsCheckingInfo {
+  needsChecking: boolean;
+  criterion: 1 | 2 | 3 | 4 | 5 | null; // Priority level (1=highest, 5=lowest)
+  criterionLabel: string; // Human-readable label (e.g., "🔴 Urgent - Recently played")
+  criterionColor: '🔴' | '🟠' | '🟡' | '🟢' | '🔵' | null; // Color emoji indicator
+  recentPlays: number; // Plays in last 30 days
+  totalPlays: number; // Total play count
+  playsSinceLastCheck: number; // Plays since most recent check
+  lastPlayedDate: Date | null; // Most recent play log date
+  daysSinceLastCheck: number; // Days since last check (Infinity if never checked)
+  daysSinceAcquired: number; // Days since acquisition
+  sortPriority: number; // Composite score for sorting within criterion
+}
 
 // API Response Types
 export interface ApiResponse<T> {

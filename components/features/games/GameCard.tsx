@@ -204,11 +204,14 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
               </div>
             )}
 
-            {/* v1.2.0: Staff mode - show 📚 icon with check count as 4th item */}
+            {/* v1.3.0: Staff mode - show 📚 icon with check count + criterion color indicator */}
             {isStaff && (
               <div className="flex items-center gap-1">
                 <span>📚</span>
                 <span>{game.fields['Total Checks'] || 0}</span>
+                {(game as any).needsCheckingInfo?.needsChecking && (game as any).needsCheckingInfo?.criterionColor && (
+                  <span className="ml-0.5">{(game as any).needsCheckingInfo.criterionColor}</span>
+                )}
               </div>
             )}
           </div>
