@@ -175,7 +175,12 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
             {game.fields['Max. Players'] && (
               <div className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                <span>{game.fields['Min Players'] || 1}-{game.fields['Max. Players']}</span>
+                <span>
+                  {game.fields['Min Players'] === game.fields['Max. Players']
+                    ? `Players ${game.fields['Max. Players']}`
+                    : `${game.fields['Min Players'] || 1}-${game.fields['Max. Players']}`
+                  }
+                </span>
               </div>
             )}
 

@@ -83,6 +83,23 @@ export async function POST(request: NextRequest) {
       recordId: contentCheck.id,
     });
 
+    // v1.3.0: Update game's latest check data and increment total checks
+    try {
+      await db.pool.query(
+        `UPDATE games
+         SET latest_check_date = $1,
+             latest_check_status = $2,
+             total_checks = COALESCE(total_checks, 0) + 1,
+             updated_at = NOW()
+         WHERE id = $3`,
+        [checkDate, Array.isArray(status) ? status[0] : status, gameId]
+      );
+      logger.info('Content Check', 'Updated game latest check data', { gameId, checkDate });
+    } catch (updateError) {
+      logger.error('Content Check', 'Failed to update game latest check data', updateError instanceof Error ? updateError : new Error(String(updateError)));
+      // Don't fail the request if game update fails
+    }
+
     // Get game and staff details for changelog
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
