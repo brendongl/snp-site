@@ -43,7 +43,7 @@ Thumbs.db
 # Migration and utility scripts not needed in production
 scripts/
 
-# Documentation (keep only essential docs via specific includes in Dockerfile if needed)
+# Documentation
 docs/
 README.md
 *.md
@@ -55,11 +55,12 @@ README.md
 temp
 tmp
 
-# Exclude large data directories from Docker image
-# These should be stored on persistent volumes or uploaded separately
-# NOTE: data/video-game-images/ is now INCLUDED in Docker image (removed from ignore)
-data/staff-ids/
+# Exclude ALL data directories from Docker image (1.7GB+ savings!)
+# These are stored on Railway's persistent volume
 data/images/
+data/video-game-images/
+data/staff-ids/
+data/*.json
 
-# Exclude git worktrees (duplicates main repo)
+# Exclude git worktrees
 .worktrees/
