@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Pencil, Trash2, Shield, AlertTriangle, XCircle, Calendar, User, Package, Box } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { EditContentCheckDialog } from '@/components/features/content-check/EditContentCheckDialog';
 import IssuesMissingReport from '@/components/features/content-check/IssuesMissingReport';
@@ -128,6 +128,21 @@ export default function CheckHistoryPage() {
     setCurrentPage(1);
   }, [sortBy, showMyChecksOnly, selectedStatus, selectedStaff]);
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Perfect Condition':
+        return <Shield className="w-4 h-4 text-green-600" />;
+      case 'Minor Issues':
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+      case 'Major Issues':
+        return <AlertTriangle className="w-4 h-4 text-orange-600" />;
+      case 'Unplayable':
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      default:
+        return <Shield className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Perfect Condition':
@@ -147,6 +162,14 @@ export default function CheckHistoryPage() {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatDateShort = (date: string) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     });
@@ -306,6 +329,31 @@ export default function CheckHistoryPage() {
           </div>
         </div>
 
+        {/* Icon Legend - Mobile Only */}
+        <div className="mb-6 md:hidden">
+          <div className="border rounded-lg p-3 bg-card shadow-sm">
+            <p className="text-xs font-semibold mb-2 text-muted-foreground">LEGEND</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-green-600" />
+                <span>Perfect</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
+                <span>Minor</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
+                <span>Major</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-600" />
+                <span>Unplayable</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Issues/Missing Report */}
         <div className="mb-6">
           <IssuesMissingReport />
@@ -346,82 +394,147 @@ export default function CheckHistoryPage() {
           </div>
         )}
 
-        {/* Content Checks Table */}
+        {/* Content Checks - Mobile Card View */}
         {!isLoading && !error && filteredAndSortedChecks.length > 0 && (
-          <div className="border border-border rounded-lg overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
-              <div className="col-span-3">Game</div>
-              <div className="col-span-1.5">Date</div>
-              <div className="col-span-2">Inspector</div>
-              <div className="col-span-1.5">Status</div>
-              <div className={isAdmin ? "col-span-3" : "col-span-4"}>Notes</div>
-              {isAdmin && <div className="col-span-1">Actions</div>}
-            </div>
-
-            {/* Table Rows */}
-            <div className="divide-y divide-border">
-              {paginatedChecks.map((check, idx) => (
+          <>
+            {/* Mobile Cards (hidden on desktop) */}
+            <div className="space-y-3 md:hidden">
+              {paginatedChecks.map((check) => (
                 <div
                   key={check.id}
-                  className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
-                    idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                  }`}
+                  className="border-2 rounded-lg p-3 bg-card shadow-sm"
                 >
-                  <div className="col-span-3 font-medium truncate" title={check.gameName}>
-                    {check.gameName}
+                  {/* Compact Header - Status icon + Date + Game Name */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                      {getStatusIcon(check.status)}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm line-clamp-2">
+                          {check.gameName}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />
+                          <span>{formatDateShort(check.checkDate)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(check)}
+                          className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-600"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(check.id)}
+                          disabled={deletingId === check.id}
+                          className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <div className="col-span-1.5 text-muted-foreground">
-                    {formatDate(check.checkDate)}
+
+                  {/* Inspector */}
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                    <User className="w-3 h-3" />
+                    <span className="truncate">{check.inspector}</span>
                   </div>
-                  <div className="col-span-2 text-muted-foreground">
-                    {check.inspector}
-                  </div>
-                  <div className="col-span-1.5">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(check.status)}`}>
-                      {check.status}
-                    </span>
-                  </div>
-                  <div className={`${isAdmin ? 'col-span-3' : 'col-span-4'} text-muted-foreground truncate`} title={check.notes}>
-                    {check.notes || '—'}
-                  </div>
-                  {isAdmin && (
-                    <div className="col-span-1 flex gap-1 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(check)}
-                        className="h-8 w-8 p-0"
-                        title="Edit check"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(check.id)}
-                        disabled={deletingId === check.id}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        title="Delete check"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                  {/* Notes */}
+                  {check.notes && (
+                    <div className="p-2 bg-muted/50 rounded border text-xs text-muted-foreground line-clamp-2">
+                      {check.notes}
                     </div>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Pagination Controls */}
+            {/* Desktop Table (hidden on mobile) */}
+            <div className="hidden md:block border border-border rounded-lg overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-12 bg-muted px-4 py-3 gap-4 font-semibold text-sm sticky top-0">
+                <div className="col-span-3">Game</div>
+                <div className="col-span-1.5">Date</div>
+                <div className="col-span-2">Inspector</div>
+                <div className="col-span-1.5">Status</div>
+                <div className={isAdmin ? "col-span-3" : "col-span-4"}>Notes</div>
+                {isAdmin && <div className="col-span-1">Actions</div>}
+              </div>
+
+              {/* Table Rows */}
+              <div className="divide-y divide-border">
+                {paginatedChecks.map((check, idx) => (
+                  <div
+                    key={check.id}
+                    className={`grid grid-cols-12 px-4 py-3 gap-4 text-sm items-center hover:bg-accent transition-colors ${
+                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                    }`}
+                  >
+                    <div className="col-span-3 font-medium truncate" title={check.gameName}>
+                      {check.gameName}
+                    </div>
+                    <div className="col-span-1.5 text-muted-foreground">
+                      {formatDate(check.checkDate)}
+                    </div>
+                    <div className="col-span-2 text-muted-foreground">
+                      {check.inspector}
+                    </div>
+                    <div className="col-span-1.5">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(check.status)}`}>
+                        {check.status}
+                      </span>
+                    </div>
+                    <div className={`${isAdmin ? 'col-span-3' : 'col-span-4'} text-muted-foreground truncate`} title={check.notes}>
+                      {check.notes || '—'}
+                    </div>
+                    {isAdmin && (
+                      <div className="col-span-1 flex gap-1 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(check)}
+                          className="h-8 w-8 p-0"
+                          title="Edit check"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(check.id)}
+                          disabled={deletingId === check.id}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title="Delete check"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pagination Controls (shared for both views) */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-4 border-t border-border bg-muted/30">
+              <div className="flex items-center justify-between px-4 py-4 border-t border-border bg-muted/30 mt-4 rounded-lg">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
                 </button>
                 <div className="text-sm text-muted-foreground">
                   Page {currentPage} of {totalPages}
@@ -431,12 +544,12 @@ export default function CheckHistoryPage() {
                   disabled={currentPage === totalPages}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 transition-colors"
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
