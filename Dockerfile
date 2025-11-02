@@ -39,7 +39,12 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
     FACEBOOK_ACCESS_TOKEN=dummy_token \
     N8N_WEBHOOK_URL=https://dummy.n8n.com/webhook/dummy \
     N8N_API_KEY=dummy_api_key \
-    GOOGLE_MAPS_API_KEY=dummy_maps_key
+    GOOGLE_MAPS_API_KEY=dummy_maps_key \
+    IPOS_EMAIL=dummy_email \
+    IPOS_PASSWORD=dummy_password
+
+# Install Playwright browsers during build
+RUN npx playwright install chromium
 
 RUN npm run build
 
@@ -53,10 +58,35 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install gosu for user switching in entrypoint
-RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+# Install gosu for user switching in entrypoint and Playwright browser dependencies
+RUN apt-get update && apt-get install -y gosu \
+    # Dependencies for Playwright/Chromium
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libatspi2.0-0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxcb1 \
+    libxkbcommon0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
+
+# Copy Playwright browser binaries from builder stage
+COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
