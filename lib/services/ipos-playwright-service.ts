@@ -58,28 +58,44 @@ export async function fetchIPOSDashboardData(
       page.click('button:has-text("Đăng nhập")')
     ]);
 
-    // Wait for dashboard to load
-    await page.waitForSelector('text=Doanh thu (NET)', { timeout: 10000 });
+    // Wait for dashboard to load - increase timeout and add extra wait for data
+    await page.waitForSelector('text=Doanh thu (NET)', { timeout: 15000 });
+
+    // Additional wait for all data to load properly
+    await page.waitForTimeout(3000);
 
     // Extract data from the dashboard
     const data = await page.evaluate(() => {
+      const textContent = document.body.innerText;
+      const lines = textContent.split('\n');
+
       // Extract unpaid amount (from "Hiện tại ở quán" section)
-      const unpaidText = document.body.innerText.match(/Tổng tiền chưa thanh toán\s+([\d,]+)/);
-      const unpaidAmount = unpaidText ? parseFloat(unpaidText[1].replace(/,/g, '')) : 0;
+      let unpaidAmount = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Hiện tại ở quán')) {
+          // The amount is on the next line
+          if (i + 1 < lines.length) {
+            const match = lines[i + 1].match(/([\d,]+)\s*₫?/);
+            if (match) {
+              unpaidAmount = parseFloat(match[1].replace(/,/g, ''));
+            }
+          }
+          break;
+        }
+      }
 
       // Extract paid/revenue amount (from "Doanh thu (NET)" section)
-      const revenueElements = document.querySelectorAll('div');
       let paidAmount = 0;
-      for (const el of revenueElements) {
-        const text = el.textContent || '';
-        // Look for pattern like "723,587 ₫" after "Doanh thu (NET)"
-        const match = text.match(/([\d,]+)\s*₫/);
-        if (match && !text.includes('Trung bình') && !text.includes('Giảm')) {
-          const amount = parseFloat(match[1].replace(/,/g, ''));
-          if (amount > 0 && amount < 1000000000) { // Reasonable range
-            paidAmount = amount;
-            break;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Doanh thu (NET)')) {
+          // The amount is on the next line
+          if (i + 1 < lines.length) {
+            const match = lines[i + 1].match(/([\d,]+)\s*₫?/);
+            if (match) {
+              paidAmount = parseFloat(match[1].replace(/,/g, ''));
+            }
           }
+          break;
         }
       }
 
