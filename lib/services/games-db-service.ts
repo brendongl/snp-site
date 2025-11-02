@@ -694,13 +694,13 @@ class GamesDbService {
     // Calculate play-based metrics
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     const recentPlays = playLogs.filter(log => {
-      const logDate = new Date(log.played_at || log.created_at);
+      const logDate = new Date(log.session_date || log.created_at);
       return logDate >= thirtyDaysAgo;
     }).length;
 
     const playsSinceLastCheck = lastCheckDate
       ? playLogs.filter(log => {
-          const logDate = new Date(log.played_at || log.created_at);
+          const logDate = new Date(log.session_date || log.created_at);
           return logDate > lastCheckDate;
         }).length
       : playLogs.length;
@@ -708,7 +708,7 @@ class GamesDbService {
     const totalPlays = playLogs.length;
 
     const lastPlayedDate = playLogs.length > 0
-      ? new Date(Math.max(...playLogs.map(log => new Date(log.played_at || log.created_at).getTime())))
+      ? new Date(Math.max(...playLogs.map(log => new Date(log.session_date || log.created_at).getTime())))
       : null;
 
     // Calculate sort priority (higher = more urgent within criterion)

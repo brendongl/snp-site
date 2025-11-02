@@ -21,10 +21,10 @@ export async function GET() {
     const playLogsResult = await pool.query(`
       SELECT
         game_id,
-        played_at,
+        session_date,
         created_at
       FROM play_logs
-      ORDER BY game_id, played_at DESC
+      ORDER BY game_id, session_date DESC
     `);
 
     // Group play logs by game_id
