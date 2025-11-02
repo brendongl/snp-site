@@ -884,18 +884,20 @@ function GamesPageContent() {
               </Button>
             </div>
 
-            <div className="flex flex-wrap gap-4 items-center justify-between">
-              <GameFilters
-                filters={filters}
-                onQuickFilter={handleQuickFilter}
-                onOpenAdvancedFilter={() => setShowAdvancedFilters(true)}
-                onClearAll={handleClearAll}
-                activeFiltersCount={activeFiltersCount}
-                hasAnyFilters={hasAnyFilters}
-                isStaff={isStaff}
-              />
+            {/* Mobile-optimized layout: Row 1 (Filters, Gallery, Random) → Divider → Row 2 (Sort + Staff Knowledge) */}
+            <div className="space-y-3">
+              {/* Row 1: Filter buttons - Filters, Gallery Mode, Random Pick */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <GameFilters
+                  filters={filters}
+                  onQuickFilter={handleQuickFilter}
+                  onOpenAdvancedFilter={() => setShowAdvancedFilters(true)}
+                  onClearAll={handleClearAll}
+                  activeFiltersCount={activeFiltersCount}
+                  hasAnyFilters={hasAnyFilters}
+                  isStaff={isStaff}
+                />
 
-              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={picturesOnlyMode ? 'default' : 'outline'}
                   size="sm"
@@ -916,7 +918,13 @@ function GamesPageContent() {
                   <span className="hidden sm:inline">Random Pick</span>
                   <span className="sm:hidden">Random</span>
                 </Button>
+              </div>
 
+              {/* Divider */}
+              <div className="h-px bg-border" />
+
+              {/* Row 2: Sorting options - Sort dropdown + Staff Knowledge dropdowns */}
+              <div className="flex flex-wrap gap-2 items-center">
                 {/* Combined Sort Dropdown */}
                 <Select
                   value={staffSortOption || sortOption}
@@ -961,8 +969,8 @@ function GamesPageContent() {
                 {isStaff && (
                   <>
                     {/* Visual separator and label for Staff Knowledge Filters */}
-                    <div className="h-6 w-px bg-border mx-2" />
-                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    <div className="h-6 w-px bg-border mx-2 hidden sm:block" />
+                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap hidden sm:inline">
                       Staff Knowledge:
                     </span>
 
