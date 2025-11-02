@@ -47,7 +47,7 @@ function GamesPageContent() {
   const [staffSortOption, setStaffSortOption] = useState<SortOption | null>(null);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [picturesOnlyMode, setPicturesOnlyMode] = useState(false);
-  const [staffKnowledge, setStaffKnowledge] = useState<Map<string, string>>(new Map());
+  const [staffKnowledge, setStaffKnowledge] = useState<Map<string, {id: string, confidenceLevel: string, notes?: string}>>(new Map());
   // v1.2.0: Knowledge dialog state
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [knowledgeDialogGame, setKnowledgeDialogGame] = useState<BoardGame | null>(null);
@@ -133,14 +133,18 @@ function GamesPageContent() {
       const data = await response.json();
       const knowledge = data.knowledge || [];
 
-      // Create a map of gameId -> confidence level for current staff member
-      const knowledgeMap = new Map<string, string>();
+      // Create a map of gameId -> {id, confidenceLevel, notes} for current staff member
+      const knowledgeMap = new Map<string, {id: string, confidenceLevel: string, notes?: string}>();
       knowledge
         .filter((k: any) => k.staffMember === staffName)
         .forEach((k: any) => {
           const matchingGame = games.find(g => g.fields['Game Name'] === k.gameName);
           if (matchingGame) {
-            knowledgeMap.set(matchingGame.id, k.confidenceLevel);
+            knowledgeMap.set(matchingGame.id, {
+              id: k.id,
+              confidenceLevel: k.confidenceLevel,
+              notes: k.notes || '',
+            });
           }
         });
 
@@ -739,7 +743,7 @@ function GamesPageContent() {
                 {/* v1.3.0: Needs Checking Priority Legend (staff-only) */}
                 {isStaff && (
                   <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                    📚 Priority: <span className="font-medium">🔴 Urgent → 🟠 High → 🟡 Routine → 🟢 New → 🔵 Annual</span>
+                    Priority: Highest🔴🟠🟡🟢🔵Lowest
                   </div>
                 )}
               </div>
@@ -1118,7 +1122,7 @@ function GamesPageContent() {
               onClick={() => handleGameCardClick(game)}
               isStaff={isStaff}
               picturesOnlyMode={picturesOnlyMode}
-              staffKnowledgeLevel={staffKnowledge.get(game.id)}
+              staffKnowledgeLevel={staffKnowledge.get(game.id)?.confidenceLevel}
               onKnowledgeBadgeClick={() => handleKnowledgeBadgeClick(game)} // v1.2.0
             />
           ))}
@@ -1156,6 +1160,7 @@ function GamesPageContent() {
         open={!!selectedGame}
         onClose={handleCloseModal}
         onRefresh={handleRefresh}
+        staffKnowledge={selectedGame ? staffKnowledge.get(selectedGame.id) : undefined}
       />
 
       {/* Add Game Dialog (Staff Only) */}
@@ -1185,9 +1190,9 @@ function GamesPageContent() {
           gameId={knowledgeDialogGame.id}
           gameName={knowledgeDialogGame.fields['Game Name']}
           onSuccess={handleRefresh}
-          existingKnowledgeId={`${knowledgeDialogGame.id}-${localStorage.getItem('staff_id')}`}
-          existingConfidenceLevel={staffKnowledge.get(knowledgeDialogGame.id)}
-          existingNotes=""
+          existingKnowledgeId={staffKnowledge.get(knowledgeDialogGame.id)?.id}
+          existingConfidenceLevel={staffKnowledge.get(knowledgeDialogGame.id)?.confidenceLevel}
+          existingNotes={staffKnowledge.get(knowledgeDialogGame.id)?.notes || ""}
         />
       )}
 

@@ -125,7 +125,7 @@ export function ContentCheckHistory({
   return (
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
+        <SheetHeader className="pr-12">
           <SheetTitle className="text-xl">Content Check History</SheetTitle>
           <SheetDescription>
             View all content check records for {gameName}

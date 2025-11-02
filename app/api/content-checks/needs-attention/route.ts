@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     // v1.2.0: Get games where the LATEST content check has hasIssue=true
     // Uses DISTINCT ON to get only the most recent check per game
+    // v1.3.0: Exclude resolution checks (resolved_from_check_id IS NOT NULL)
     const result = await pool.query(`
       SELECT DISTINCT ON (cc.game_id)
         cc.game_id,
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
       FROM content_checks cc
       INNER JOIN games g ON cc.game_id = g.id
       LEFT JOIN staff_list sl ON cc.inspector_id = sl.id
-      WHERE cc.has_issue = true
+      WHERE cc.has_issue = true AND cc.resolved_from_check_id IS NULL
       ORDER BY cc.game_id, cc.check_date DESC, cc.created_at DESC
     `);
 

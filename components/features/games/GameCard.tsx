@@ -170,55 +170,61 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
             </div>
           )}
 
-          {/* Compact horizontal info row - shows for all modes */}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {game.fields['Max. Players'] && (
-              <div className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                <span>
-                  {game.fields['Min Players'] === game.fields['Max. Players']
-                    ? `Players ${game.fields['Max. Players']}`
-                    : `${game.fields['Min Players'] || 1}-${game.fields['Max. Players']}`
-                  }
-                </span>
-              </div>
-            )}
-
-            {game.fields['Complexity'] && (
-              <div className="flex items-center gap-1">
-                <Brain className="h-3 w-3" />
-                <div className="flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className={i < game.fields['Complexity']! ? 'text-primary' : 'text-muted'}>
-                      ●
-                    </span>
-                  ))}
+          {/* Two-line compact info layout */}
+          <div className="space-y-1">
+            {/* Line 1: Player count / Complexity */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {game.fields['Max. Players'] && (
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  <span>
+                    {game.fields['Min Players'] === game.fields['Max. Players']
+                      ? game.fields['Max. Players']
+                      : `${game.fields['Min Players'] || 1}-${game.fields['Max. Players']}`
+                    }
+                  </span>
                 </div>
-              </div>
-            )}
+              )}
 
-            {(game.fields['Min Playtime'] || game.fields['Max Playtime']) && (
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span>
-                  {game.fields['Min Playtime'] === game.fields['Max Playtime']
-                    ? `${game.fields['Min Playtime']}m`
-                    : `${game.fields['Min Playtime'] || '?'}-${game.fields['Max Playtime'] || '?'}m`
-                  }
-                </span>
-              </div>
-            )}
+              {game.fields['Complexity'] && (
+                <div className="flex items-center gap-1">
+                  <Brain className="h-3 w-3" />
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} className={i < game.fields['Complexity']! ? 'text-primary' : 'text-muted'}>
+                        ●
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
-            {/* v1.3.0: Staff mode - show 📚 icon with check count + criterion color indicator */}
-            {isStaff && (
-              <div className="flex items-center gap-1">
-                <span>📚</span>
-                <span>{game.fields['Total Checks'] || 0}</span>
-                {(game as any).needsCheckingInfo?.needsChecking && (game as any).needsCheckingInfo?.criterionColor && (
-                  <span className="ml-0.5">{(game as any).needsCheckingInfo.criterionColor}</span>
-                )}
-              </div>
-            )}
+            {/* Line 2: Playtime, Check count, Priority */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {(game.fields['Min Playtime'] || game.fields['Max Playtime']) && (
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    {game.fields['Min Playtime'] === game.fields['Max Playtime']
+                      ? `${game.fields['Min Playtime']}m`
+                      : `${game.fields['Min Playtime'] || '?'}-${game.fields['Max Playtime'] || '?'}m`
+                    }
+                  </span>
+                </div>
+              )}
+
+              {/* v1.3.0: Staff mode - show 📚 icon with check count + criterion color indicator */}
+              {isStaff && (
+                <div className="flex items-center gap-1">
+                  <span>📚</span>
+                  <span>{game.fields['Total Checks'] || 0}</span>
+                  {(game as any).needsCheckingInfo?.needsChecking && (game as any).needsCheckingInfo?.criterionColor && (
+                    <span className="ml-0.5">{(game as any).needsCheckingInfo.criterionColor}</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

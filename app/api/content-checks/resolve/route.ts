@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       boxCondition: 'Good', // Default, can be enhanced later
       cardCondition: 'Good', // Default, can be enhanced later
       isFake: false,
-      notes: `Resolved previous issue from check ${originalCheckId}`,
+      notes: `Resolved previous issue from check`,
       sleeved: false,
       boxWrapped: false,
       photos: [],

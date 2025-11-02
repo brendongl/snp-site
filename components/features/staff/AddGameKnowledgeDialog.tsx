@@ -193,29 +193,33 @@ export function AddGameKnowledgeDialog({
       }
 
       // v1.2.0: Create or update knowledge entry
-      const response = await fetch('/api/staff-knowledge', {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          isEditMode
-            ? {
-                // Update mode: only send ID, confidence level, and notes
-                id: existingKnowledgeId,
-                confidenceLevel,
-                notes: notes.trim() || null,
-              }
-            : {
-                // Create mode: send all fields
-                gameId,
-                gameName,
-                staffName,
-                staffId,
-                confidenceLevel,
-                taughtBy: taughtBy || null,
-                notes: notes.trim() || null,
-              }
-        ),
-      });
+      const response = await fetch(
+        isEditMode
+          ? `/api/staff-knowledge?id=${existingKnowledgeId}`
+          : '/api/staff-knowledge',
+        {
+          method: isEditMode ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            isEditMode
+              ? {
+                  // Update mode: only send confidence level and notes (ID is in query param)
+                  confidenceLevel,
+                  notes: notes.trim() || null,
+                }
+              : {
+                  // Create mode: send all fields
+                  gameId,
+                  gameName,
+                  staffName,
+                  staffId,
+                  confidenceLevel,
+                  taughtBy: taughtBy || null,
+                  notes: notes.trim() || null,
+                }
+          ),
+        }
+      );
 
       // Read the response body as text first (to avoid "body already consumed" error)
       const responseText = await response.text();

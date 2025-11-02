@@ -27,9 +27,10 @@ interface GameDetailModalProps {
   open: boolean;
   onClose: () => void;
   onRefresh?: () => void;
+  staffKnowledge?: {id: string, confidenceLevel: string, notes?: string}; // v1.3.0: For edit mode
 }
 
-export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailModalProps) {
+export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge }: GameDetailModalProps) {
   const isStaff = useStaffMode();
   const isAdmin = useAdminMode();
   const [showHistory, setShowHistory] = useState(false);
@@ -169,7 +170,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
                   className="gap-2 w-full sm:w-auto"
                 >
                   <Brain className="w-4 h-4" />
-                  Add Knowledge
+                  {staffKnowledge ? 'Edit Knowledge' : 'Add Knowledge'}
                 </Button>
                 <Button
                   variant="default"
@@ -485,6 +486,9 @@ export function GameDetailModal({ game, open, onClose, onRefresh }: GameDetailMo
             gameId={game.id}
             gameName={game.fields['Game Name']}
             onSuccess={onRefresh}
+            existingKnowledgeId={staffKnowledge?.id}
+            existingConfidenceLevel={staffKnowledge?.confidenceLevel}
+            existingNotes={staffKnowledge?.notes || ""}
           />
         )}
 
