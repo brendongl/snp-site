@@ -48,6 +48,8 @@ export function EditContentCheckDialog({
   const [notes, setNotes] = useState<string>('');
   const [sleevedAtCheck, setSleevedAtCheck] = useState(false);
   const [boxWrappedAtCheck, setBoxWrappedAtCheck] = useState(false);
+  // v1.2.0: Add hasIssue toggle state
+  const [hasIssueToggle, setHasIssueToggle] = useState(false);
 
   // Initialize form fields when dialog opens or check changes
   useEffect(() => {
@@ -59,11 +61,23 @@ export function EditContentCheckDialog({
       setNotes(check.fields.Notes || '');
       setSleevedAtCheck(check.fields['Sleeved At Check'] || false);
       setBoxWrappedAtCheck(check.fields['Box Wrapped At Check'] || false);
+      // v1.2.0: Initialize hasIssue toggle from existing check
+      const hasIssueFromCheck = !!(missingPieces && missingPieces.trim());
+      setHasIssueToggle(hasIssueFromCheck);
     }
   }, [open, check]);
 
+  // v1.2.0: Control toggle based on status (same logic as ContentCheckDialog)
+  useEffect(() => {
+    if (status === 'Perfect Condition') {
+      setHasIssueToggle(false); // Force OFF
+    } else if (status === 'Major Issues' || status === 'Unplayable') {
+      setHasIssueToggle(true); // Lock ON
+    }
+  }, [status]);
+
   const handleSubmit = async () => {
-    // Validation with detailed error messaging
+    // v1.2.0: Validation with toggle logic
     const missingFields: string[] = [];
     if (!status) missingFields.push('Status');
     if (!boxCondition) missingFields.push('Box Condition');
@@ -73,6 +87,19 @@ export function EditContentCheckDialog({
       alert(`Please fill in all required fields:\n${missingFields.join(', ')}`);
       return;
     }
+
+    // v1.2.0: Validate toggle logic
+    if (status === 'Perfect Condition' && hasIssueToggle) {
+      alert('Cannot have issues with Perfect Condition status');
+      return;
+    }
+    if ((status === 'Major Issues' || status === 'Unplayable') && (!missingPieces || !missingPieces.trim())) {
+      alert('Issue description required for Major Issues or Unplayable status');
+      return;
+    }
+
+    // v1.2.0: Calculate hasIssue based on toggle AND description
+    const hasIssue = hasIssueToggle && missingPieces.trim().length > 0;
 
     setLoading(true);
     try {
@@ -89,6 +116,7 @@ export function EditContentCheckDialog({
           notes,
           sleevedAtCheck,
           boxWrappedAtCheck,
+          hasIssue, // v1.2.0: Include hasIssue field
         }),
       });
 
@@ -202,16 +230,28 @@ export function EditContentCheckDialog({
             </Select>
           </div>
 
-          {/* Missing Pieces */}
-          <div className="space-y-2">
-            <Label htmlFor="missingPieces">Missing Pieces (optional)</Label>
-            <Textarea
-              id="missingPieces"
-              value={missingPieces}
-              onChange={(e) => setMissingPieces(e.target.value)}
-              placeholder="List any missing pieces, or write 'None' if complete"
-              className="min-h-[80px]"
-            />
+          {/* v1.2.0: Report an Issue Toggle */}
+          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hasIssue" className="text-base font-semibold">
+                Report an Issue
+              </Label>
+              <Checkbox
+                id="hasIssue"
+                checked={hasIssueToggle}
+                onCheckedChange={(checked) => setHasIssueToggle(checked as boolean)}
+                disabled={status === 'Perfect Condition' || status === 'Major Issues' || status === 'Unplayable'}
+              />
+            </div>
+            {hasIssueToggle && (
+              <Textarea
+                id="issueDescription"
+                value={missingPieces}
+                onChange={(e) => setMissingPieces(e.target.value)}
+                placeholder="Describe the issue (e.g., missing 1 white road, broken sleeves, damaged box corner)"
+                className="min-h-[80px]"
+              />
+            )}
           </div>
 
           {/* Notes */}

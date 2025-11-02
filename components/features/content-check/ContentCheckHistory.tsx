@@ -132,6 +132,37 @@ export function ContentCheckHistory({
           </SheetDescription>
         </SheetHeader>
 
+        {/* Icon Legend - Pinned at top */}
+        <div className="sticky top-0 z-10 bg-background border rounded-lg p-3 mt-4 shadow-sm">
+          <p className="text-xs font-semibold mb-2 text-muted-foreground">LEGEND</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-green-600" />
+              <span>Perfect</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-yellow-600" />
+              <span>Minor</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
+              <span>Major</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <XCircle className="w-3.5 h-3.5 text-red-600" />
+              <span>Unplayable</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-blue-600" />
+              <span>Sleeved</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-purple-600" />
+              <span>Wrapped</span>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6">
           {loading && (
             <div className="text-center py-8 text-muted-foreground">
@@ -158,131 +189,102 @@ export function ContentCheckHistory({
           )}
 
           {!loading && !error && checks.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {checks.map((check, index) => (
                 <div
                   key={check.id}
-                  className={`border-2 rounded-lg p-4 ${getStatusColor(check.fields.Status)}`}
+                  className={`border-2 rounded-lg p-3 ${getStatusColor(check.fields.Status)}`}
                 >
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
+                  {/* Compact Header - Status icon + Date + Badges + Actions */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {getStatusIcon(check.fields.Status)}
-                      <h3 className="font-semibold text-lg">{check.fields.Status}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
+                      {check.fields['Check Date'] && (
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(check.fields['Check Date']), 'MMM dd')}
+                        </span>
+                      )}
                       {index === 0 && (
-                        <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
                           Latest
                         </span>
                       )}
-                      {isAdmin && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(check)}
-                            className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-600"
-                            title="Edit this check"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(check.id)}
-                            disabled={deletingId === check.id}
-                            className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
-                            title="Delete this check"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
+                      {/* Icon Badges */}
+                      {check.fields['Sleeved At Check'] && (
+                        <span title="Sleeved">
+                          <Package className="w-3.5 h-3.5 text-blue-600" />
+                        </span>
+                      )}
+                      {check.fields['Box Wrapped At Check'] && (
+                        <span title="Wrapped">
+                          <Package className="w-3.5 h-3.5 text-purple-600" />
+                        </span>
                       )}
                     </div>
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-sm">
-                    {check.fields['Check Date'] && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {format(new Date(check.fields['Check Date']), 'MMM dd')}
-                        </span>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(check)}
+                          className="h-7 w-7 p-0 hover:bg-blue-100 hover:text-blue-600"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(check.id)}
+                          disabled={deletingId === check.id}
+                          className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Inspector + Conditions in compact row */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2">
                     {check.fields.Inspector && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        <span>
-                          Inspector: {
-                            Array.isArray(check.fields.Inspector)
-                              ? check.fields.Inspector.join(', ') || 'Unknown'
-                              : check.fields.Inspector || 'Unknown'
-                          }
+                      <div className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        <span className="truncate max-w-[120px]">
+                          {Array.isArray(check.fields.Inspector)
+                            ? check.fields.Inspector.join(', ')
+                            : check.fields.Inspector}
                         </span>
+                      </div>
+                    )}
+                    {check.fields['Box Condition'] && (
+                      <div className="flex items-center gap-1">
+                        <Box className="w-3 h-3" />
+                        <span>{check.fields['Box Condition']}</span>
+                      </div>
+                    )}
+                    {check.fields['Card Condition'] && (
+                      <div className="flex items-center gap-1">
+                        <Package className="w-3 h-3" />
+                        <span>{check.fields['Card Condition']}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Conditions */}
-                  {(check.fields['Box Condition'] || check.fields['Card Condition']) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-sm">
-                      {check.fields['Box Condition'] && (
-                        <div className="flex items-center gap-2">
-                          <Box className="w-4 h-4 text-muted-foreground" />
-                          <span>Box: {check.fields['Box Condition']}</span>
-                        </div>
-                      )}
-                      {check.fields['Card Condition'] && (
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                          <span>Cards: {check.fields['Card Condition']}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Status badges */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {check.fields['Sleeved At Check'] && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        <Package className="w-3 h-3" />
-                        Sleeved
-                      </span>
-                    )}
-                    {check.fields['Box Wrapped At Check'] && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        <Package className="w-3 h-3" />
-                        Wrapped
-                      </span>
-                    )}
-                    {check.fields['Is Fake'] && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <XCircle className="w-3 h-3" />
-                        Counterfeit
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Missing Pieces */}
+                  {/* Issue Description */}
                   {check.fields['Missing Pieces'] && (
-                    <div className="mb-3 p-2 bg-white rounded border border-red-200">
-                      <p className="text-sm font-medium text-red-800 mb-1">
-                        Missing Pieces:
-                      </p>
-                      <p className="text-sm text-red-700">
+                    <div className="mb-2 p-2 bg-white rounded border border-red-200">
+                      <p className="text-xs font-medium text-red-800">
                         {check.fields['Missing Pieces']}
                       </p>
                     </div>
                   )}
 
-                  {/* Notes */}
+                  {/* Notes - Collapsible on mobile */}
                   {check.fields.Notes && (
-                    <div className="mb-3 p-2 bg-white rounded border">
-                      <p className="text-sm font-medium mb-1">Notes:</p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <div className="p-2 bg-white rounded border">
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-2">
                         {check.fields.Notes}
                       </p>
                     </div>
@@ -290,9 +292,9 @@ export function ContentCheckHistory({
 
                   {/* Photos indicator */}
                   {check.fields.Photos && check.fields.Photos.length > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Image className="w-4 h-4" />
-                      <span>{check.fields.Photos.length} photo(s) attached</span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                      <Image className="w-3 h-3" />
+                      <span>{check.fields.Photos.length}</span>
                     </div>
                   )}
                 </div>
