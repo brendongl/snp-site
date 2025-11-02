@@ -48,6 +48,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     minPlayers: game?.fields['Min Players'] || '',
     maxPlayers: game?.fields['Max. Players'] || '',
     bestPlayerAmount: game?.fields['Best Player Amount'] || '',
+    minPlaytime: game?.fields['Min Playtime'] || '',
+    maxPlaytime: game?.fields['Max Playtime'] || '',
     complexity: game?.fields['Complexity'] || 0,
     dateAcquired: formatDateForInput(game?.fields['Date of Aquisition']),
     categories: game?.fields.Categories || [],
@@ -76,6 +78,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
         minPlayers: game.fields['Min Players'] || '',
         maxPlayers: game.fields['Max. Players'] || '',
         bestPlayerAmount: game.fields['Best Player Amount'] || '',
+        minPlaytime: game.fields['Min Playtime'] || '',
+        maxPlaytime: game.fields['Max Playtime'] || '',
         complexity: game.fields['Complexity'] || 0,
         dateAcquired: formatDateForInput(game.fields['Date of Aquisition']),
         categories: game.fields.Categories || [],
@@ -256,6 +260,8 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             minPlayers: formData.minPlayers,
             maxPlayers: formData.maxPlayers,
             bestPlayerAmount: formData.bestPlayerAmount,
+            minPlaytime: formData.minPlaytime ? parseInt(String(formData.minPlaytime)) : null,
+            maxPlaytime: formData.maxPlaytime ? parseInt(String(formData.maxPlaytime)) : null,
             complexity: formData.complexity ? parseInt(String(formData.complexity)) : 0,
             dateAcquired: formData.dateAcquired,
             categories: formData.categories,
@@ -501,6 +507,35 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             </div>
           </div>
 
+          {/* Playtime */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Min Playtime (minutes)</label>
+              <input
+                type="number"
+                name="minPlaytime"
+                value={formData.minPlaytime}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+                placeholder="30"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Max Playtime (minutes)</label>
+              <input
+                type="number"
+                name="maxPlaytime"
+                value={formData.maxPlaytime}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+                placeholder="60"
+              />
+            </div>
+          </div>
+
           {/* Base Game (for expansions) */}
           <div>
             <label className="block text-sm font-medium mb-2">Base Game (if expansion)</label>
@@ -529,7 +564,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
-                placeholder="1000000"
+                placeholder={game?.fields['Deposit'] ? Math.round(game.fields['Deposit']).toString() : "1000000"}
               />
             </div>
 
@@ -542,7 +577,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
-                placeholder="1000000"
+                placeholder={game?.fields['Cost Price'] ? Math.round(game.fields['Cost Price']).toString() : "1000000"}
               />
             </div>
 
@@ -555,7 +590,9 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
               >
-                <option value="">Select size</option>
+                <option value="">{game?.fields['Game Size'] ?
+                  `Current: ${['Very Small', 'Small', 'Medium', 'Large', 'Very Large'][(Number(game.fields['Game Size']) || 1) - 1]}` :
+                  'Select size'}</option>
                 <option value="1">1 - Very Small</option>
                 <option value="2">2 - Small</option>
                 <option value="3">3 - Medium</option>
