@@ -65,8 +65,16 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
   const [customImageUrls, setCustomImageUrls] = useState<string[]>(['']);
   const [showUrlInput, setShowUrlInput] = useState(false);
 
-  // Get current images from the game
-  const currentImages = game?.images || [];
+  // Get current images from the game (maintain order)
+  const [orderedImages, setOrderedImages] = useState(game?.images || []);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+
+  // Update ordered images when game changes
+  useEffect(() => {
+    if (game?.images) {
+      setOrderedImages(game.images);
+    }
+  }, [game?.images]);
 
   // Reset form data when game changes
   useEffect(() => {
@@ -182,10 +190,58 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
     });
   };
 
+  // Drag and drop handlers for image reordering
+  const handleDragStart = (index: number) => {
+    setDraggedImageIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleDrop = (targetIndex: number) => {
+    if (draggedImageIndex === null) return;
+
+    const newImages = [...orderedImages];
+    const [draggedImage] = newImages.splice(draggedImageIndex, 1);
+    newImages.splice(targetIndex, 0, draggedImage);
+
+    setOrderedImages(newImages);
+    setDraggedImageIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedImageIndex(null);
+  };
+
   const handleSave = async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Step 0: Check if image order has changed and update it
+      const originalHashes = game?.images?.map(img => img.hash) || [];
+      const currentHashes = orderedImages.map(img => img.hash);
+      const orderChanged = JSON.stringify(originalHashes) !== JSON.stringify(currentHashes);
+
+      if (orderChanged && orderedImages.length > 0) {
+        console.log('Image order changed, updating order:', currentHashes);
+        const orderResponse = await fetch(`/api/games/${game.id}/images/reorder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageHashes: currentHashes,
+            staffId: localStorage.getItem('staff_id') || 'system',
+            staffName: localStorage.getItem('staff_name') || 'System',
+          }),
+        });
+
+        if (!orderResponse.ok) {
+          const data = await orderResponse.json().catch(() => ({ error: 'Failed to reorder images' }));
+          console.warn('Failed to reorder images:', data.error);
+          // Don't fail the entire save operation if reordering fails
+        }
+      }
 
       // Step 1: Process pending image deletions
       if (pendingDeletions.size > 0) {
@@ -606,7 +662,7 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
 
           {/* Image Management */}
           <div className={staffMode ? "" : "border-t pt-4 mt-6"}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-medium">Game Images</h3>
               <div className="flex gap-2">
                 <Button
@@ -649,6 +705,11 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
                 className="hidden"
               />
             </div>
+            {!staffMode && orderedImages.length > 0 && (
+              <p className="text-xs text-muted-foreground mb-4">
+                💡 Drag images to reorder them. First image will be the thumbnail.
+              </p>
+            )}
 
             {/* Custom Image URL Input */}
             {showUrlInput && (
@@ -697,20 +758,29 @@ export function EditGameDialog({ game, open, onClose, onSave, staffMode = false 
             )}
 
             {/* Current and Pending Images */}
-            {currentImages.length > 0 || pendingUploads.length > 0 ? (
+            {orderedImages.length > 0 || pendingUploads.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {/* Existing Images */}
-                {currentImages.map((image, index) => {
+                {/* Existing Images - Draggable for reordering */}
+                {orderedImages.map((image, index) => {
                   const isMarkedForDeletion = pendingDeletions.has(image.hash);
+                  const isDragging = draggedImageIndex === index;
                   return (
-                    <div key={image.hash} className="relative group">
+                    <div
+                      key={image.hash}
+                      draggable={!staffMode && !isMarkedForDeletion}
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={handleDragOver}
+                      onDrop={() => handleDrop(index)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative group ${isDragging ? 'opacity-50' : ''} ${!staffMode && !isMarkedForDeletion ? 'cursor-move' : ''}`}
+                    >
                       <div className={`aspect-square rounded-lg overflow-hidden border ${
                         isMarkedForDeletion ? 'border-destructive opacity-50' : 'border-border'
                       } bg-muted`}>
                         <img
                           src={`/api/images/${image.hash}`}
                           alt={`Game image ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                         />
                         {isMarkedForDeletion && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
