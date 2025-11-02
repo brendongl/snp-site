@@ -10,6 +10,7 @@ interface VideoGameFiltersProps {
     ageRating: number[];
     playerCount: number[];
     quickFilter: '4-player' | '8-player' | null;
+    locationFilterMode: 'OR' | 'AND';
   }) => void;
   availableLocations: string[];
   availableCategories: string[];
@@ -43,6 +44,7 @@ export default function VideoGameFilters({
   const [selectedAgeRatings, setSelectedAgeRatings] = useState<number[]>([]);
   const [selectedPlayerCounts, setSelectedPlayerCounts] = useState<number[]>([]);
   const [quickFilter, setQuickFilter] = useState<'4-player' | '8-player' | null>(null);
+  const [locationFilterMode, setLocationFilterMode] = useState<'OR' | 'AND'>('OR');
 
   // Filter out non-English genres
   const englishCategories = useMemo(() => {
@@ -59,7 +61,7 @@ export default function VideoGameFilters({
       : [...selectedLocations, location];
 
     setSelectedLocations(updated);
-    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter });
+    onFilterChange({ locatedOn: updated, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter, locationFilterMode });
   };
 
   const handleCategoryToggle = (category: string) => {
@@ -68,7 +70,7 @@ export default function VideoGameFilters({
       : [...selectedCategories, category];
 
     setSelectedCategories(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter });
+    onFilterChange({ locatedOn: selectedLocations, category: updated, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter, locationFilterMode });
   };
 
   const handleAgeRatingToggle = (rating: number) => {
@@ -77,7 +79,7 @@ export default function VideoGameFilters({
       : [...selectedAgeRatings, rating];
 
     setSelectedAgeRatings(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated, playerCount: selectedPlayerCounts, quickFilter });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: updated, playerCount: selectedPlayerCounts, quickFilter, locationFilterMode });
   };
 
   const handlePlayerCountToggle = (count: number) => {
@@ -86,13 +88,19 @@ export default function VideoGameFilters({
       : [...selectedPlayerCounts, count];
 
     setSelectedPlayerCounts(updated);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: updated, quickFilter });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: updated, quickFilter, locationFilterMode });
   };
 
   const handleQuickFilterToggle = (filter: '4-player' | '8-player') => {
     const newQuickFilter = quickFilter === filter ? null : filter;
     setQuickFilter(newQuickFilter);
-    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter: newQuickFilter });
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter: newQuickFilter, locationFilterMode });
+  };
+
+  const handleLocationFilterModeToggle = () => {
+    const newMode = locationFilterMode === 'OR' ? 'AND' : 'OR';
+    setLocationFilterMode(newMode);
+    onFilterChange({ locatedOn: selectedLocations, category: selectedCategories, ageRating: selectedAgeRatings, playerCount: selectedPlayerCounts, quickFilter, locationFilterMode: newMode });
   };
 
   const handleClearFilters = () => {
@@ -101,7 +109,8 @@ export default function VideoGameFilters({
     setSelectedAgeRatings([]);
     setSelectedPlayerCounts([]);
     setQuickFilter(null);
-    onFilterChange({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null });
+    setLocationFilterMode('OR');
+    onFilterChange({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null, locationFilterMode: 'OR' });
   };
 
   const hasActiveFilters = selectedLocations.length > 0 || selectedCategories.length > 0 || selectedAgeRatings.length > 0 || selectedPlayerCounts.length > 0 || quickFilter !== null;
@@ -162,6 +171,31 @@ export default function VideoGameFilters({
                   <X size={16} />
                 </button>
               </div>
+
+              {/* AND/OR Toggle */}
+              {selectedLocations.length > 1 && (
+                <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Filter Mode:</span>
+                    <button
+                      onClick={handleLocationFilterModeToggle}
+                      className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${
+                        locationFilterMode === 'OR'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      {locationFilterMode === 'OR' ? 'ANY (OR)' : 'ALL (AND)'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {locationFilterMode === 'OR'
+                      ? 'Show games on ANY selected console'
+                      : 'Show games on ALL selected consoles'}
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {availableLocations.map((location) => (
                   <label

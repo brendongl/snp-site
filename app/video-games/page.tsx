@@ -33,12 +33,14 @@ export default function VideoGamesPage() {
     ageRating: number[];
     playerCount: number[];
     quickFilter: '4-player' | '8-player' | null;
+    locationFilterMode: 'OR' | 'AND';
   }>({
     locatedOn: [],
     category: [],
     ageRating: [],
     playerCount: [],
     quickFilter: null,
+    locationFilterMode: 'OR',
   });
 
   // Fetch games
@@ -88,12 +90,21 @@ export default function VideoGamesPage() {
         if (!nameMatch && !publisherMatch) return false;
       }
 
-      // Location filter (OR logic - game on ANY selected console)
+      // Location filter with AND/OR logic
       if (filters.locatedOn.length > 0) {
-        const hasLocation = game.located_on?.some(loc =>
-          filters.locatedOn.includes(loc)
-        );
-        if (!hasLocation) return false;
+        if (filters.locationFilterMode === 'OR') {
+          // OR logic - game on ANY selected console
+          const hasLocation = game.located_on?.some(loc =>
+            filters.locatedOn.includes(loc)
+          );
+          if (!hasLocation) return false;
+        } else {
+          // AND logic - game on ALL selected consoles
+          const hasAllLocations = filters.locatedOn.every(selectedLoc =>
+            game.located_on?.includes(selectedLoc)
+          );
+          if (!hasAllLocations) return false;
+        }
       }
 
       // Category filter (OR logic - game has ANY selected genre)
@@ -252,7 +263,7 @@ export default function VideoGamesPage() {
           <button
             onClick={() => {
               setSearchQuery('');
-              setFilters({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null });
+              setFilters({ locatedOn: [], category: [], ageRating: [], playerCount: [], quickFilter: null, locationFilterMode: 'OR' });
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
