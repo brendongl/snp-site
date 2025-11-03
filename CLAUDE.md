@@ -235,20 +235,104 @@ snp-site/
 - **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
 - **Features**: Page views, user tracking, event logging
 
-### Vikunja Task Management (v1.4.0)
-- **Service**: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
-- **API**: [/api/vikunja/tasks/priority](app/api/vikunja/tasks/priority/route.ts)
-- **Dashboard**: [app/staff/dashboard/page.tsx](app/staff/dashboard/page.tsx) - "Today's Tasks" section
+### Vikunja Task Management (v1.4.0+) ⚠️ IN DEVELOPMENT/TESTING
+
+**Status**: Implemented in v1.4.1, currently in staging testing phase
+
 - **Instance**: https://tasks.sipnplay.cafe (self-hosted on Railway)
-- **Features**:
-  - Label-based points system (100-50,000 points)
-  - Priority task display (due today/overdue)
-  - Point extraction from task labels
-  - Staff task proposals, admin point assignment
-  - Integration with Staff Dashboard
-- **Documentation**: [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md), [docs/TASK_PROPOSAL_TEMPLATE.md](docs/TASK_PROPOSAL_TEMPLATE.md)
-- **Point Labels**: Created via [scripts/create-vikunja-point-labels.js](scripts/create-vikunja-point-labels.js)
-- **⚠️ Known Issue**: Vikunja v1.0.0-rc2 has UI button bug - use `Ctrl+K` shortcut or [scripts/add-vikunja-task.js](scripts/add-vikunja-task.js). See [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md)
+- **Service**: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
+- **API Endpoints**:
+  - [/api/vikunja/tasks/priority](app/api/vikunja/tasks/priority/route.ts) - Fetch priority tasks (due within 3 days)
+  - [/api/vikunja/tasks/complete](app/api/vikunja/tasks/complete/route.ts) - Complete task and award points (v1.4.1)
+  - [/api/staff/points](app/api/staff/points/route.ts) - Fetch staff member's points and info (v1.4.1)
+- **Dashboard**: [app/staff/dashboard/page.tsx](app/staff/dashboard/page.tsx) - "Upcoming Tasks" section
+
+#### Database Schema (v1.4.1)
+Three new columns added to `staff_list` table via [scripts/add-points-and-vikunja-columns.js](scripts/add-points-and-vikunja-columns.js):
+- `points` (INTEGER, default 0) - Staff member's accumulated points
+- `vikunja_user_id` (INTEGER) - Links to Vikunja user account
+- `vikunja_username` (TEXT) - Vikunja username for display
+- Index on `vikunja_user_id` for performance
+
+#### Account Management
+**All 13 staff members have Vikunja accounts** (created v1.4.1):
+- **Creation Script**: [scripts/create-vikunja-accounts.js](scripts/create-vikunja-accounts.js)
+  - Generates usernames from staff names (handles Vietnamese diacritics)
+  - Creates secure random passwords (displayed once during creation)
+  - Links accounts to `staff_list` via `vikunja_user_id`
+  - Rate limiting: 2-second delay between registrations
+- **Team Assignment**: [scripts/add-staff-to-team.js](scripts/add-staff-to-team.js)
+  - All staff added to "Sip n Play" team (ID: 1)
+  - Enables access to project tasks
+- **Verification**: [scripts/check-staff-for-vikunja.js](scripts/check-staff-for-vikunja.js)
+
+#### Points System Features (v1.4.1)
+**Gamification workflow**:
+1. **Label-based Points**: Tasks have point labels (e.g., "points:500", "points:1000")
+2. **3-Day Task Visibility**: Dashboard shows tasks due within next 3 days (not just today/overdue)
+3. **Three-tier Color Coding**:
+   - 🔴 **Red**: Overdue tasks
+   - 🟠 **Orange**: Due today
+   - 🔵 **Blue**: Due soon (1-3 days)
+4. **Complete Button**: Each task card has "Complete" button with loading state
+5. **Points Award**: Completing task:
+   - Marks task done in Vikunja via API
+   - Awards points to staff member in database
+   - Updates points display in real-time
+   - Removes task from dashboard
+6. **Header Display**: Shows logged-in staff name and points with gold star badge
+
+**Implementation Details**:
+- `extractPoints()` - Parse point value from task labels
+- `isDueSoon()` - Check if task due within 3 days
+- `enhanceTask()` - Add computed fields (points, isOverdue, isDueToday, isDueSoon)
+- `handleCompleteTask()` - Client-side handler with optimistic updates
+
+#### Point Label Scale
+Created via [scripts/create-vikunja-point-labels.js](scripts/create-vikunja-point-labels.js):
+- 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000 points
+- Color-coded for quick identification
+- Admin-only assignment
+
+#### Documentation
+- [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md) - Complete workflow guide
+- [docs/TASK_PROPOSAL_TEMPLATE.md](docs/TASK_PROPOSAL_TEMPLATE.md) - Staff task proposal format
+- [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) - UI bug workarounds
+
+#### Environment Variables Required
+```bash
+VIKUNJA_API_URL=https://tasks.sipnplay.cafe/api/v1
+VIKUNJA_API_TOKEN=tk_e396533971cba5f0873c21900a49ecd136602c77  # Must be set in Railway
+```
+
+#### Known Issues & Workarounds
+- **⚠️ UI Bug**: Vikunja v1.0.0-rc2 has greyed-out "+ Add Task" button
+  - **Workaround 1**: Press `Ctrl+K` → type "new task" (fastest)
+  - **Workaround 2**: Use [scripts/add-vikunja-task.js](scripts/add-vikunja-task.js) (most features)
+  - See [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) for details
+
+#### Testing Status (v1.4.1)
+**Completed**:
+- ✅ Database schema updated
+- ✅ All staff accounts created and linked
+- ✅ 3-day task visibility implemented
+- ✅ Dashboard UI with color coding
+- ✅ Complete button on task cards
+- ✅ API endpoints for completion and points
+- ✅ Real-time points display in header
+
+**Pending**:
+- ⏳ End-to-end testing on staging environment
+- ⏳ Verify task completion workflow
+- ⏳ Confirm points award correctly
+- ⏳ Test two-way sync (Vikunja → Dashboard)
+
+#### Future Enhancements
+- Leaderboard display on dashboard
+- Points history/transaction log
+- Badge/achievement system
+- Task completion notifications
+- Weekly/monthly reports
 
 ### Staff UUID Migration (v1.19.0)
 **IMPORTANT ARCHITECTURAL CHANGE**: Migrated from dual-ID system to single UUID primary key.
