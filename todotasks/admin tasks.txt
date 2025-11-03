@@ -1,0 +1,411 @@
+Admin tasks
+
+⬜ G2 rent payment - Due ‎Thu‎, ‎2‎ ‎Oct
+        Notes: 18mil acct. 8804245309  BIDV bank - Luu thi dao
+5mil acct 3445556789 mb bank - le phuong thao
+⬜ Check for changes in blue box - Due ‎Mon‎, ‎27‎ ‎Oct
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+⬜ Call door ppl get fixed - Due ‎Mon‎, ‎27‎ ‎Oct
+⬜ Vendors payments check list - Due ‎Sat‎, ‎1‎ ‎Nov
+        ⬜ Thirst Trap
+        ⬜ Wildside
+        ⬜ Akbro coffee
+        ⬜ Coconut
+        ⬜ Steersman
+        ⬜ Huda
+        ⬜ Union Jack
+        ⬜ SaigonCider
+        ⬜ Huong Thuy chocolate redbull
+        ⬜ Rada wine
+        ⬜ Ice guys
+⬜ G2 rent payment - Due Yesterday
+        Notes: 18mil acct. 8804245309  BIDV bank - Luu thi dao
+5mil acct 3445556789 mb bank - le phuong thao
+⬜ AC cleaning G1 - Due ‎Mon‎, ‎10‎ ‎Nov
+⬜ AC cleaning G2 U1 - Due ‎Mon‎, ‎10‎ ‎Nov
+⬜ G1 rent payment - Due ‎Mon‎, ‎10‎ ‎Nov
+        Notes: 8804245309
+Luu thi dao
+Bidv bank
+31mil
+⬜ Clean Kitchen Fan - Due ‎Fri‎, ‎14‎ ‎Nov
+        Notes: Dust builds up, need to take it down and dis-mantle it to clean the blades
+⬜ Test fire alarms (read note) - Due ‎Fri‎, ‎12‎ ‎Dec
+        Notes: Check battery and function is working for the fire alarms in all rooms. Test with button. And the outside alarm should sound as well. If battery is dead, replace.
+
+Test during opening. When no customers.
+⬜ AC cleaning U2 - Due ‎Sat‎, ‎10‎ ‎Jan‎ ‎2026
+⬜ PS4 TV1 Cleaning - Due ‎Wed‎, ‎4‎ ‎Mar‎ ‎2026
+        Notes: take to iKnow - thermal paste was last replaced
+⬜ PS5 (U1) Cleaning Schedule - Due ‎Mon‎, ‎9‎ ‎Mar‎ ‎2026
+        Notes: Take to iKnow for cleaning
+⬜ PS5 G1 Cleaning schedule - Due ‎Thu‎, ‎12‎ ‎Mar‎ ‎2026
+        Notes: Take it to iknow for cleaning 
+ONLY DO THIS IN OPENING HOUR
+Preferably on Friday
+⬜ PS5 G1 Cleaning schedule - Due ‎Sat‎, ‎12‎ ‎Sep‎ ‎2026
+        Notes: Take it to iknow for cleaning
+ONLY DO THIS IN OPENING HOUR
+Preferably on Friday
+⬜ Get fridge light fixed, or replace fridge with larger one and sell ours
+        Notes: Our fridge is the 2nd tallest in the Sanaky range. We can get a taller fridge to pre more things in.
+
+
+
+
+
+Get the avg 2nd hand price for ours vs the price of a new taller model. Comment with the approximate total cost for this task.
+
+
+
+Find a buyer for ours and buy a new one on the same day and transfer all drinks.
+
+Keep in mind the fridge has to be lifted over the bar counter, so everything at the pos area needs to be removed.
+⬜ Brainstorm KPI for Manager Commision Incentives
+        ⬜ A loyalty program with loyalty points that customers can spend on things or get discounts. The total number of points spent monthly can be used as KPI
+        Notes: Previously with Mike during the early tenor, he had commisions based on overall growth of gross revenue.
+
+Later, we figured out that metric is not really inline with his work ethic and should naturally grow through my efforts creating events, upgrading menus, etc.
+
+I want to create some KPI's where its YOUR effort which is visible AND is profitable for the profit margin of the shop.
+
+Idea 1 - Specific Category Sales
+
+Sales of retail stock, hot-food, and 6-day passes are inlign with store growth and custom retention. So far the staff have 0 iniative to actually upsell these things as they get paid either way.
+
+Idea 2 - Creation of new store events and promotions
+
+We are dead during the weekday. g2 is wasted space and needs to be utilised better. If you are up to the task of creating and managing some events which brings people in the door, you can get commisions based directly off how profitable and well they are doing.
+
+Idea 3 - Reoccuring Bookings for specific groups and organisations
+
+We can convert the space into anything which is needed. People need a place to do arts and crafts, theatre, staff team building, corporate meetings. If you can get a client which does repeat bookings at our cafe during off-peak hours, you will receive some commisions based on those bookings.
+⬜ check all Staff Immich apps are auto-uploading
+⬜ Buy more walkie talkies so we have max amount when staff is on
+⬜ Fix the big table ★
+⬜ new pos pricing when print new menu
+        Notes: molly 60k
+wildisde drinks 60k
+change ramen egg to soft-boiled egg
+remove tonic espresso
+add apple chilli
+blanc 60k
+bottled water 30k
+⬜ PS5 (Personal) Cleaning Schedule
+⬜ Find new type of beef. Same price prefered
+⬜ get new slide to open thing for g1 door ★
+⬜ find suitable table for printer and setup
+⬜ buy new walkie talkies ★
+⬜ get outdoor sign replaced/fixed
+⬜ fix moldy walls ★
+⬜ check U2 pillows for dirty ones and wash
+
+Completed
+✅ Buy new powerboard suitable for stove - Due ‎Fri‎, ‎27‎ ‎Jun
+✅ create reoccurring scheduling for AC Cleaning - Due ‎Fri‎, ‎27‎ ‎Jun
+        Notes: Use this card to learn how to setup reoccurring tasks in new cards. After its done, mark it as complete
+
+g1 = every month exactly
+g2 u1 = every 2 months
+u2 = every 3 months (but observe if the room is used more)
+✅ buy new fry baskets - Due ‎Mon‎, ‎30‎ ‎Jun
+        Notes: With better handles, possibly a divider.
+✅ Check for changes in blue box - Due ‎Mon‎, ‎30‎ ‎Jun
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday July 1
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Vendors payments check list - Due ‎Tue‎, ‎1‎ ‎Jul
+        ✅ Thirst Trap
+        ✅ Wildside
+        ✅ Akbro coffee
+        ✅ Coconut
+        ✅ Steersman
+        ✅ Huda
+        ✅ Union Jack
+        ✅ SaigonCider
+        ⬜ Huong Thuy chocolate redbull
+        ⬜ Rada wine
+✅ Salary Sheet - Due ‎Fri‎, ‎4‎ ‎Jul
+✅ Setup Gmail forward for store shoppee emails - Due ‎Fri‎, ‎4‎ ‎Jul
+        Notes: Make a rule so that all shoppee new orders get send to Brendonganle@gmail.com
+
+If you use shoppee for personal orders, you will need to figure out how to filter ones that only are going to Snp. If you need help ask me
+✅ Increase water bottle appsheet min level - Due ‎Sun‎, ‎6‎ ‎Jul
+✅ Check for changes in blue box - Due ‎Mon‎, ‎7‎ ‎Jul
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Check phatcat bill - Due ‎Tue‎, ‎8‎ ‎Jul
+✅ Re-Purchase all low stock brooch pins - Due ‎Tue‎, ‎8‎ ‎Jul
+✅ AC cleaning G1 - Due ‎Thu‎, ‎10‎ ‎Jul
+✅ AC cleaning G2 U1 - Due ‎Thu‎, ‎10‎ ‎Jul
+✅ AC cleaning U2 - Due ‎Thu‎, ‎10‎ ‎Jul
+✅ G1 rent payment - Due ‎Thu‎, ‎10‎ ‎Jul
+        Notes: 6999688
+LE thi thien nhien
+ACB
+29mil
+
+Note: ckhoan tien mb
+✅ Re active phat cat item type - Due ‎Thu‎, ‎10‎ ‎Jul
+✅ Check float value - Due ‎Sun‎, ‎13‎ ‎Jul
+        Notes: It's only around 1.5m it used to be around 2m
+✅ Check for changes in blue box - Due ‎Mon‎, ‎14‎ ‎Jul
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Check for changes in blue box - Due ‎Mon‎, ‎14‎ ‎Jul
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Clean Kitchen Fan - Due ‎Mon‎, ‎14‎ ‎Jul
+        Notes: Dust builds up, need to take it down and dis-mantle it to clean the blades
+✅ Replace mosquito light - Due ‎Mon‎, ‎14‎ ‎Jul
+✅ Pay 3m left for table - Due ‎Fri‎, ‎18‎ ‎Jul
+        Notes: Tecombank
+19036789727010
+HOANG VAN TAO
+✅ Pay redbull choco - Due ‎Fri‎, ‎18‎ ‎Jul
+        Notes: 2097825 vnd
+HSBC
+001260777001
+✅ Check for changes in blue box - Due ‎Mon‎, ‎21‎ ‎Jul
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Check for changes in blue box - Due ‎Mon‎, ‎28‎ ‎Jul
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ edit fb Tuesday opening hours back to open - Due ‎Wed‎, ‎30‎ ‎Jul
+✅ staff salary timesheet - Due ‎Fri‎, ‎1‎ ‎Aug
+✅ Vendors payments check list - Due ‎Fri‎, ‎1‎ ‎Aug
+        ✅ Thirst Trap
+        ✅ Wildside
+        ✅ Akbro coffee
+        ✅ Coconut
+        ✅ Steersman
+        ✅ Huda
+        ✅ Union Jack
+        ✅ SaigonCider
+        ✅ Huong Thuy chocolate redbull
+        ✅ Rada wine
+        ✅ Ice guys
+✅ Arrange g2 storage (notes inside) - Due ‎Sun‎, ‎3‎ ‎Aug
+        Notes: 2 shelves under loading zone can be used for unknown items which your unable to sort.
+
+Also take off the door hinges on g2 board game shelf. Put in zip bag and stick to the door pieces in the storage.
+
+The entire square area  behind the g2 storage door should be clear once finished. And all stock should be clearly visible, Labeled if a box, etc
+✅ G2 rent payment - Due ‎Sun‎, ‎3‎ ‎Aug
+        Notes: 18mil acct. 8804245309  BIDV bank - Luu thi dao
+5mil acct 3445556789 mb bank - le phuong thao
+✅ Check for changes in blue box - Due ‎Mon‎, ‎4‎ ‎Aug
+        ⬜ Need 20k, 50k, 5k, 1k
+        ⬜ Due on Tuesday
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ AC cleaning G1 - Due ‎Sun‎, ‎10‎ ‎Aug
+✅ G1 rent payment - Due ‎Sun‎, ‎10‎ ‎Aug
+        Notes: 8804245309
+Luu thi dao
+Bidv bank
+31mil
+✅ Make Clean tasks list H2 - Due ‎Sun‎, ‎10‎ ‎Aug
+✅ Check for changes in blue box - Due ‎Mon‎, ‎11‎ ‎Aug
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Test fire alarms (read note) - Due ‎Tue‎, ‎12‎ ‎Aug
+        Notes: Check battery and function is working for the fire alarms in all rooms. Test with button. And the outside alarm should sound as well. If battery is dead, replace.
+
+Test during opening. When no customers.
+✅ Clean Kitchen Fan - Due ‎Thu‎, ‎14‎ ‎Aug
+        Notes: Dust builds up, need to take it down and dis-mantle it to clean the blades
+✅ Check for changes in blue box - Due ‎Mon‎, ‎18‎ ‎Aug
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ pay phatcat - Due ‎Mon‎, ‎18‎ ‎Aug
+✅ Check for changes in blue box - Due ‎Mon‎, ‎25‎ ‎Aug
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Create gutter and pipe cleaning schedule - Due ‎Mon‎, ‎25‎ ‎Aug
+✅ Check for changes in blue box - Due ‎Mon‎, ‎1‎ ‎Sep
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Vendors payments check list - Due ‎Mon‎, ‎1‎ ‎Sep
+        ✅ Thirst Trap
+        ✅ Wildside
+        ✅ Akbro coffee
+        ✅ Coconut
+        ✅ Steersman
+        ✅ Huda
+        ✅ Union Jack
+        ✅ SaigonCider
+        ⬜ Huong Thuy chocolate redbull
+        ⬜ Rada wine
+        ⬜ Ice guys
+✅ G2 rent payment - Due ‎Wed‎, ‎3‎ ‎Sep
+        Notes: 18mil acct. 8804245309  BIDV bank - Luu thi dao
+5mil acct 3445556789 mb bank - le phuong thao
+✅ PS4 TV1 Cleaning - Due ‎Thu‎, ‎4‎ ‎Sep
+        Notes: take to iKnow - thermal paste was last replaced
+✅ Check for changes in blue box - Due ‎Mon‎, ‎8‎ ‎Sep
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ AC cleaning G1 - Due ‎Wed‎, ‎10‎ ‎Sep
+✅ AC cleaning G2 U1 - Due ‎Wed‎, ‎10‎ ‎Sep
+✅ G1 rent payment - Due ‎Wed‎, ‎10‎ ‎Sep
+        Notes: 8804245309
+Luu thi dao
+Bidv bank
+31mil
+✅ PS5 G1 Cleaning schedule - Due ‎Fri‎, ‎12‎ ‎Sep
+        Notes: Take it to iknow for cleaning
+ONLY DO THIS IN OPENING HOUR
+Preferably on Friday
+✅ Clean Kitchen Fan - Due ‎Sun‎, ‎14‎ ‎Sep
+        Notes: Dust builds up, need to take it down and dis-mantle it to clean the blades
+✅ Check for changes in blue box - Due ‎Mon‎, ‎15‎ ‎Sep
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Check for changes in blue box - Due ‎Mon‎, ‎22‎ ‎Sep
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Get g2 door floor fixed - Due ‎Mon‎, ‎22‎ ‎Sep
+✅ re-apply padding u2 - Due ‎Mon‎, ‎22‎ ‎Sep
+✅ Replace mosquito light backarea - Due ‎Thu‎, ‎25‎ ‎Sep
+✅ Buy silicone gun try fix U2 wall only the fallen pieces - Due ‎Fri‎, ‎26‎ ‎Sep
+✅ Check for changes in blue box - Due ‎Mon‎, ‎29‎ ‎Sep
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ try donetick hosted at snptowert - Due ‎Mon‎, ‎29‎ ‎Sep
+✅ Vendors payments check list - Due ‎Wed‎, ‎1‎ ‎Oct
+        ✅ Thirst Trap
+        ✅ Wildside
+        ✅ Akbro coffee
+        ✅ Coconut
+        ✅ Steersman
+        ✅ Huda
+        ✅ Union Jack
+        ✅ SaigonCider
+        ✅ Huong Thuy chocolate redbull
+        ✅ Rada wine
+        ✅ Ice guys
+✅ Check for changes in blue box - Due ‎Mon‎, ‎6‎ ‎Oct
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ AC cleaning G1 - Due ‎Fri‎, ‎10‎ ‎Oct
+✅ AC cleaning U2 - Due ‎Fri‎, ‎10‎ ‎Oct
+✅ G1 rent payment - Due ‎Fri‎, ‎10‎ ‎Oct
+        Notes: 8804245309
+Luu thi dao
+Bidv bank
+31mil
+✅ Test fire alarms (read note) - Due ‎Sun‎, ‎12‎ ‎Oct
+        Notes: Check battery and function is working for the fire alarms in all rooms. Test with button. And the outside alarm should sound as well. If battery is dead, replace.
+
+Test during opening. When no customers.
+✅ Check for changes in blue box - Due ‎Mon‎, ‎13‎ ‎Oct
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Clean Kitchen Fan - Due ‎Tue‎, ‎14‎ ‎Oct
+        Notes: Dust builds up, need to take it down and dis-mantle it to clean the blades
+✅ Check for changes in blue box - Due ‎Mon‎, ‎20‎ ‎Oct
+        Notes: 1. Check changes to see if any needs refill
+2. Set subtasks for the date to exchange
+3. Exchange and tick whenever it's done
+4. Delete subtask
+✅ Add long island ice tea to recipe sheet, reprint and laminate
+        Notes: https://docs.google.com/document/d/1t1ofeVCFQMOMNkAaCDYJz-i8hwwCHYbsCu4ZIkB3rWo/edit?tab=t.0
+✅ Add saigon chili cider to the menu
+✅ add sweep g2 stairs regularly
+✅ buy 50forks ★
+✅ Buy and set anti cockroach traps for u2
+✅ buy glasses
+✅ Buy new glasses
+✅ Create reoccurring task for Vendor Payment Checklist at start of month
+        Notes: Origins
+Thirst Trap
+Tiramisu (we check the time-frame and amount sold)
+Phatcat (wait for them to summarize then check)
+Ice (wait for their number, confirm with paper)
+Huda
+Saigon Cider
+Steersman
+Immortal T-Shirts
+3d fidget toys (shojostudio)
+
+Comment with the amount for each vendor once confirmed
+I will reaction once paid
+✅ Figure out snickers
+✅ Find new staff
+        Notes: Post on fb groups, job classified sites, go to other board game cafes and poach workers, ask the guy at familymart. I don't care, we just need people. The only requirement is average English skills and the willingness to improve.
+✅ Fix cabling for U2 camera (put power plug where old camera was)
+✅ Fix H2 plumbing system
+✅ Get custom table made
+✅ get new chunky containers so we don't have to replace ★
+✅ Handyman Tasks
+        ✅ Install Soap Dispensers G1 + U2
+        ✅ Fix Single Blue Light in Stairway
+        ✅ Fix outdoor Neon Sign
+        ✅ Swap Door hinge Stairway and Kitchen
+        ✅ Replace G1 and G2 Speakers with Bose
+        ✅ Fix g2 Storage Door slider
+        ✅ Fix bar neon light cabling/bottom light
+✅ Kitchen Recipe adjustments, then reprint
+        Notes: Dịp sausage in oil
+Cut fully after cooking
+Serve with fork
+
+Reduce qty popcorn chicken/edemame 50g
+✅ Make simple PS4 troubleshooting guide for Discord Procedures
+✅ put haribo and protein bars in g2
+✅ put U1 camera up
+✅ Replace Xiaomi purifier air filter + deep cleaning
+✅ restock dnd dice g2 ★
+✅ Test
+
+

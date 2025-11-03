@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star } from 'lucide-react';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DashboardStats {
@@ -39,24 +39,115 @@ interface GameWithIssue {
   reported_date: string;
 }
 
+// Vikunja task with points
+interface VikunjaTask {
+  id: number;
+  title: string;
+  description: string;
+  done: boolean;
+  due_date: string | null;
+  priority: number;
+  points: number;
+  isOverdue: boolean;
+  isDueToday: boolean;
+  isDueSoon: boolean; // Due within next 3 days
+}
+
+interface StaffInfo {
+  id: string;
+  name: string;
+  points: number;
+  vikunjaUserId: number | null;
+  vikunjaUsername: string | null;
+}
+
 export default function StaffDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
   const [gamesWithIssues, setGamesWithIssues] = useState<GameWithIssue[]>([]); // v1.2.0
+  const [vikunjaTasks, setVikunjaTasks] = useState<VikunjaTask[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchStaffInfo();
   }, []);
+
+  const fetchStaffInfo = async () => {
+    try {
+      const staffId = localStorage.getItem('staff_id');
+      if (!staffId) {
+        console.warn('No staff ID found in localStorage');
+        return;
+      }
+
+      const response = await fetch(`/api/staff/points?staffId=${staffId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setStaffInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching staff info:', error);
+    }
+  };
+
+  const handleCompleteTask = async (taskId: number, taskPoints: number) => {
+    if (!staffInfo) {
+      console.error('No staff info available');
+      return;
+    }
+
+    try {
+      setCompletingTaskId(taskId);
+
+      // Call API to complete task and award points
+      const response = await fetch('/api/vikunja/tasks/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          staffId: staffInfo.id,
+          points: taskPoints
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to complete task');
+      }
+
+      const result = await response.json();
+
+      // Update staff points locally
+      setStaffInfo(prev => prev ? {
+        ...prev,
+        points: prev.points + taskPoints
+      } : null);
+
+      // Remove completed task from list
+      setVikunjaTasks(prev => prev.filter(task => task.id !== taskId));
+
+      console.log('Task completed successfully:', result);
+    } catch (error) {
+      console.error('Error completing task:', error);
+      alert('Failed to complete task. Please try again.');
+    } finally {
+      setCompletingTaskId(null);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
       // v1.2.0: Added games with issues fetch
-      const [statsRes, actionsRes, issuesRes, activityRes] = await Promise.all([
+      const [statsRes, actionsRes, issuesRes, vikunjaRes, activityRes] = await Promise.all([
         fetch('/api/staff/dashboard/stats'),
         fetch('/api/staff/dashboard/priority-actions?limit=5'),
         fetch('/api/content-checks/needs-attention'),
+        fetch('/api/vikunja/tasks/priority'),
         fetch('/api/staff/dashboard/recent-activity?limit=10'),
       ]);
 
@@ -74,6 +165,12 @@ export default function StaffDashboard() {
       if (issuesRes.ok) {
         const issuesData = await issuesRes.json();
         setGamesWithIssues(issuesData.issues || []);
+      }
+
+      // Fetch Vikunja priority tasks
+      if (vikunjaRes.ok) {
+        const vikunjaData = await vikunjaRes.json();
+        setVikunjaTasks(vikunjaData.tasks || []);
       }
 
       if (activityRes.ok) {
@@ -104,6 +201,31 @@ export default function StaffDashboard() {
     return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
   };
 
+  const getPointBadgeColor = (points: number) => {
+    if (points >= 10000) return 'bg-purple-100 text-purple-700 border-purple-200';
+    if (points >= 5000) return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+    if (points >= 1000) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (points >= 500) return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
+  const formatDueDate = (dueDate: string) => {
+    const date = new Date(dueDate);
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+
+    if (isToday) {
+      return `Today at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+    }
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -116,7 +238,22 @@ export default function StaffDashboard() {
               </Link>
               <StaffMenu />
             </div>
-            <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+              {staffInfo && (
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">Welcome,</div>
+                    <div className="font-semibold">{staffInfo.name}</div>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <Star className="h-5 w-5 text-yellow-600 fill-yellow-600" />
+                    <span className="font-bold text-yellow-900">{staffInfo.points.toLocaleString()}</span>
+                    <span className="text-sm text-yellow-700">points</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="container mx-auto px-4 py-8">
@@ -144,7 +281,22 @@ export default function StaffDashboard() {
             </Link>
             <StaffMenu />
           </div>
-          <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+            {staffInfo && (
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Welcome,</div>
+                  <div className="font-semibold">{staffInfo.name}</div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Star className="h-5 w-5 text-yellow-600 fill-yellow-600" />
+                  <span className="font-bold text-yellow-900">{staffInfo.points.toLocaleString()}</span>
+                  <span className="text-sm text-yellow-700">points</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="container mx-auto px-4 py-8 space-y-8">
@@ -219,6 +371,115 @@ export default function StaffDashboard() {
                 </Button>
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Upcoming Tasks (Vikunja) */}
+      {vikunjaTasks.length > 0 && (
+        <Card className="p-6 border-orange-200 bg-orange-50/30">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-orange-800">📋 Upcoming Tasks</h2>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-orange-700 font-medium">
+                {vikunjaTasks.length} task{vikunjaTasks.length !== 1 ? 's' : ''}
+              </span>
+              <Button size="sm" variant="outline" className="border-orange-300" asChild>
+                <Link href="https://tasks.sipnplay.cafe" target="_blank" rel="noopener noreferrer">
+                  Open Task Manager
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {vikunjaTasks.map((task) => {
+              // Determine card styling based on priority
+              const getCardStyles = () => {
+                if (task.isOverdue) {
+                  return 'border-red-200 bg-red-50/50 hover:bg-red-50';
+                }
+                if (task.isDueToday) {
+                  return 'border-orange-200 bg-white hover:bg-orange-50/50';
+                }
+                // Due soon (within 3 days)
+                return 'border-blue-200 bg-blue-50/30 hover:bg-blue-50/50';
+              };
+
+              return (
+              <div
+                key={task.id}
+                className={`flex items-start justify-between p-3 border rounded-lg transition-colors ${getCardStyles()}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`font-medium ${
+                      task.isOverdue ? 'text-red-900' :
+                      task.isDueToday ? 'text-orange-900' :
+                      'text-blue-900'
+                    }`}>
+                      {task.title}
+                    </div>
+                    {task.points > 0 && (
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getPointBadgeColor(task.points)}`}>
+                        {task.points.toLocaleString()} pts
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    {task.isOverdue ? (
+                      <span className="flex items-center gap-1 text-red-600">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Overdue
+                      </span>
+                    ) : task.isDueToday ? (
+                      <span className="flex items-center gap-1 text-orange-600">
+                        <Clock className="h-3.5 w-3.5" />
+                        Due today
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-blue-600">
+                        <Clock className="h-3.5 w-3.5" />
+                        Due soon
+                      </span>
+                    )}
+                    {task.due_date && (
+                      <span className={
+                        task.isOverdue ? 'text-red-600' :
+                        task.isDueToday ? 'text-orange-600' :
+                        'text-blue-600'
+                      }>
+                        • {formatDueDate(task.due_date)}
+                      </span>
+                    )}
+                  </div>
+                  {task.description && (
+                    <div className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      {task.description}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  onClick={() => handleCompleteTask(task.id, task.points)}
+                  disabled={completingTaskId === task.id}
+                  size="sm"
+                  className="ml-3 shrink-0"
+                >
+                  {completingTaskId === task.id ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-1 animate-spin" />
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Complete
+                    </>
+                  )}
+                </Button>
+              </div>
+              );
+            })}
           </div>
         </Card>
       )}

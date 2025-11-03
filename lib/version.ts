@@ -5,8 +5,8 @@
  * and used for cache busting and feature flags.
  */
 
-export const VERSION = '1.3.5';
-export const BUILD_DATE = '2025-02-11';
+export const VERSION = '1.4.1';
+export const BUILD_DATE = '2025-02-03';
 export const CHANGELOG_URL = '/docs/CHANGELOG.md';
 
 export const FEATURES = {
@@ -16,6 +16,7 @@ export const FEATURES = {
   staffMode: true,
   spinnerWheel: true,
   advancedFilters: true,
+  vikunjaTasks: true,
 } as const;
 
 export function getVersionInfo() {

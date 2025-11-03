@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 **Last Updated**: January 30, 2025
-**Current Version**: 1.19.0
+**Current Version**: 1.4.0
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
 
@@ -114,6 +114,7 @@ All database access goes through service classes in [lib/services/](lib/services
 | [play-logs-db-service.ts](lib/services/play-logs-db-service.ts) | Game session tracking | `getLogsByGameId()`, `createLog()` |
 | [staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts) | Staff expertise levels | `getKnowledgeByStaffMember()`, `getTeachersForGame()` |
 | [changelog-service.ts](lib/services/changelog-service.ts) | Changelog tracking | `getAllChangelogs()`, `createChangelog()` |
+| [vikunja-service.ts](lib/services/vikunja-service.ts) | Vikunja task management | `getPriorityTasks()`, `getTask()`, `completeTask()` |
 | [bgg-api.ts](lib/services/bgg-api.ts) | BoardGameGeek integration | `getGameDetails()`, `searchGames()` |
 
 See [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) for detailed usage examples.
@@ -233,6 +234,21 @@ snp-site/
 - **Integration**: Mixpanel ([lib/analytics/mixpanel.ts](lib/analytics/mixpanel.ts))
 - **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
 - **Features**: Page views, user tracking, event logging
+
+### Vikunja Task Management (v1.4.0)
+- **Service**: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
+- **API**: [/api/vikunja/tasks/priority](app/api/vikunja/tasks/priority/route.ts)
+- **Dashboard**: [app/staff/dashboard/page.tsx](app/staff/dashboard/page.tsx) - "Today's Tasks" section
+- **Instance**: https://tasks.sipnplay.cafe (self-hosted on Railway)
+- **Features**:
+  - Label-based points system (100-50,000 points)
+  - Priority task display (due today/overdue)
+  - Point extraction from task labels
+  - Staff task proposals, admin point assignment
+  - Integration with Staff Dashboard
+- **Documentation**: [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md), [docs/TASK_PROPOSAL_TEMPLATE.md](docs/TASK_PROPOSAL_TEMPLATE.md)
+- **Point Labels**: Created via [scripts/create-vikunja-point-labels.js](scripts/create-vikunja-point-labels.js)
+- **⚠️ Known Issue**: Vikunja v1.0.0-rc2 has UI button bug - use `Ctrl+K` shortcut or [scripts/add-vikunja-task.js](scripts/add-vikunja-task.js). See [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md)
 
 ### Staff UUID Migration (v1.19.0)
 **IMPORTANT ARCHITECTURAL CHANGE**: Migrated from dual-ID system to single UUID primary key.
