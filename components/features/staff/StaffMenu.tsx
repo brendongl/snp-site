@@ -135,14 +135,14 @@ export function StaffMenu() {
               <span>Play Logs</span>
             </Link>
 
-            {/* Check History */}
+            {/* BG Issues & Checks */}
             <Link
               href="/staff/check-history"
               className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
               onClick={() => setIsOpen(false)}
             >
               <span className="text-lg">✓</span>
-              <span>Check History</span>
+              <span>BG Issues & Checks</span>
             </Link>
 
             {/* Staff Knowledge */}
@@ -176,6 +176,18 @@ export function StaffMenu() {
               >
                 <span className="text-lg">📈</span>
                 <span>Changelog Analytics</span>
+              </Link>
+            )}
+
+            {/* Admin-only Points Configuration */}
+            {isAdmin && (
+              <Link
+                href="/admin/points-config"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="text-lg">⚙️</span>
+                <span>Points Configuration</span>
               </Link>
             )}
 

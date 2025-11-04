@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Zap, ChevronLeft, ChevronRight, Pencil, Trash2, Shield, AlertTriangle, XCircle, Calendar, User, Package, Box } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { EditContentCheckDialog } from '@/components/features/content-check/EditContentCheckDialog';
-import IssuesMissingReport from '@/components/features/content-check/IssuesMissingReport';
+import BGIssuesAndChecks from '@/components/features/content-check/BGIssuesAndChecks';
 import { Button } from '@/components/ui/button';
 import type { ContentCheck } from '@/types';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
@@ -252,7 +252,7 @@ export default function CheckHistoryPage() {
             <StaffMenu />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Content Check History</h1>
+            <h1 className="text-3xl font-bold">BG Issues & Checks</h1>
             <p className="text-muted-foreground mt-2">
               {staffName && `Logged in as ${staffName}`}
             </p>
@@ -354,9 +354,9 @@ export default function CheckHistoryPage() {
           </div>
         </div>
 
-        {/* Issues/Missing Report */}
+        {/* BG Issues & Checks */}
         <div className="mb-6">
-          <IssuesMissingReport />
+          <BGIssuesAndChecks />
         </div>
 
         {/* Results Count */}

@@ -50,31 +50,74 @@ export interface PointAwardResult {
 }
 
 /**
- * Knowledge level multipliers for point calculation
+ * Points configuration cache (refreshed from database)
  */
-const KNOWLEDGE_LEVEL_MULTIPLIERS: Record<number, number> = {
-  1: 100,  // Beginner
-  2: 200,  // Intermediate
-  3: 300,  // Expert
-  4: 500   // Instructor
-};
+interface PointConfig {
+  action_type: string;
+  base_points: number;
+  uses_complexity: boolean;
+  uses_level_multiplier: boolean;
+  uses_student_count: boolean;
+  description: string;
+}
+
+let pointsConfigCache: Record<string, PointConfig> = {};
+let lastConfigLoad = 0;
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Issue resolution base points by category
+ * Load points configuration from database
  */
-const ISSUE_RESOLUTION_POINTS: Record<string, number> = {
-  'broken_sleeves': 500,
-  'needs_sorting': 500,
-  'needs_cleaning': 500,
-  'box_rewrap': 1000,
-  'customer_reported': 0, // Just triggers content check
-  'other_actionable': 500
-};
+async function loadPointsConfig(): Promise<Record<string, PointConfig>> {
+  // Return cached config if still valid
+  if (Date.now() - lastConfigLoad < CONFIG_CACHE_TTL && Object.keys(pointsConfigCache).length > 0) {
+    return pointsConfigCache;
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM points_config');
+
+    pointsConfigCache = result.rows.reduce((acc: Record<string, PointConfig>, row: any) => {
+      acc[row.action_type] = row;
+      return acc;
+    }, {});
+
+    lastConfigLoad = Date.now();
+    console.log(`✅ Loaded ${result.rows.length} point configurations from database`);
+
+    return pointsConfigCache;
+  } catch (error) {
+    console.error('❌ Failed to load points config from database:', error);
+
+    // Return cached config if database fails
+    if (Object.keys(pointsConfigCache).length > 0) {
+      console.warn('⚠️ Using stale cached config due to database error');
+      return pointsConfigCache;
+    }
+
+    // Fallback to hardcoded defaults
+    console.warn('⚠️ Using hardcoded fallback config');
+    return {
+      'play_log': { action_type: 'play_log', base_points: 100, uses_complexity: false, uses_level_multiplier: false, uses_student_count: false, description: 'Play log' },
+      'content_check': { action_type: 'content_check', base_points: 1000, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Content check' },
+      'knowledge_add_level_1': { action_type: 'knowledge_add_level_1', base_points: 100, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Knowledge level 1' },
+      'knowledge_add_level_2': { action_type: 'knowledge_add_level_2', base_points: 200, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Knowledge level 2' },
+      'knowledge_add_level_3': { action_type: 'knowledge_add_level_3', base_points: 300, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Knowledge level 3' },
+      'knowledge_add_level_4': { action_type: 'knowledge_add_level_4', base_points: 500, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Knowledge level 4' },
+      'knowledge_upgrade': { action_type: 'knowledge_upgrade', base_points: 100, uses_complexity: true, uses_level_multiplier: false, uses_student_count: false, description: 'Knowledge upgrade' },
+      'teaching': { action_type: 'teaching', base_points: 1000, uses_complexity: true, uses_level_multiplier: false, uses_student_count: true, description: 'Teaching' },
+      'photo_upload': { action_type: 'photo_upload', base_points: 1000, uses_complexity: false, uses_level_multiplier: false, uses_student_count: false, description: 'Photo upload' },
+      'issue_report': { action_type: 'issue_report', base_points: 100, uses_complexity: false, uses_level_multiplier: false, uses_student_count: false, description: 'Issue report' },
+      'issue_resolution_basic': { action_type: 'issue_resolution_basic', base_points: 500, uses_complexity: false, uses_level_multiplier: false, uses_student_count: false, description: 'Issue resolution basic' },
+      'issue_resolution_complex': { action_type: 'issue_resolution_complex', base_points: 1000, uses_complexity: false, uses_level_multiplier: false, uses_student_count: false, description: 'Issue resolution complex' },
+    };
+  }
+}
 
 /**
- * Calculate points based on action type and metadata
+ * Calculate points based on action type and metadata (async to load config)
  */
-export function calculatePoints(params: PointAwardParams): number {
+export async function calculatePoints(params: PointAwardParams): Promise<number> {
   const { actionType, metadata, points } = params;
 
   // For task_complete, use explicit points value
@@ -82,40 +125,59 @@ export function calculatePoints(params: PointAwardParams): number {
     return points;
   }
 
+  // Load configuration from database
+  const config = await loadPointsConfig();
+
   const complexity = metadata?.gameComplexity || 1;
 
   switch (actionType) {
-    case 'play_log':
-      return 100;
+    case 'play_log': {
+      const cfg = config['play_log'];
+      return cfg ? cfg.base_points : 100;
+    }
 
-    case 'content_check':
-      return 1000 * complexity;
+    case 'content_check': {
+      const cfg = config['content_check'];
+      const basePoints = cfg ? cfg.base_points : 1000;
+      return basePoints * complexity;
+    }
 
     case 'knowledge_add': {
       const level = metadata?.knowledgeLevel || 1;
-      const multiplier = KNOWLEDGE_LEVEL_MULTIPLIERS[level] || 100;
-      return multiplier * complexity;
+      const configKey = `knowledge_add_level_${level}`;
+      const cfg = config[configKey];
+      const basePoints = cfg ? cfg.base_points : (level * 100);
+      return basePoints * complexity;
     }
 
-    case 'knowledge_upgrade':
-      return 100 * complexity;
+    case 'knowledge_upgrade': {
+      const cfg = config['knowledge_upgrade'];
+      const basePoints = cfg ? cfg.base_points : 100;
+      return basePoints * complexity;
+    }
 
     case 'teaching': {
       const students = metadata?.studentCount || 1;
-      return 1000 * complexity * students;
+      const cfg = config['teaching'];
+      const basePoints = cfg ? cfg.base_points : 1000;
+      return basePoints * complexity * students;
     }
 
-    case 'photo_upload':
-      return 1000;
+    case 'photo_upload': {
+      const cfg = config['photo_upload'];
+      return cfg ? cfg.base_points : 1000;
+    }
 
-    case 'issue_report':
-      return 100; // Reporter bonus (all issues)
+    case 'issue_report': {
+      const cfg = config['issue_report'];
+      return cfg ? cfg.base_points : 100;
+    }
 
     case 'issue_resolution': {
-      const category = metadata?.issueCategory || '';
-      const basePoints = ISSUE_RESOLUTION_POINTS[category] || 0;
-      // Multiply by 2 if game complexity >= 3
-      return complexity >= 3 ? basePoints * 2 : basePoints;
+      const isComplex = complexity >= 3;
+      const configKey = isComplex ? 'issue_resolution_complex' : 'issue_resolution_basic';
+      const cfg = config[configKey];
+      return cfg ? cfg.base_points : (isComplex ? 1000 : 500);
     }
 
     case 'task_complete':
@@ -136,7 +198,7 @@ export function calculatePoints(params: PointAwardParams): number {
  */
 export async function awardPoints(params: PointAwardParams): Promise<PointAwardResult> {
   try {
-    const points = calculatePoints(params);
+    const points = await calculatePoints(params);
 
     if (points === 0) {
       return {
@@ -211,6 +273,21 @@ async function logPointAward(
     entityName = params.metadata.taskTitle;
   }
 
+  // Determine category and event_type based on action
+  let category = 'points';
+  let eventType = 'created';
+
+  if (params.actionType === 'task_complete') {
+    category = 'task';
+    eventType = 'updated'; // Task completion is an update action
+  } else if (params.actionType === 'issue_report') {
+    category = 'issue_report';
+    eventType = 'created'; // Reporting an issue is a creation action
+  } else if (params.actionType === 'issue_resolution') {
+    category = 'task';
+    eventType = 'updated'; // Resolving an issue updates the task
+  }
+
   await pool.query(`
     INSERT INTO changelog (
       id,
@@ -226,8 +303,8 @@ async function logPointAward(
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
   `, [
     changelogId,
-    'points_awarded',
-    'points',
+    eventType,
+    category,
     params.staffId,
     entityId,
     entityName,

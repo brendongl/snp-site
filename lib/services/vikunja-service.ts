@@ -315,7 +315,16 @@ function calculatePriority(issueCategory: string): number {
 }
 
 /**
+ * Map issue type to Vikunja label IDs
+ * Labels created via scripts/create-vikunja-issue-labels.js
+ */
+function getIssueTypeLabelId(issueType: 'task' | 'note'): number {
+  return issueType === 'task' ? 19 : 20; // task=19, note=20
+}
+
+/**
  * Create a Board Game Issue task in Vikunja
+ * v1.5.3: Now supports issue types (task/note) with appropriate labels
  */
 export async function createBoardGameIssueTask(params: {
   gameName: string;
@@ -325,28 +334,32 @@ export async function createBoardGameIssueTask(params: {
   issueDescription: string;
   reportedBy: string;
   reportedByVikunjaUserId: number;
+  issueType?: 'task' | 'note'; // Optional, defaults to 'task' for backward compatibility
 }): Promise<number> {
   if (!VIKUNJA_TOKEN) {
     throw new Error('VIKUNJA_API_TOKEN not configured');
   }
 
   const projectId = 25; // Board Game Issues project (hard-coded)
+  const issueType = params.issueType || 'task'; // Default to 'task' if not specified
 
-  // Calculate points for task completion
+  // Calculate points for task completion (only for actionable tasks)
   const basePoints = getIssueResolutionPoints(params.issueCategory);
-  const points = params.gameComplexity >= 3 ? basePoints * 2 : basePoints;
+  const points = issueType === 'task' && params.gameComplexity >= 3 ? basePoints * 2 : basePoints;
 
   // Calculate due date and priority
   const dueDate = calculateDueDate(params.issueCategory);
   const priority = calculatePriority(params.issueCategory);
 
-  // Get label ID for points (if points exist)
-  const labelId = getPointLabelId(points);
+  // Get label IDs for points and issue type
+  const pointLabelId = getPointLabelId(points);
+  const issueTypeLabelId = getIssueTypeLabelId(issueType);
 
   // Build request body
   const taskBody: any = {
     title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
-    description: `
+    description: issueType === 'task'
+      ? `
 **Issue:** ${params.issueDescription}
 
 **Reported by:** ${params.reportedBy}
@@ -354,6 +367,15 @@ export async function createBoardGameIssueTask(params: {
 **Complexity:** ${params.gameComplexity}
 
 Complete this task to resolve the issue and earn ${points} points!
+    `.trim()
+      : `
+**Note:** ${params.issueDescription}
+
+**Reported by:** ${params.reportedBy}
+**Game ID:** ${params.gameId}
+**Complexity:** ${params.gameComplexity}
+
+This is a non-actionable observation. No points awarded upon completion.
     `.trim(),
     project_id: projectId,
     due_date: dueDate,
@@ -361,12 +383,14 @@ Complete this task to resolve the issue and earn ${points} points!
     assignees: [{ id: params.reportedByVikunjaUserId }]
   };
 
-  // Add label if valid points value
-  if (labelId) {
-    taskBody.labels = [{ id: labelId }];
-  } else if (points > 0) {
+  // Add labels: always add issue type label, optionally add points label for actionable tasks
+  const labels = [{ id: issueTypeLabelId }];
+  if (issueType === 'task' && pointLabelId) {
+    labels.push({ id: pointLabelId });
+  } else if (issueType === 'task' && points > 0 && !pointLabelId) {
     console.warn(`⚠️  No label found for ${points} points. Task will use description fallback.`);
   }
+  taskBody.labels = labels;
 
   // Create task using PUT method
   const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
@@ -389,12 +413,23 @@ Complete this task to resolve the issue and earn ${points} points!
 
 /**
  * Get all tasks from Board Game Issues project
+ * v1.5.3: Filters out observation notes (only shows actionable tasks labeled as 'task')
  */
 export async function getBoardGameIssueTasks(): Promise<TaskWithPoints[]> {
   const projectId = 25; // Board Game Issues project (hard-coded)
 
   const allTasks = await getProjectTasks(projectId);
 
-  // Filter to incomplete tasks only
-  return allTasks.filter(task => !task.done);
+  // Filter to incomplete tasks that are NOT labeled as 'note' (observation notes)
+  // Include tasks labeled as 'task' (actionable) and unlabeled tasks (backward compatibility)
+  return allTasks.filter(task => {
+    if (task.done) return false;
+
+    // Check if task has the 'note' label (ID: 20) - these are observation notes
+    // Handle null/undefined labels array with optional chaining
+    const hasNoteLabel = task.labels?.some(label => label.id === 20) ?? false;
+
+    // Exclude all observation notes - include everything else (actionable tasks)
+    return !hasNoteLabel;
+  });
 }

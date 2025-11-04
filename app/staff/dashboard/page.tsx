@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DashboardStats {
@@ -54,6 +55,8 @@ export default function StaffDashboard() {
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+  const [selectedGameIssue, setSelectedGameIssue] = useState<VikunjaTask | null>(null);
+  const [showGameIssueDialog, setShowGameIssueDialog] = useState(false);
 
   // Collapsible section states
   const [upcomingTasksCollapsed, setUpcomingTasksCollapsed] = useState(false);
@@ -354,50 +357,89 @@ export default function StaffDashboard() {
               {gamesNeedingAttention.map((task) => (
                 <div
                   key={task.id}
-                  className="flex flex-col p-4 border border-red-300 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
+                  className="flex items-center justify-between p-4 border border-red-300 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-red-900 mb-1">{task.title}</div>
-                      {task.description && (
-                        <div className="text-sm text-red-700 whitespace-pre-line mb-2">
-                          {task.description}
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="font-medium text-red-900 truncate">{task.title}</div>
                     {task.points > 0 && (
                       <div className={`shrink-0 px-3 py-1 border rounded-full text-sm font-semibold ${getPointBadgeColor(task.points)}`}>
                         {task.points} pts
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => handleCompleteTask(task.id, task.points)}
-                      disabled={completingTaskId === task.id}
-                    >
-                      {completingTaskId === task.id ? (
-                        <>
-                          <Clock className="h-4 w-4 mr-1 animate-spin" />
-                          Resolving...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Resolve
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 border-red-300 hover:bg-red-100"
+                    onClick={() => {
+                      setSelectedGameIssue(task);
+                      setShowGameIssueDialog(true);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
                 </div>
               ))}
             </div>
           )}
         </Card>
       )}
+
+      {/* Game Issue Detail Dialog */}
+      <Dialog open={showGameIssueDialog} onOpenChange={setShowGameIssueDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-900">{selectedGameIssue?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedGameIssue?.description && (
+              <div className="text-sm text-gray-700 whitespace-pre-line p-4 bg-gray-50 rounded-lg">
+                {selectedGameIssue.description.replace(/<[^>]*>/g, '')}
+              </div>
+            )}
+            {selectedGameIssue && selectedGameIssue.points > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Points for resolving:</span>
+                <div className={`px-3 py-1 border rounded-full text-sm font-semibold ${getPointBadgeColor(selectedGameIssue.points)}`}>
+                  {selectedGameIssue.points} pts
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowGameIssueDialog(false)}
+            >
+              Close
+            </Button>
+            <Button
+              variant="default"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (selectedGameIssue) {
+                  handleCompleteTask(selectedGameIssue.id, selectedGameIssue.points);
+                  setShowGameIssueDialog(false);
+                }
+              }}
+              disabled={selectedGameIssue ? completingTaskId === selectedGameIssue.id : false}
+            >
+              {selectedGameIssue && completingTaskId === selectedGameIssue.id ? (
+                <>
+                  <Clock className="h-4 w-4 mr-1 animate-spin" />
+                  Resolving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Resolve Issue
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upcoming Tasks (Vikunja - other projects) */}
       {vikunjaTasks.length > 0 && (

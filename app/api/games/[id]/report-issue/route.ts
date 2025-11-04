@@ -45,6 +45,7 @@ interface ReportIssueRequest {
   reportedById: string;
   issueCategory: IssueCategory;
   issueDescription: string;
+  issueType?: 'task' | 'note'; // v1.5.3: Explicit issue type (defaults to legacy category mapping)
 }
 
 export async function POST(
@@ -71,7 +72,13 @@ export async function POST(
       );
     }
 
-    const issueType = ISSUE_CATEGORIES[body.issueCategory];
+    // v1.5.3: Determine issue type (explicit or from category mapping)
+    const legacyIssueType = ISSUE_CATEGORIES[body.issueCategory];
+    const explicitIssueType = body.issueType ? (body.issueType === 'task' ? 'actionable' : 'non_actionable') : null;
+    const issueType = explicitIssueType || legacyIssueType;
+
+    // Map to Vikunja label type
+    const vikunjaIssueType: 'task' | 'note' = body.issueType || (legacyIssueType === 'actionable' ? 'task' : 'note');
 
     // Fetch game details (always needed for game name)
     const gameResult = await pool.query(
@@ -88,52 +95,49 @@ export async function POST(
 
     const game = gameResult.rows[0];
 
-    let vikunjaTaskId: number | undefined;
+    // Fetch reporter details for Vikunja assignment (needed for all issues now)
+    const staffResult = await pool.query(
+      'SELECT staff_name, vikunja_user_id FROM staff_list WHERE id = $1',
+      [body.reportedById]
+    );
 
-    if (issueType === 'actionable') {
-
-      // Fetch reporter details for Vikunja assignment
-      const staffResult = await pool.query(
-        'SELECT staff_name, vikunja_user_id FROM staff_list WHERE id = $1',
-        [body.reportedById]
+    if (staffResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Reporter not found in staff list' },
+        { status: 404 }
       );
+    }
 
-      if (staffResult.rows.length === 0) {
-        return NextResponse.json(
-          { error: 'Reporter not found in staff list' },
-          { status: 404 }
-        );
-      }
+    const reporter = staffResult.rows[0];
 
-      const reporter = staffResult.rows[0];
+    if (!reporter.vikunja_user_id) {
+      return NextResponse.json(
+        { error: 'Reporter account is not set up for task creation' },
+        { status: 400 }
+      );
+    }
 
-      if (!reporter.vikunja_user_id) {
-        return NextResponse.json(
-          { error: 'Reporter account is not set up for task creation' },
-          { status: 400 }
-        );
-      }
+    // v1.5.3: Create Vikunja task for ALL issues (both task and note types)
+    let vikunjaTaskId: number | undefined;
+    try {
+      vikunjaTaskId = await createBoardGameIssueTask({
+        gameName: game.name,
+        gameId: gameId,
+        gameComplexity: game.complexity,
+        issueCategory: body.issueCategory,
+        issueDescription: body.issueDescription,
+        reportedBy: reporter.staff_name,
+        reportedByVikunjaUserId: reporter.vikunja_user_id,
+        issueType: vikunjaIssueType
+      });
 
-      // Create Vikunja task for actionable issues
-      try {
-        vikunjaTaskId = await createBoardGameIssueTask({
-          gameName: game.name,
-          gameId: gameId,
-          gameComplexity: game.complexity,
-          issueCategory: body.issueCategory,
-          issueDescription: body.issueDescription,
-          reportedBy: reporter.staff_name,
-          reportedByVikunjaUserId: reporter.vikunja_user_id
-        });
-
-        console.log(`✅ Created task ${vikunjaTaskId} for issue in game ${gameId}`);
-      } catch (vikunjaError) {
-        console.error('❌ Failed to create task:', vikunjaError);
-        return NextResponse.json(
-          { error: 'Failed to create task for actionable issue' },
-          { status: 500 }
-        );
-      }
+      console.log(`✅ Created ${vikunjaIssueType} ${vikunjaTaskId} for issue in game ${gameId}`);
+    } catch (vikunjaError) {
+      console.error('❌ Failed to create task:', vikunjaError);
+      return NextResponse.json(
+        { error: 'Failed to create task for issue' },
+        { status: 500 }
+      );
     }
 
     // Create game_issues record
@@ -166,11 +170,12 @@ export async function POST(
         issueCategory: issue.issue_category,
         issueType: issue.issue_type,
         vikunjaTaskId: issue.vikunja_task_id,
+        vikunjaIssueType: vikunjaIssueType, // v1.5.3: Include Vikunja label type
         createdAt: issue.created_at
       },
-      message: issueType === 'actionable'
-        ? `Actionable issue reported and task created for resolution. You earned 100 points!`
-        : `Non-actionable issue reported for tracking. You earned 100 points!`
+      message: vikunjaIssueType === 'task'
+        ? `Actionable task created for resolution. You earned 100 points!`
+        : `Non-actionable note created for tracking. You earned 100 points!`
     });
 
   } catch (error) {

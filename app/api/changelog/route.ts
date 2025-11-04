@@ -54,43 +54,48 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (startDate) {
-      conditions.push(`created_at >= $${paramIndex++}`);
+      conditions.push(`c.created_at >= $${paramIndex++}`);
       params.push(startDate);
     }
     if (endDate) {
       // Add one day to endDate to include all entries on that day
       const endDatePlusOne = new Date(endDate);
       endDatePlusOne.setDate(endDatePlusOne.getDate() + 1);
-      conditions.push(`created_at < $${paramIndex++}`);
+      conditions.push(`c.created_at < $${paramIndex++}`);
       params.push(endDatePlusOne.toISOString());
     }
     if (staffId) {
-      conditions.push(`staff_id = $${paramIndex++}`);
+      conditions.push(`c.staff_id = $${paramIndex++}`);
       params.push(staffId);
     }
     if (eventType) {
-      conditions.push(`event_type = $${paramIndex++}`);
+      conditions.push(`c.event_type = $${paramIndex++}`);
       params.push(eventType);
     }
     if (category) {
-      conditions.push(`category = $${paramIndex++}`);
+      conditions.push(`c.category = $${paramIndex++}`);
       params.push(category);
     }
 
     const whereClause = conditions.join(' AND ');
 
-    // Fetch data
+    // Fetch data with staff information
     const dataQuery = `
-      SELECT * FROM changelog
+      SELECT
+        c.*,
+        s.staff_name,
+        s.staff_email
+      FROM changelog c
+      LEFT JOIN staff_list s ON c.staff_id = s.id
       WHERE ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY c.created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
     `;
     params.push(limit, offset);
 
     // Count total
     const countQuery = `
-      SELECT COUNT(*) as total FROM changelog
+      SELECT COUNT(*) as total FROM changelog c
       WHERE ${whereClause}
     `;
 
@@ -113,11 +118,11 @@ export async function GET(request: NextRequest) {
     // Get summary stats
     const statsQuery = `
       SELECT
-        COUNT(*) FILTER (WHERE category = 'board_game') as game_updates,
-        COUNT(*) FILTER (WHERE category = 'play_log') as play_logs_added,
-        COUNT(*) FILTER (WHERE category = 'staff_knowledge') as knowledge_updates,
-        COUNT(*) FILTER (WHERE category = 'content_check') as content_checks
-      FROM changelog
+        COUNT(*) FILTER (WHERE c.category = 'board_game') as game_updates,
+        COUNT(*) FILTER (WHERE c.category = 'play_log') as play_logs_added,
+        COUNT(*) FILTER (WHERE c.category = 'staff_knowledge') as knowledge_updates,
+        COUNT(*) FILTER (WHERE c.category = 'content_check') as content_checks
+      FROM changelog c
       WHERE ${whereClause}
     `;
 

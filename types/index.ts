@@ -295,13 +295,16 @@ export interface CreateGameInput {
 export interface ChangelogEntry {
   id: string;
   event_type: 'created' | 'updated' | 'deleted' | 'photo_added';
-  category: 'board_game' | 'play_log' | 'staff_knowledge' | 'content_check';
+  category: 'board_game' | 'play_log' | 'staff_knowledge' | 'content_check' | 'task' | 'issue_report';
   entity_id: string;
   entity_name: string;
   description: string;
   staff_member: string;
   staff_id: string;
+  staff_name?: string; // From LEFT JOIN with staff_list
+  staff_email?: string; // From LEFT JOIN with staff_list
   metadata?: Record<string, any>;
+  points_awarded?: number | null;
   created_at: string;
 }
 

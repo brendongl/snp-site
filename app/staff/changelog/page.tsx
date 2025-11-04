@@ -427,6 +427,8 @@ export default function ChangelogPage() {
                 <option value="play_log">Play Logs</option>
                 <option value="staff_knowledge">Staff Knowledge</option>
                 <option value="content_check">Content Checks</option>
+                <option value="issue_report">Issue Reports</option>
+                <option value="task">Tasks</option>
               </select>
             </div>
             <div>
@@ -912,6 +914,9 @@ export default function ChangelogPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Category
                     </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Points Awarded
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
@@ -936,11 +941,14 @@ export default function ChangelogPage() {
                           {log.category.replace('_', ' ')}
                         </span>
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                        {log.points_awarded ? log.points_awarded.toLocaleString() : '—'}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {log.description}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {log.staff_member}
+                        {log.staff_name || 'Unknown'}
                       </td>
                     </tr>
                   ))}
