@@ -66,6 +66,7 @@ export default function StaffDashboard() {
   const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
   const [gamesWithIssues, setGamesWithIssues] = useState<GameWithIssue[]>([]); // v1.2.0
   const [vikunjaTasks, setVikunjaTasks] = useState<VikunjaTask[]>([]);
+  const [boardGameIssueTasks, setBoardGameIssueTasks] = useState<VikunjaTask[]>([]); // v1.5.0
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,7 @@ export default function StaffDashboard() {
 
   // Collapsible section states
   const [upcomingTasksCollapsed, setUpcomingTasksCollapsed] = useState(false);
+  const [boardGameIssuesCollapsed, setBoardGameIssuesCollapsed] = useState(false); // v1.5.0
   const [gamesNeedingAttentionCollapsed, setGamesNeedingAttentionCollapsed] = useState(false);
   const [priorityActionsCollapsed, setPriorityActionsCollapsed] = useState(false);
   const [recentActivityCollapsed, setRecentActivityCollapsed] = useState(false);
@@ -149,11 +151,13 @@ export default function StaffDashboard() {
   const fetchDashboardData = async () => {
     try {
       // v1.2.0: Added games with issues fetch
-      const [statsRes, actionsRes, issuesRes, vikunjaRes, activityRes] = await Promise.all([
+      // v1.5.0: Added board game issues tasks fetch
+      const [statsRes, actionsRes, issuesRes, vikunjaRes, bgIssuesRes, activityRes] = await Promise.all([
         fetch('/api/staff/dashboard/stats'),
         fetch('/api/staff/dashboard/priority-actions?limit=5'),
         fetch('/api/content-checks/needs-attention'),
         fetch('/api/vikunja/tasks/priority'),
+        fetch('/api/vikunja/board-game-issues'),
         fetch('/api/staff/dashboard/recent-activity?limit=10'),
       ]);
 
@@ -177,6 +181,12 @@ export default function StaffDashboard() {
       if (vikunjaRes.ok) {
         const vikunjaData = await vikunjaRes.json();
         setVikunjaTasks(vikunjaData.tasks || []);
+      }
+
+      // v1.5.0: Fetch Board Game Issues tasks from Vikunja
+      if (bgIssuesRes.ok) {
+        const bgIssuesData = await bgIssuesRes.json();
+        setBoardGameIssueTasks(bgIssuesData.tasks || []);
       }
 
       if (activityRes.ok) {
@@ -462,6 +472,96 @@ export default function StaffDashboard() {
               );
             })}
           </div>
+          )}
+        </Card>
+      )}
+
+      {/* v1.5.0: Board Game Issues */}
+      {boardGameIssueTasks.length > 0 && (
+        <Card className="p-6 border-orange-200 bg-orange-50/50">
+          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setBoardGameIssuesCollapsed(!boardGameIssuesCollapsed)}>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-orange-700">🔧 Board Game Issues</h2>
+              <span className="text-sm text-orange-600 font-medium">
+                ({boardGameIssueTasks.length} task{boardGameIssueTasks.length !== 1 ? 's' : ''})
+              </span>
+            </div>
+            {boardGameIssuesCollapsed ? <ChevronDown className="h-5 w-5 text-orange-600" /> : <ChevronUp className="h-5 w-5 text-orange-600" />}
+          </div>
+          {!boardGameIssuesCollapsed && (
+            <div className="space-y-3">
+              {boardGameIssueTasks.map((task) => {
+                const taskColor = task.isOverdue
+                  ? 'border-red-300 bg-red-50/50'
+                  : task.isDueToday
+                  ? 'border-orange-300 bg-orange-50/50'
+                  : 'border-blue-300 bg-blue-50/50';
+
+                return (
+                  <div
+                    key={task.id}
+                    className={`flex flex-col p-4 border rounded-lg ${taskColor}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 mb-1">{task.title}</div>
+                        {task.description && (
+                          <div className="text-sm text-gray-600 whitespace-pre-line mb-2">
+                            {task.description}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                          {task.due_date && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDueDate(task.due_date)}
+                            </span>
+                          )}
+                          {task.priority > 0 && (
+                            <span className="flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Priority {task.priority}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {task.points > 0 && (
+                        <div className={`shrink-0 px-3 py-1 border rounded-full text-sm font-medium ${getPointBadgeColor(task.points)}`}>
+                          {task.points} pts
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Link href={`https://tasks.sipnplay.cafe/tasks/${task.id}`} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+                          View in Vikunja
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                        onClick={() => handleCompleteTask(task.id, task.points)}
+                        disabled={completingTaskId === task.id}
+                      >
+                        {completingTaskId === task.id ? (
+                          <>
+                            <Clock className="h-4 w-4 mr-1 animate-spin" />
+                            Completing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Complete
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </Card>
       )}
