@@ -52,6 +52,9 @@ function GamesPageContent() {
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [knowledgeDialogGame, setKnowledgeDialogGame] = useState<BoardGame | null>(null);
 
+  // v1.5.0: Staff ID for issue reporting
+  const [staffId, setStaffId] = useState<string | null>(null);
+
   // Track which game ID was auto-opened from query param to prevent re-opening
   const autoOpenedGameId = useRef<string | null>(null);
 
@@ -75,13 +78,15 @@ function GamesPageContent() {
     }
 
     // Validate staff_id is a valid UUID if it exists
-    const staffId = localStorage.getItem('staff_id');
-    if (staffId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId)) {
+    const staffIdFromStorage = localStorage.getItem('staff_id');
+    if (staffIdFromStorage && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffIdFromStorage)) {
       console.warn('⚠️ Invalid staff_id format detected. Clearing staff session.');
       localStorage.removeItem('staff_id');
       localStorage.removeItem('staff_name');
       localStorage.removeItem('staff_email');
       localStorage.removeItem('staff_type');
+    } else if (staffIdFromStorage) {
+      setStaffId(staffIdFromStorage);
     }
   }, []);
 
@@ -1124,6 +1129,7 @@ function GamesPageContent() {
               picturesOnlyMode={picturesOnlyMode}
               staffKnowledgeLevel={staffKnowledge.get(game.id)?.confidenceLevel}
               onKnowledgeBadgeClick={() => handleKnowledgeBadgeClick(game)} // v1.2.0
+              staffId={staffId || undefined} // v1.5.0: Pass staffId for issue reporting
             />
           ))}
         </div>
