@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard V1 - Card Stack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            color: #1a202c;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .user-info h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-info p {
+            color: #718096;
+            font-size: 0.875rem;
+        }
+
+        .points-badge {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .points-badge span {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #744210;
+        }
+
+        /* Card Base */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-title h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .card-count {
+            background: #edf2f7;
+            padding: 0.25rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .chevron {
+            color: #a0aec0;
+            transition: transform 0.2s;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        /* Task Item */
+        .task-item {
+            border-left: 4px solid;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            background: #f7fafc;
+            transition: background 0.2s;
+        }
+
+        .task-item:hover {
+            background: #edf2f7;
+        }
+
+        .task-item.overdue {
+            border-color: #fc8181;
+            background: #fff5f5;
+        }
+
+        .task-item.today {
+            border-color: #f6ad55;
+            background: #fffaf0;
+        }
+
+        .task-item.soon {
+            border-color: #63b3ed;
+            background: #ebf8ff;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            gap: 1rem;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #2d3748;
+            flex: 1;
+        }
+
+        .task-points {
+            background: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: #d69e2e;
+            white-space: nowrap;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: #718096;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-outline:hover {
+            background: #f7fafc;
+        }
+
+        /* Game Item */
+        .game-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #f7fafc;
+            margin-bottom: 0.75rem;
+        }
+
+        .game-item:hover {
+            background: #edf2f7;
+        }
+
+        .game-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .game-info {
+            flex: 1;
+        }
+
+        .game-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.25rem;
+        }
+
+        .game-meta {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: #f7fafc;
+            padding: 1.25rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .user-info h1 {
+                font-size: 1.25rem;
+            }
+
+            .points-badge {
+                padding: 0.5rem 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .task-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .task-meta {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="user-info">
+                <h1>👋 Brendon Gan-Le</h1>
+                <p>Staff Dashboard</p>
+            </div>
+            <div class="points-badge">
+                <span>⭐</span>
+                <span>200 pts</span>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>📊 Quick Stats</h2>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Tasks Due</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Games Checked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Play Sessions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Tasks -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>📋 Upcoming Tasks</h2>
+                    <span class="card-count">3</span>
+                </div>
+                <span class="chevron open">▼</span>
+            </div>
+
+            <div class="task-item overdue">
+                <div class="task-header">
+                    <div class="task-title">Clean G1 Retail shelf and dust games</div>
+                    <div class="task-points">500 pts</div>
+                </div>
+                <div class="task-meta">
+                    <span>🔴 Overdue</span>
+                    <span>Due: Yesterday</span>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-primary">Complete</button>
+                    <button class="btn btn-outline">View</button>
+                </div>
+            </div>
+
+            <div class="task-item today">
+                <div class="task-header">
+                    <div class="task-title">Update BGG ratings for top 20 games</div>
+                    <div class="task-points">200 pts</div>
+                </div>
+                <div class="task-meta">
+                    <span>🟠 Due Today</span>
+                    <span>Due: Today 5:00 PM</span>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-primary">Complete</button>
+                    <button class="btn btn-outline">View</button>
+                </div>
+            </div>
+
+            <div class="task-item soon">
+                <div class="task-header">
+                    <div class="task-title">Organize video game collection</div>
+                    <div class="task-points">1000 pts</div>
+                </div>
+                <div class="task-meta">
+                    <span>🔵 Due Soon</span>
+                    <span>Due: In 2 days</span>
+                </div>
+                <div class="task-actions">
+                    <button class="btn btn-primary">Complete</button>
+                    <button class="btn btn-outline">View</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Needing Attention -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <h2>🎮 Games Needing Attention</h2>
+                    <span class="card-count">5</span>
+                </div>
+                <span class="chevron open">▼</span>
+            </div>
+
+            <div class="game-item">
+                <div class="game-image"></div>
+                <div class="game-info">
+                    <div class="game-name">Catan</div>
+                    <div class="game-meta">Last checked: 15 days ago • Missing pieces</div>
+                </div>
+            </div>
+
+            <div class="game-item">
+                <div class="game-image"></div>
+                <div class="game-info">
+                    <div class="game-name">Ticket to Ride</div>
+                    <div class="game-meta">Last checked: 12 days ago • Needs inspection</div>
+                </div>
+            </div>
+
+            <div class="game-item">
+                <div class="game-image"></div>
+                <div class="game-info">
+                    <div class="game-name">Pandemic</div>
+                    <div class="game-meta">Last checked: 10 days ago • Box damaged</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

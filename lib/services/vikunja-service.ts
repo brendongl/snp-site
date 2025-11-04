@@ -58,6 +58,11 @@ export interface TaskWithPoints extends VikunjaTask {
  * Extract point value from task labels
  */
 export function extractPoints(task: VikunjaTask): number {
+  // Handle tasks without labels
+  if (!task.labels || !Array.isArray(task.labels) || task.labels.length === 0) {
+    return 0;
+  }
+
   const pointLabel = task.labels.find(label =>
     label.title.startsWith('points:')
   );

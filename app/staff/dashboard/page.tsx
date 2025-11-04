@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DashboardStats {
@@ -70,6 +70,12 @@ export default function StaffDashboard() {
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+
+  // Collapsible section states
+  const [upcomingTasksCollapsed, setUpcomingTasksCollapsed] = useState(false);
+  const [gamesNeedingAttentionCollapsed, setGamesNeedingAttentionCollapsed] = useState(false);
+  const [priorityActionsCollapsed, setPriorityActionsCollapsed] = useState(false);
+  const [recentActivityCollapsed, setRecentActivityCollapsed] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -340,58 +346,33 @@ export default function StaffDashboard() {
         </Card>
       </div>
 
-      {/* v1.2.0: Games Needing Attention */}
-      {gamesWithIssues.length > 0 && (
-        <Card className="p-6 border-red-200 bg-red-50/50">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-red-700">⚠️ Games Needing Attention</h2>
-            <span className="text-sm text-red-600 font-medium">{gamesWithIssues.length} issue{gamesWithIssues.length !== 1 ? 's' : ''}</span>
-          </div>
-          <div className="space-y-2">
-            {gamesWithIssues.map((issue) => (
-              <div
-                key={issue.game_id}
-                className="flex items-center justify-between p-3 border border-red-200 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-red-900">{issue.game_name}</div>
-                  <div className="text-sm text-red-700 mt-1">
-                    <span className="font-medium">Issue:</span> {issue.issue_description}
-                  </div>
-                  <div className="text-xs text-red-600 mt-1">
-                    Reported by {issue.reported_by} on{' '}
-                    {new Date(issue.reported_date).toLocaleDateString()}
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="ml-4 border-red-300 text-red-700 hover:bg-red-100" asChild>
-                  <Link href={`/games?openGame=${issue.game_id}`}>
-                    Resolve
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
       {/* Upcoming Tasks (Vikunja) */}
       {vikunjaTasks.length > 0 && (
         <Card className="p-6 border-orange-200 bg-orange-50/30">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-orange-800">📋 Upcoming Tasks</h2>
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setUpcomingTasksCollapsed(!upcomingTasksCollapsed)}>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-orange-800">📋 Upcoming Tasks</h2>
               <span className="text-sm text-orange-700 font-medium">
-                {vikunjaTasks.length} task{vikunjaTasks.length !== 1 ? 's' : ''}
+                ({vikunjaTasks.length} task{vikunjaTasks.length !== 1 ? 's' : ''})
               </span>
-              <Button size="sm" variant="outline" className="border-orange-300" asChild>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-orange-300"
+                asChild
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Link href="https://tasks.sipnplay.cafe" target="_blank" rel="noopener noreferrer">
                   Open Task Manager
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
+              {upcomingTasksCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
             </div>
           </div>
+          {!upcomingTasksCollapsed && (
           <div className="space-y-2">
             {vikunjaTasks.map((task) => {
               // Determine card styling based on priority
@@ -481,12 +462,60 @@ export default function StaffDashboard() {
               );
             })}
           </div>
+          )}
+        </Card>
+      )}
+
+      {/* v1.2.0: Games Needing Attention */}
+      {gamesWithIssues.length > 0 && (
+        <Card className="p-6 border-red-200 bg-red-50/50">
+          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setGamesNeedingAttentionCollapsed(!gamesNeedingAttentionCollapsed)}>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-red-700">⚠️ Games Needing Attention</h2>
+              <span className="text-sm text-red-600 font-medium">
+                ({gamesWithIssues.length} issue{gamesWithIssues.length !== 1 ? 's' : ''})
+              </span>
+            </div>
+            {gamesNeedingAttentionCollapsed ? <ChevronDown className="h-5 w-5 text-red-600" /> : <ChevronUp className="h-5 w-5 text-red-600" />}
+          </div>
+          {!gamesNeedingAttentionCollapsed && (
+          <div className="space-y-2">
+            {gamesWithIssues.map((issue) => (
+              <div
+                key={issue.game_id}
+                className="flex items-center justify-between p-3 border border-red-200 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-red-900">{issue.game_name}</div>
+                  <div className="text-sm text-red-700 mt-1">
+                    <span className="font-medium">Issue:</span> {issue.issue_description}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    Reported by {issue.reported_by} on{' '}
+                    {new Date(issue.reported_date).toLocaleDateString()}
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="ml-4 border-red-300 text-red-700 hover:bg-red-100" asChild>
+                  <Link href={`/games?openGame=${issue.game_id}`}>
+                    Resolve
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+          )}
         </Card>
       )}
 
       {/* Priority Actions */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Priority Actions</h2>
+        <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setPriorityActionsCollapsed(!priorityActionsCollapsed)}>
+          <h2 className="text-xl font-semibold">Priority Actions</h2>
+          {priorityActionsCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+        </div>
+        {!priorityActionsCollapsed && (
+        <>
         {priorityActions.length === 0 ? (
           <p className="text-gray-500 text-center py-4">
             All games are up to date! ✅
@@ -518,11 +547,17 @@ export default function StaffDashboard() {
             ))}
           </div>
         )}
+        </>
+        )}
       </Card>
 
       {/* Recent Activity */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+        <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setRecentActivityCollapsed(!recentActivityCollapsed)}>
+          <h2 className="text-xl font-semibold">Recent Activity</h2>
+          {recentActivityCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+        </div>
+        {!recentActivityCollapsed && (
         <div className="space-y-2">
           {recentActivity.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No recent activity</p>
@@ -538,6 +573,7 @@ export default function StaffDashboard() {
             ))
           )}
         </div>
+        )}
       </Card>
       </div>
     </div>

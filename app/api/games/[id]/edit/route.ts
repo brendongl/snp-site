@@ -44,11 +44,11 @@ export async function POST(
     if (gameName) updates.name = gameName;
     if (description) updates.description = description;
     if (yearReleased !== undefined) updates.year_released = yearReleased;
-    if (minPlayers) updates.min_players = String(minPlayers);  // Store as string
-    if (maxPlayers) updates.max_players = String(maxPlayers);  // Store as string
-    if (bestPlayerAmount !== undefined) updates.best_player_amount = String(bestPlayerAmount); // Store as string
-    if (minPlaytime !== undefined) updates.min_playtime = minPlaytime;
-    if (maxPlaytime !== undefined) updates.max_playtime = maxPlaytime;
+    if (minPlayers) updates.min_players = minPlayers;  // Integer value
+    if (maxPlayers) updates.max_players = maxPlayers;  // Integer value
+    if (bestPlayerAmount) updates.best_player_amount = bestPlayerAmount; // Integer value (fixed: use truthy check)
+    if (minPlaytime !== undefined && minPlaytime !== null) updates.min_playtime = minPlaytime;
+    if (maxPlaytime !== undefined && maxPlaytime !== null) updates.max_playtime = maxPlaytime;
     if (complexity !== undefined) updates.complexity = complexity;
     if (dateAcquired) updates.date_of_acquisition = dateAcquired;
     if (categories) updates.categories = categories; // Array of strings

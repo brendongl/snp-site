@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Last Updated**: November 4, 2025
+**Last Updated**: January 30, 2025
 **Current Version**: 1.4.0
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
@@ -68,75 +68,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
   - Only updated after user confirms changes are ready
   - Trigger phrase: "push to main"
   - Railway auto-deploys from this branch to production
-
----
-
-## Claude Code Skills & Best Practices
-
-### Proactive Task Optimization (`proactive-task-optimizer`)
-
-**Purpose**: Enables autonomous task continuation and systematic debugging without requiring repeated "continue" prompts.
-
-**Use this skill when:**
-
-**Proactive Triggers (automatic - no user request needed):**
-- Encountering the same error for the 2nd time in a conversation
-- About to ask "should I..." or "would you like me to..." for a straightforward next step
-- A tool failed silently (no error but unexpected result)
-- In the middle of a multi-step task and approaching a natural checkpoint
-- Just completed a subtask and there are clear next steps
-- Realize you need to read a file/context you haven't checked yet
-- Workflow execution fails and there's an obvious retry strategy
-
-**Reactive Triggers (user explicitly requests):**
-- User says "keep going", "continue", or "don't stop"
-- User mentions frustration with repeated errors or asking the same thing
-- User asks to "just fix it" or "make it work"
-- User points out you already have information you're asking about
-- User requests autonomous debugging or error resolution
-
-**Examples:**
-```
-❌ DON'T: "I got an error connecting to the database. Should I try again?"
-✅ DO: Launch proactive-task-optimizer to systematically debug and retry multiple solutions
-
-❌ DON'T: "I've completed the API endpoint. Would you like me to add tests?"
-✅ DO: Launch proactive-task-optimizer to continue with logical next steps
-
-❌ DON'T: Ask user about obvious file locations after 2nd failed attempt
-✅ DO: Launch proactive-task-optimizer to thoroughly search for the file
-```
-
-### Quality Control Enforcement (`quality-control-enforcer`)
-
-**Purpose**: Reviews and validates completed work to ensure it meets quality standards and avoids common pitfalls.
-
-**Use this skill when:**
-- Implementation is complete and all tests pass
-- User has asked you to implement a feature
-- Before merging or creating a pull request
-- User suspects quality issues ("this feels hacky", "is this a proper solution?")
-- After completing any significant feature or refactoring
-
-**Examples:**
-```
-✅ User: "I implemented the user authentication system"
-   Launch quality-control-enforcer to review implementation
-
-✅ User: "The login is working but it feels hacky - can you check if this is proper?"
-   Launch quality-control-enforcer to analyze for workarounds or shortcuts
-
-✅ After implementing a complex feature spanning multiple files
-   Launch quality-control-enforcer before committing to staging
-```
-
-**Quality Standards Enforced:**
-- Security best practices (no SQL injection, XSS, command injection, etc.)
-- Proper error handling and resilience patterns
-- Code maintainability and readability
-- No workarounds or temporary hacks
-- Follows project architecture patterns (service layer, type safety, etc.)
-- Proper testing coverage
 
 ---
 
@@ -304,9 +235,9 @@ snp-site/
 - **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
 - **Features**: Page views, user tracking, event logging
 
-### Vikunja Task Management (v1.4.0+)
+### Vikunja Task Management (v1.4.0+) ⚠️ IN DEVELOPMENT/TESTING
 
-**Status**: ✅ Fully implemented and tested in v1.4.1
+**Status**: Implemented in v1.4.1, currently in staging testing phase
 
 - **Instance**: https://tasks.sipnplay.cafe (self-hosted on Railway)
 - **Service**: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
@@ -381,19 +312,20 @@ VIKUNJA_API_TOKEN=tk_e396533971cba5f0873c21900a49ecd136602c77  # Must be set in 
   - See [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) for details
 
 #### Testing Status (v1.4.1)
-**All Testing Completed** ✅:
+**Completed**:
 - ✅ Database schema updated
 - ✅ All staff accounts created and linked
 - ✅ 3-day task visibility implemented
-- ✅ Dashboard UI with color coding (red/orange/blue)
-- ✅ Complete button on task cards with loading states
+- ✅ Dashboard UI with color coding
+- ✅ Complete button on task cards
 - ✅ API endpoints for completion and points
 - ✅ Real-time points display in header
-- ✅ End-to-end testing on local development environment
-- ✅ Task completion workflow verified (button click → API → points award → UI update)
-- ✅ Points award correctly to database (tested: 0 → 200 points)
-- ✅ Task removal from dashboard after completion (tested: 3 → 2 tasks)
-- ✅ Vikunja API integration confirmed (task marked done successfully)
+
+**Pending**:
+- ⏳ End-to-end testing on staging environment
+- ⏳ Verify task completion workflow
+- ⏳ Confirm points award correctly
+- ⏳ Test two-way sync (Vikunja → Dashboard)
 
 #### Future Enhancements
 - Leaderboard display on dashboard

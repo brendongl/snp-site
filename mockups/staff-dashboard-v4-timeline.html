@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard V4 - Timeline Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(to bottom, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Profile Card */
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+        }
+
+        .profile-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-text p {
+            color: #718096;
+            font-size: 0.875rem;
+        }
+
+        .points-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+        }
+
+        .points-circle-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .points-circle-label {
+            font-size: 0.625rem;
+            color: white;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        /* Stats Horizontal */
+        .stats-horizontal {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card-small {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-card-small-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card-small-label {
+            font-size: 0.75rem;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #cbd5e0 0%, #e2e8f0 100%);
+        }
+
+        .timeline-section {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            z-index: 1;
+        }
+
+        .timeline-section.priority-high .timeline-marker {
+            border-color: #f56565;
+            background: #fff5f5;
+        }
+
+        .timeline-section.priority-medium .timeline-marker {
+            border-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .timeline-section.priority-low .timeline-marker {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+
+        .timeline-content {
+            margin-left: 60px;
+        }
+
+        .timeline-header {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s;
+        }
+
+        .timeline-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateX(4px);
+        }
+
+        .task-header-timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            gap: 1rem;
+        }
+
+        .task-title-timeline {
+            font-weight: 600;
+            color: #1a202c;
+            font-size: 1rem;
+            flex: 1;
+        }
+
+        .points-tag {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.375rem 0.875rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .task-meta-timeline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        .task-meta-timeline span {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .task-actions-timeline {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-timeline {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-complete-timeline {
+            background: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-complete-timeline:hover {
+            background: #059669;
+        }
+
+        .btn-view-timeline {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-view-timeline:hover {
+            background: #edf2f7;
+        }
+
+        /* Section Divider */
+        .section-divider {
+            margin: 3rem 0 2rem 60px;
+            font-size: 0.875rem;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        /* Game Timeline Item */
+        .game-timeline {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .game-icon-timeline {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+            flex-shrink: 0;
+        }
+
+        .game-info-timeline {
+            flex: 1;
+        }
+
+        .game-name-timeline {
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .game-status-timeline {
+            font-size: 0.8125rem;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 0;
+            }
+
+            .profile-card {
+                flex-direction: column;
+                gap: 1.5rem;
+                text-align: center;
+            }
+
+            .profile-info {
+                flex-direction: column;
+            }
+
+            .stats-horizontal {
+                flex-direction: column;
+            }
+
+            .timeline::before {
+                left: 10px;
+            }
+
+            .timeline-marker {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+
+            .timeline-content {
+                margin-left: 45px;
+            }
+
+            .section-divider {
+                margin-left: 45px;
+            }
+
+            .task-header-timeline {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Profile Card -->
+        <div class="profile-card">
+            <div class="profile-info">
+                <div class="avatar">👤</div>
+                <div class="profile-text">
+                    <h1>Brendon Gan-Le</h1>
+                    <p>Staff Member</p>
+                </div>
+            </div>
+            <div class="points-circle">
+                <div class="points-circle-number">200</div>
+                <div class="points-circle-label">Points</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-horizontal">
+            <div class="stat-card-small">
+                <div class="stat-card-small-value">3</div>
+                <div class="stat-card-small-label">Tasks</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-card-small-value">12</div>
+                <div class="stat-card-small-label">Checks</div>
+            </div>
+            <div class="stat-card-small">
+                <div class="stat-card-small-value">8</div>
+                <div class="stat-card-small-label">Sessions</div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline">
+            <!-- Overdue Task -->
+            <div class="timeline-section priority-high">
+                <div class="timeline-marker">🔴</div>
+                <div class="timeline-content">
+                    <div class="timeline-header">Overdue</div>
+                    <div class="timeline-card">
+                        <div class="task-header-timeline">
+                            <div class="task-title-timeline">Clean G1 Retail shelf and dust games</div>
+                            <div class="points-tag">500</div>
+                        </div>
+                        <div class="task-meta-timeline">
+                            <span>📅 Due: Yesterday</span>
+                        </div>
+                        <div class="task-actions-timeline">
+                            <button class="btn-timeline btn-complete-timeline">Complete Task</button>
+                            <button class="btn-timeline btn-view-timeline">View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Due Today -->
+            <div class="timeline-section priority-medium">
+                <div class="timeline-marker">🟠</div>
+                <div class="timeline-content">
+                    <div class="timeline-header">Due Today</div>
+                    <div class="timeline-card">
+                        <div class="task-header-timeline">
+                            <div class="task-title-timeline">Update BGG ratings for top 20 games</div>
+                            <div class="points-tag">200</div>
+                        </div>
+                        <div class="task-meta-timeline">
+                            <span>📅 Today at 5:00 PM</span>
+                        </div>
+                        <div class="task-actions-timeline">
+                            <button class="btn-timeline btn-complete-timeline">Complete Task</button>
+                            <button class="btn-timeline btn-view-timeline">View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Due Soon -->
+            <div class="timeline-section priority-low">
+                <div class="timeline-marker">🔵</div>
+                <div class="timeline-content">
+                    <div class="timeline-header">Due Soon</div>
+                    <div class="timeline-card">
+                        <div class="task-header-timeline">
+                            <div class="task-title-timeline">Organize video game collection</div>
+                            <div class="points-tag">1000</div>
+                        </div>
+                        <div class="task-meta-timeline">
+                            <span>📅 In 2 days</span>
+                        </div>
+                        <div class="task-actions-timeline">
+                            <button class="btn-timeline btn-complete-timeline">Complete Task</button>
+                            <button class="btn-timeline btn-view-timeline">View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Divider -->
+            <div class="section-divider">Games Needing Attention</div>
+
+            <!-- Games -->
+            <div class="timeline-section">
+                <div class="timeline-marker">🎮</div>
+                <div class="timeline-content">
+                    <div class="timeline-card">
+                        <div class="game-timeline">
+                            <div class="game-icon-timeline"></div>
+                            <div class="game-info-timeline">
+                                <div class="game-name-timeline">Catan</div>
+                                <div class="game-status-timeline">Last checked: 15 days ago • Missing pieces</div>
+                            </div>
+                        </div>
+                        <div class="game-timeline">
+                            <div class="game-icon-timeline"></div>
+                            <div class="game-info-timeline">
+                                <div class="game-name-timeline">Ticket to Ride</div>
+                                <div class="game-status-timeline">Last checked: 12 days ago • Needs inspection</div>
+                            </div>
+                        </div>
+                        <div class="game-timeline">
+                            <div class="game-icon-timeline"></div>
+                            <div class="game-info-timeline">
+                                <div class="game-name-timeline">Pandemic</div>
+                                <div class="game-status-timeline">Last checked: 10 days ago • Box damaged</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

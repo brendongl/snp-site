@@ -511,9 +511,11 @@ class GamesDbService {
       categories?: string[];
       year_released?: number;
       complexity?: number;
-      min_players?: string;
-      max_players?: string;
-      best_player_amount?: string;
+      min_players?: number;
+      max_players?: number;
+      best_player_amount?: number;
+      min_playtime?: number;
+      max_playtime?: number;
       date_of_acquisition?: string;
       latest_check_date?: string;
       latest_check_status?: string[];
@@ -564,6 +566,14 @@ class GamesDbService {
       if (updates.best_player_amount !== undefined) {
         setClauses.push(`best_player_amount = $${paramCount++}`);
         values.push(updates.best_player_amount);
+      }
+      if (updates.min_playtime !== undefined) {
+        setClauses.push(`min_playtime = $${paramCount++}`);
+        values.push(updates.min_playtime);
+      }
+      if (updates.max_playtime !== undefined) {
+        setClauses.push(`max_playtime = $${paramCount++}`);
+        values.push(updates.max_playtime);
       }
       if (updates.date_of_acquisition !== undefined) {
         setClauses.push(`date_of_acquisition = $${paramCount++}`);
