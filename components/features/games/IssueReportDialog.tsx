@@ -243,7 +243,7 @@ export function IssueReportDialog({
                 {selectedCategoryInfo.type === 'actionable' ? (
                   <>
                     <p className="font-medium text-green-800 dark:text-green-200">
-                      ✓ This will create a Vikunja task for resolution
+                      ✓ This will create a task for resolution
                     </p>
                     <p className="text-green-700 dark:text-green-300 mt-1">
                       You'll earn 100 points for reporting. The resolver will earn points for completing the task.

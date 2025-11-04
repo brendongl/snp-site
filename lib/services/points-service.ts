@@ -27,13 +27,16 @@ export interface PointAwardParams {
   staffId: string;
   actionType: 'play_log' | 'content_check' | 'knowledge_add' |
                'knowledge_upgrade' | 'teaching' | 'photo_upload' |
-               'issue_report' | 'issue_resolution';
-  metadata: {
+               'issue_report' | 'issue_resolution' | 'task_complete';
+  points?: number; // Optional explicit points (for task_complete)
+  metadata?: {
     gameId?: string;
     gameComplexity?: number;
     knowledgeLevel?: number;
     studentCount?: number;
     issueCategory?: string;
+    taskId?: number;
+    taskTitle?: string;
   };
   context?: string;
 }
@@ -72,8 +75,14 @@ const ISSUE_RESOLUTION_POINTS: Record<string, number> = {
  * Calculate points based on action type and metadata
  */
 export function calculatePoints(params: PointAwardParams): number {
-  const { actionType, metadata } = params;
-  const complexity = metadata.gameComplexity || 1;
+  const { actionType, metadata, points } = params;
+
+  // For task_complete, use explicit points value
+  if (actionType === 'task_complete' && points !== undefined) {
+    return points;
+  }
+
+  const complexity = metadata?.gameComplexity || 1;
 
   switch (actionType) {
     case 'play_log':
@@ -83,7 +92,7 @@ export function calculatePoints(params: PointAwardParams): number {
       return 1000 * complexity;
 
     case 'knowledge_add': {
-      const level = metadata.knowledgeLevel || 1;
+      const level = metadata?.knowledgeLevel || 1;
       const multiplier = KNOWLEDGE_LEVEL_MULTIPLIERS[level] || 100;
       return multiplier * complexity;
     }
@@ -92,7 +101,7 @@ export function calculatePoints(params: PointAwardParams): number {
       return 100 * complexity;
 
     case 'teaching': {
-      const students = metadata.studentCount || 1;
+      const students = metadata?.studentCount || 1;
       return 1000 * complexity * students;
     }
 
@@ -103,11 +112,15 @@ export function calculatePoints(params: PointAwardParams): number {
       return 100; // Reporter bonus (all issues)
 
     case 'issue_resolution': {
-      const category = metadata.issueCategory || '';
+      const category = metadata?.issueCategory || '';
       const basePoints = ISSUE_RESOLUTION_POINTS[category] || 0;
       // Multiply by 2 if game complexity >= 3
       return complexity >= 3 ? basePoints * 2 : basePoints;
     }
+
+    case 'task_complete':
+      // Fallback if no explicit points provided
+      return 0;
 
     default:
       console.warn(`Unknown action type: ${actionType}`);
@@ -178,32 +191,52 @@ async function logPointAward(
   params: PointAwardParams,
   points: number
 ): Promise<string> {
-  const changelogId = `changelog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Get next available ID (max + 1)
+  const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
+  const changelogId = maxIdResult.rows[0].next_id;
 
   const description = params.context || `Points awarded for ${params.actionType.replace(/_/g, ' ')}`;
+
+  // Determine entity_id and entity_name based on action type
+  let entityId = null;
+  let entityName = null;
+
+  if (params.metadata?.gameId) {
+    entityId = params.metadata.gameId;
+  } else if (params.metadata?.taskId) {
+    entityId = params.metadata.taskId.toString();
+  }
+
+  if (params.metadata?.taskTitle) {
+    entityName = params.metadata.taskTitle;
+  }
 
   await pool.query(`
     INSERT INTO changelog (
       id,
       event_type,
+      category,
       staff_id,
-      game_id,
+      entity_id,
+      entity_name,
       points_awarded,
       point_category,
       description,
       created_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
   `, [
     changelogId,
     'points_awarded',
+    'points',
     params.staffId,
-    params.metadata.gameId || null,
+    entityId,
+    entityName,
     points,
     params.actionType,
     description
   ]);
 
-  return changelogId;
+  return changelogId.toString();
 }
 
 /**

@@ -73,23 +73,24 @@ export async function POST(
 
     const issueType = ISSUE_CATEGORIES[body.issueCategory];
 
-    // Fetch game details for Vikunja task creation (if actionable)
+    // Fetch game details (always needed for game name)
+    const gameResult = await pool.query(
+      'SELECT name, complexity FROM games WHERE id = $1',
+      [gameId]
+    );
+
+    if (gameResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Game not found' },
+        { status: 404 }
+      );
+    }
+
+    const game = gameResult.rows[0];
+
     let vikunjaTaskId: number | undefined;
 
     if (issueType === 'actionable') {
-      const gameResult = await pool.query(
-        'SELECT name, complexity FROM games WHERE id = $1',
-        [gameId]
-      );
-
-      if (gameResult.rows.length === 0) {
-        return NextResponse.json(
-          { error: 'Game not found' },
-          { status: 404 }
-        );
-      }
-
-      const game = gameResult.rows[0];
 
       // Fetch reporter details for Vikunja assignment
       const staffResult = await pool.query(
@@ -108,7 +109,7 @@ export async function POST(
 
       if (!reporter.vikunja_user_id) {
         return NextResponse.json(
-          { error: 'Reporter does not have a Vikunja account linked' },
+          { error: 'Reporter account is not set up for task creation' },
           { status: 400 }
         );
       }
@@ -125,11 +126,11 @@ export async function POST(
           reportedByVikunjaUserId: reporter.vikunja_user_id
         });
 
-        console.log(`✅ Created Vikunja task ${vikunjaTaskId} for issue in game ${gameId}`);
+        console.log(`✅ Created task ${vikunjaTaskId} for issue in game ${gameId}`);
       } catch (vikunjaError) {
-        console.error('❌ Failed to create Vikunja task:', vikunjaError);
+        console.error('❌ Failed to create task:', vikunjaError);
         return NextResponse.json(
-          { error: 'Failed to create Vikunja task for actionable issue' },
+          { error: 'Failed to create task for actionable issue' },
           { status: 500 }
         );
       }
@@ -152,7 +153,7 @@ export async function POST(
       metadata: {
         gameId: gameId
       },
-      context: `Reported ${body.issueCategory.replace(/_/g, ' ')} issue for game ${gameId}`
+      context: `Reported ${body.issueCategory.replace(/_/g, ' ')} issue for game ${game.name}`
     }).catch(err => {
       console.error('Failed to award issue report points:', err);
     });
@@ -168,7 +169,7 @@ export async function POST(
         createdAt: issue.created_at
       },
       message: issueType === 'actionable'
-        ? `Actionable issue reported and Vikunja task #${vikunjaTaskId} created. You earned 100 points!`
+        ? `Actionable issue reported and task created for resolution. You earned 100 points!`
         : `Non-actionable issue reported for tracking. You earned 100 points!`
     });
 

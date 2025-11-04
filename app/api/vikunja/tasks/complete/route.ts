@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import { awardPoints } from '@/lib/services/points-service';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -59,17 +60,21 @@ export async function POST(request: NextRequest) {
 
     const completedTask = await vikunjaResponse.json();
 
-    // Step 2: Award points to staff member in database
+    // Step 2: Award points using centralized service (creates changelog entry)
+    await awardPoints({
+      staffId: staffId,
+      actionType: 'task_complete',
+      points: points,
+      metadata: {
+        taskId: taskId,
+        taskTitle: completedTask.title
+      },
+      context: `Completed task: ${completedTask.title}`
+    });
+
+    // Step 3: Get updated staff info
     const client = await pool.connect();
     try {
-      await client.query(
-        `UPDATE staff_list
-         SET points = COALESCE(points, 0) + $1
-         WHERE id = $2`,
-        [points, staffId]
-      );
-
-      // Get updated staff info
       const result = await client.query(
         `SELECT
           id,

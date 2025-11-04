@@ -13,6 +13,10 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

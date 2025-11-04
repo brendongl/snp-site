@@ -12,6 +12,7 @@ const pointLabels = [
   { value: 200, color: '32CD32', description: 'Minor task' },
   { value: 500, color: '4169E1', description: 'Standard task' },
   { value: 1000, color: '1E90FF', description: 'Medium effort task' },
+  { value: 2000, color: '00CED1', description: 'Complex game task' },
   { value: 5000, color: '9370DB', description: 'Major task' },
   { value: 10000, color: '8B008B', description: 'Large project' },
   { value: 20000, color: 'FF8C00', description: 'Major project' },

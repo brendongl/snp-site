@@ -8,18 +8,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Fetch recent activity directly from changelog table (EXACT match to /staff/changelog)
+    // Fetch recent activity from changelog with staff names
     const result = await pool.query(
       `
       SELECT
-        category as type,
-        created_at as timestamp,
-        staff_member as staff_name,
-        description,
-        event_type,
-        metadata
-      FROM changelog
-      ORDER BY created_at DESC
+        c.category as type,
+        c.created_at as timestamp,
+        COALESCE(s.staff_name, c.staff_member) as staff_name,
+        c.description,
+        c.event_type,
+        c.metadata
+      FROM changelog c
+      LEFT JOIN staff_list s ON c.staff_id = s.id
+      ORDER BY c.created_at DESC
       LIMIT $1
       `,
       [limit]
@@ -87,6 +88,22 @@ export async function GET(request: NextRequest) {
           const metadata = row.metadata || {};
           game_name = metadata.name || 'a game';
           action = `added game ${game_name}`;
+        }
+      } else if (row.type === 'points') {
+        // Handle points category (task completions, issue reports, etc)
+        const taskMatch = row.description.match(/Completed task:\s*(.+)/);
+        const issueMatch = row.description.match(/Reported\s+(.+?)\s+issue for game\s+(.+)/);
+
+        if (taskMatch) {
+          game_name = taskMatch[1].trim();
+          action = `completed task: ${game_name}`;
+        } else if (issueMatch) {
+          const issueType = issueMatch[1].trim();
+          game_name = issueMatch[2].trim();
+          action = `reported ${issueType} issue for ${game_name}`;
+        } else {
+          // Generic points award
+          action = row.description.toLowerCase();
         }
       }
 

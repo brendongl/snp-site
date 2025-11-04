@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
     // Fetch all incomplete Board Game Issues tasks
     const tasks = await getBoardGameIssueTasks();
 
+    // Handle null or undefined tasks
+    const safeTasks = tasks || [];
+
     return NextResponse.json({
       success: true,
-      count: tasks.length,
-      tasks: tasks.map(task => ({
+      count: safeTasks.length,
+      tasks: safeTasks.map(task => ({
         id: task.id,
         title: task.title,
         description: task.description,
@@ -26,12 +29,12 @@ export async function GET(request: NextRequest) {
         isOverdue: task.isOverdue,
         isDueToday: task.isDueToday,
         isDueSoon: task.isDueSoon,
-        assignees: task.assignees.map(a => ({
+        assignees: (task.assignees || []).map(a => ({
           id: a.id,
           username: a.username,
           name: a.name
         })),
-        labels: task.labels,
+        labels: task.labels || [],
         createdAt: task.created,
         updatedAt: task.updated
       }))

@@ -55,22 +55,34 @@ export interface TaskWithPoints extends VikunjaTask {
 }
 
 /**
- * Extract point value from task labels
+ * Extract point value from task labels or title
  */
 export function extractPoints(task: VikunjaTask): number {
-  // Handle tasks without labels
-  if (!task.labels || !Array.isArray(task.labels) || task.labels.length === 0) {
-    return 0;
+  // Try to extract from labels first
+  if (task.labels && Array.isArray(task.labels) && task.labels.length > 0) {
+    const pointLabel = task.labels.find(label =>
+      label.title.startsWith('points:')
+    );
+
+    if (pointLabel) {
+      const pointsStr = pointLabel.title.replace('points:', '');
+      return parseInt(pointsStr) || 0;
+    }
   }
 
-  const pointLabel = task.labels.find(label =>
-    label.title.startsWith('points:')
-  );
+  // Fallback: Parse from task title if format is "... [XXXpts]"
+  const titleMatch = task.title.match(/\[(\d+)pts?\]/i);
+  if (titleMatch) {
+    return parseInt(titleMatch[1]) || 0;
+  }
 
-  if (!pointLabel) return 0;
+  // Fallback: Parse from description if it says "earn X points"
+  const descMatch = task.description.match(/earn\s+(\d+)\s+points/i);
+  if (descMatch) {
+    return parseInt(descMatch[1]) || 0;
+  }
 
-  const pointsStr = pointLabel.title.replace('points:', '');
-  return parseInt(pointsStr) || 0;
+  return 0;
 }
 
 /**
@@ -140,7 +152,7 @@ export async function getProjectTasks(projectId: number): Promise<TaskWithPoints
       'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
       'Content-Type': 'application/json'
     },
-    next: { revalidate: 60 } // Cache for 1 minute
+    cache: 'no-store' // Always fetch fresh data (no caching)
   });
 
   if (!response.ok) {
@@ -235,6 +247,25 @@ export async function completeTask(taskId: number): Promise<TaskWithPoints> {
 // ============================================================================
 
 /**
+ * Map point values to Vikunja label IDs
+ * Labels created via scripts/create-vikunja-point-labels.js
+ */
+function getPointLabelId(points: number): number | null {
+  const labelMap: Record<number, number> = {
+    100: 1,
+    200: 2,
+    500: 3,
+    1000: 4,
+    2000: 14,  // Complex game multiplier (1000 × 2)
+    5000: 5,
+    10000: 6,
+    20000: 7,
+    50000: 8
+  };
+  return labelMap[points] || null;
+}
+
+/**
  * Get issue resolution base points by category
  */
 function getIssueResolutionPoints(category: string): number {
@@ -299,7 +330,7 @@ export async function createBoardGameIssueTask(params: {
     throw new Error('VIKUNJA_API_TOKEN not configured');
   }
 
-  const projectId = parseInt(process.env.VIKUNJA_BG_ISSUES_PROJECT_ID || '3');
+  const projectId = 25; // Board Game Issues project (hard-coded)
 
   // Calculate points for task completion
   const basePoints = getIssueResolutionPoints(params.issueCategory);
@@ -309,16 +340,13 @@ export async function createBoardGameIssueTask(params: {
   const dueDate = calculateDueDate(params.issueCategory);
   const priority = calculatePriority(params.issueCategory);
 
-  // Create task
-  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
-      description: `
+  // Get label ID for points (if points exist)
+  const labelId = getPointLabelId(points);
+
+  // Build request body
+  const taskBody: any = {
+    title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
+    description: `
 **Issue:** ${params.issueDescription}
 
 **Reported by:** ${params.reportedBy}
@@ -326,12 +354,28 @@ export async function createBoardGameIssueTask(params: {
 **Complexity:** ${params.gameComplexity}
 
 Complete this task to resolve the issue and earn ${points} points!
-      `.trim(),
-      due_date: dueDate,
-      priority: priority,
-      labels: [{ title: `points:${points}` }],
-      assignees: [{ id: params.reportedByVikunjaUserId }]
-    })
+    `.trim(),
+    project_id: projectId,
+    due_date: dueDate,
+    priority: priority,
+    assignees: [{ id: params.reportedByVikunjaUserId }]
+  };
+
+  // Add label if valid points value
+  if (labelId) {
+    taskBody.labels = [{ id: labelId }];
+  } else if (points > 0) {
+    console.warn(`⚠️  No label found for ${points} points. Task will use description fallback.`);
+  }
+
+  // Create task using PUT method
+  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(taskBody)
   });
 
   if (!response.ok) {
@@ -347,7 +391,7 @@ Complete this task to resolve the issue and earn ${points} points!
  * Get all tasks from Board Game Issues project
  */
 export async function getBoardGameIssueTasks(): Promise<TaskWithPoints[]> {
-  const projectId = parseInt(process.env.VIKUNJA_BG_ISSUES_PROJECT_ID || '3');
+  const projectId = 25; // Board Game Issues project (hard-coded)
 
   const allTasks = await getProjectTasks(projectId);
 

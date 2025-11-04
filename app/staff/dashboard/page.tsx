@@ -14,13 +14,6 @@ interface DashboardStats {
   knowledgeGaps: number;
 }
 
-interface PriorityAction {
-  game_id: string;
-  name: string;
-  days_since_check: number | null;
-  plays_since_check: number;
-}
-
 interface Activity {
   type: string;
   timestamp: string;
@@ -30,14 +23,6 @@ interface Activity {
   description?: string;
 }
 
-// v1.2.0: Games with issues interface
-interface GameWithIssue {
-  game_id: string;
-  game_name: string;
-  issue_description: string;
-  reported_by: string;
-  reported_date: string;
-}
 
 // Vikunja task with points
 interface VikunjaTask {
@@ -63,10 +48,8 @@ interface StaffInfo {
 
 export default function StaffDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
-  const [gamesWithIssues, setGamesWithIssues] = useState<GameWithIssue[]>([]); // v1.2.0
   const [vikunjaTasks, setVikunjaTasks] = useState<VikunjaTask[]>([]);
-  const [boardGameIssueTasks, setBoardGameIssueTasks] = useState<VikunjaTask[]>([]); // v1.5.0
+  const [gamesNeedingAttention, setGamesNeedingAttention] = useState<VikunjaTask[]>([]); // v1.5.0: From Vikunja Board Game Issues
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,14 +57,20 @@ export default function StaffDashboard() {
 
   // Collapsible section states
   const [upcomingTasksCollapsed, setUpcomingTasksCollapsed] = useState(false);
-  const [boardGameIssuesCollapsed, setBoardGameIssuesCollapsed] = useState(false); // v1.5.0
   const [gamesNeedingAttentionCollapsed, setGamesNeedingAttentionCollapsed] = useState(false);
-  const [priorityActionsCollapsed, setPriorityActionsCollapsed] = useState(false);
   const [recentActivityCollapsed, setRecentActivityCollapsed] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
     fetchStaffInfo();
+
+    // Set up polling for real-time points updates (every 30 seconds)
+    const pointsInterval = setInterval(() => {
+      fetchStaffInfo();
+    }, 30000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(pointsInterval);
   }, []);
 
   const fetchStaffInfo = async () => {
@@ -130,16 +119,22 @@ export default function StaffDashboard() {
 
       const result = await response.json();
 
-      // Update staff points locally
-      setStaffInfo(prev => prev ? {
-        ...prev,
-        points: prev.points + taskPoints
-      } : null);
-
-      // Remove completed task from list
-      setVikunjaTasks(prev => prev.filter(task => task.id !== taskId));
-
       console.log('Task completed successfully:', result);
+
+      // Update staff info immediately with response data (real-time update)
+      if (result.staff) {
+        setStaffInfo({
+          id: result.staff.id,
+          name: result.staff.name,
+          points: result.staff.points,
+          vikunjaUserId: staffInfo.vikunjaUserId,
+          vikunjaUsername: staffInfo.vikunjaUsername
+        });
+      }
+
+      // Refetch dashboard data to update task lists
+      await fetchDashboardData();
+
     } catch (error) {
       console.error('Error completing task:', error);
       alert('Failed to complete task. Please try again.');
@@ -150,12 +145,9 @@ export default function StaffDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // v1.2.0: Added games with issues fetch
-      // v1.5.0: Added board game issues tasks fetch
-      const [statsRes, actionsRes, issuesRes, vikunjaRes, bgIssuesRes, activityRes] = await Promise.all([
+      // v1.5.0: Fetch from Vikunja for Games Needing Attention
+      const [statsRes, vikunjaRes, gamesAttentionRes, activityRes] = await Promise.all([
         fetch('/api/staff/dashboard/stats'),
-        fetch('/api/staff/dashboard/priority-actions?limit=5'),
-        fetch('/api/content-checks/needs-attention'),
         fetch('/api/vikunja/tasks/priority'),
         fetch('/api/vikunja/board-game-issues'),
         fetch('/api/staff/dashboard/recent-activity?limit=10'),
@@ -166,27 +158,16 @@ export default function StaffDashboard() {
         setStats(statsData);
       }
 
-      if (actionsRes.ok) {
-        const actionsData = await actionsRes.json();
-        setPriorityActions(actionsData.actions);
-      }
-
-      // v1.2.0: Fetch games with issues
-      if (issuesRes.ok) {
-        const issuesData = await issuesRes.json();
-        setGamesWithIssues(issuesData.issues || []);
-      }
-
       // Fetch Vikunja priority tasks
       if (vikunjaRes.ok) {
         const vikunjaData = await vikunjaRes.json();
         setVikunjaTasks(vikunjaData.tasks || []);
       }
 
-      // v1.5.0: Fetch Board Game Issues tasks from Vikunja
-      if (bgIssuesRes.ok) {
-        const bgIssuesData = await bgIssuesRes.json();
-        setBoardGameIssueTasks(bgIssuesData.tasks || []);
+      // v1.5.0: Fetch Games Needing Attention from Vikunja
+      if (gamesAttentionRes.ok) {
+        const gamesAttentionData = await gamesAttentionRes.json();
+        setGamesNeedingAttention(gamesAttentionData.tasks || []);
       }
 
       if (activityRes.ok) {
@@ -356,7 +337,69 @@ export default function StaffDashboard() {
         </Card>
       </div>
 
-      {/* Upcoming Tasks (Vikunja) */}
+      {/* v1.5.0: Games Needing Attention (from Vikunja Board Game Issues project 25) */}
+      {gamesNeedingAttention.length > 0 && (
+        <Card className="p-6 border-red-200 bg-red-50/50">
+          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setGamesNeedingAttentionCollapsed(!gamesNeedingAttentionCollapsed)}>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-red-700">⚠️ Games Needing Attention</h2>
+              <span className="text-sm text-red-600 font-medium">
+                ({gamesNeedingAttention.length} game{gamesNeedingAttention.length !== 1 ? 's' : ''})
+              </span>
+            </div>
+            {gamesNeedingAttentionCollapsed ? <ChevronDown className="h-5 w-5 text-red-600" /> : <ChevronUp className="h-5 w-5 text-red-600" />}
+          </div>
+          {!gamesNeedingAttentionCollapsed && (
+            <div className="space-y-3">
+              {gamesNeedingAttention.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex flex-col p-4 border border-red-300 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-red-900 mb-1">{task.title}</div>
+                      {task.description && (
+                        <div className="text-sm text-red-700 whitespace-pre-line mb-2">
+                          {task.description}
+                        </div>
+                      )}
+                    </div>
+                    {task.points > 0 && (
+                      <div className={`shrink-0 px-3 py-1 border rounded-full text-sm font-semibold ${getPointBadgeColor(task.points)}`}>
+                        {task.points} pts
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => handleCompleteTask(task.id, task.points)}
+                      disabled={completingTaskId === task.id}
+                    >
+                      {completingTaskId === task.id ? (
+                        <>
+                          <Clock className="h-4 w-4 mr-1 animate-spin" />
+                          Resolving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Resolve
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Upcoming Tasks (Vikunja - other projects) */}
       {vikunjaTasks.length > 0 && (
         <Card className="p-6 border-orange-200 bg-orange-50/30">
           <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setUpcomingTasksCollapsed(!upcomingTasksCollapsed)}>
@@ -475,181 +518,6 @@ export default function StaffDashboard() {
           )}
         </Card>
       )}
-
-      {/* v1.5.0: Board Game Issues */}
-      {boardGameIssueTasks.length > 0 && (
-        <Card className="p-6 border-orange-200 bg-orange-50/50">
-          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setBoardGameIssuesCollapsed(!boardGameIssuesCollapsed)}>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-orange-700">🔧 Board Game Issues</h2>
-              <span className="text-sm text-orange-600 font-medium">
-                ({boardGameIssueTasks.length} task{boardGameIssueTasks.length !== 1 ? 's' : ''})
-              </span>
-            </div>
-            {boardGameIssuesCollapsed ? <ChevronDown className="h-5 w-5 text-orange-600" /> : <ChevronUp className="h-5 w-5 text-orange-600" />}
-          </div>
-          {!boardGameIssuesCollapsed && (
-            <div className="space-y-3">
-              {boardGameIssueTasks.map((task) => {
-                const taskColor = task.isOverdue
-                  ? 'border-red-300 bg-red-50/50'
-                  : task.isDueToday
-                  ? 'border-orange-300 bg-orange-50/50'
-                  : 'border-blue-300 bg-blue-50/50';
-
-                return (
-                  <div
-                    key={task.id}
-                    className={`flex flex-col p-4 border rounded-lg ${taskColor}`}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 mb-1">{task.title}</div>
-                        {task.description && (
-                          <div className="text-sm text-gray-600 whitespace-pre-line mb-2">
-                            {task.description}
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                          {task.due_date && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDueDate(task.due_date)}
-                            </span>
-                          )}
-                          {task.priority > 0 && (
-                            <span className="flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              Priority {task.priority}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {task.points > 0 && (
-                        <div className={`shrink-0 px-3 py-1 border rounded-full text-sm font-medium ${getPointBadgeColor(task.points)}`}>
-                          {task.points} pts
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <Link href={`https://tasks.sipnplay.cafe/tasks/${task.id}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-100">
-                          View in Vikunja
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                        onClick={() => handleCompleteTask(task.id, task.points)}
-                        disabled={completingTaskId === task.id}
-                      >
-                        {completingTaskId === task.id ? (
-                          <>
-                            <Clock className="h-4 w-4 mr-1 animate-spin" />
-                            Completing...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Complete
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* v1.2.0: Games Needing Attention */}
-      {gamesWithIssues.length > 0 && (
-        <Card className="p-6 border-red-200 bg-red-50/50">
-          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setGamesNeedingAttentionCollapsed(!gamesNeedingAttentionCollapsed)}>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-red-700">⚠️ Games Needing Attention</h2>
-              <span className="text-sm text-red-600 font-medium">
-                ({gamesWithIssues.length} issue{gamesWithIssues.length !== 1 ? 's' : ''})
-              </span>
-            </div>
-            {gamesNeedingAttentionCollapsed ? <ChevronDown className="h-5 w-5 text-red-600" /> : <ChevronUp className="h-5 w-5 text-red-600" />}
-          </div>
-          {!gamesNeedingAttentionCollapsed && (
-          <div className="space-y-2">
-            {gamesWithIssues.map((issue) => (
-              <div
-                key={issue.game_id}
-                className="flex items-center justify-between p-3 border border-red-200 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-red-900">{issue.game_name}</div>
-                  <div className="text-sm text-red-700 mt-1">
-                    <span className="font-medium">Issue:</span> {issue.issue_description}
-                  </div>
-                  <div className="text-xs text-red-600 mt-1">
-                    Reported by {issue.reported_by} on{' '}
-                    {new Date(issue.reported_date).toLocaleDateString()}
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="ml-4 border-red-300 text-red-700 hover:bg-red-100" asChild>
-                  <Link href={`/games?openGame=${issue.game_id}`}>
-                    Resolve
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-          )}
-        </Card>
-      )}
-
-      {/* Priority Actions */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setPriorityActionsCollapsed(!priorityActionsCollapsed)}>
-          <h2 className="text-xl font-semibold">Priority Actions</h2>
-          {priorityActionsCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-        </div>
-        {!priorityActionsCollapsed && (
-        <>
-        {priorityActions.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            All games are up to date! ✅
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {priorityActions.map((action) => (
-              <div
-                key={action.game_id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-              >
-                <div>
-                  <div className="font-medium">{action.name}</div>
-                  <div className="text-sm text-gray-600">
-                    {action.days_since_check
-                      ? `${action.days_since_check} days`
-                      : 'Never checked'}
-                    {' • '}
-                    {action.plays_since_check} plays since check
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`/games?openGame=${action.game_id}`}>
-                    Check Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-        </>
-        )}
-      </Card>
 
       {/* Recent Activity */}
       <Card className="p-6">
