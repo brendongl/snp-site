@@ -40,7 +40,11 @@ class GamesDbService {
           total_checks,
           sleeved,
           box_wrapped,
-          game_expansions_link
+          game_expansions_link,
+          base_game_id,
+          deposit,
+          cost_price,
+          game_size
         FROM games
         ORDER BY name ASC
       `);
@@ -66,6 +70,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       }));
     } catch (error) {
@@ -102,6 +110,10 @@ class GamesDbService {
           g.sleeved,
           g.box_wrapped,
           g.game_expansions_link,
+          g.base_game_id,
+          g.deposit,
+          g.cost_price,
+          g.game_size,
           COALESCE(
             json_agg(
               json_build_object(
@@ -140,6 +152,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
         images: row.images || [],
       }));
@@ -211,9 +227,10 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, date_of_acquisition,
-          latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, base_game_id, game_expansions_link
+          min_players, max_players, best_player_amount, min_playtime, max_playtime,
+          date_of_acquisition, latest_check_date, latest_check_status, latest_check_notes,
+          total_checks, sleeved, box_wrapped, base_game_id, game_expansions_link,
+          deposit, cost_price, game_size
         FROM games
         WHERE (name ILIKE $1 OR description ILIKE $1)
           AND base_game_id IS NULL
@@ -232,6 +249,8 @@ class GamesDbService {
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
+          'Min Playtime': row.min_playtime,
+          'Max Playtime': row.max_playtime,
           'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
           'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
@@ -240,6 +259,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       }));
     } catch (error) {
@@ -256,9 +279,10 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, date_of_acquisition,
-          latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, base_game_id, game_expansions_link
+          min_players, max_players, best_player_amount, min_playtime, max_playtime,
+          date_of_acquisition, latest_check_date, latest_check_status, latest_check_notes,
+          total_checks, sleeved, box_wrapped, base_game_id, game_expansions_link,
+          deposit, cost_price, game_size
         FROM games
         WHERE categories::text ILIKE $1
           AND base_game_id IS NULL
@@ -277,6 +301,8 @@ class GamesDbService {
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
+          'Min Playtime': row.min_playtime,
+          'Max Playtime': row.max_playtime,
           'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
           'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
@@ -285,6 +311,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       }));
     } catch (error) {
@@ -301,9 +331,10 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, date_of_acquisition,
-          latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, base_game_id, game_expansions_link
+          min_players, max_players, best_player_amount, min_playtime, max_playtime,
+          date_of_acquisition, latest_check_date, latest_check_status, latest_check_notes,
+          total_checks, sleeved, box_wrapped, base_game_id, game_expansions_link,
+          deposit, cost_price, game_size
         FROM games
         WHERE base_game_id IS NULL
         ORDER BY RANDOM()
@@ -326,6 +357,8 @@ class GamesDbService {
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
+          'Min Playtime': row.min_playtime,
+          'Max Playtime': row.max_playtime,
           'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
           'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
@@ -334,6 +367,10 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Game Expansions Link': row.game_expansions_link || [],
+          'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       };
     } catch (error) {
@@ -350,9 +387,10 @@ class GamesDbService {
       const result = await this.pool.query(
         `SELECT
           id, name, description, categories, year_released, complexity,
-          min_players, max_players, best_player_amount, date_of_acquisition,
-          latest_check_date, latest_check_status, latest_check_notes, total_checks,
-          sleeved, box_wrapped, base_game_id
+          min_players, max_players, best_player_amount, min_playtime, max_playtime,
+          date_of_acquisition, latest_check_date, latest_check_status, latest_check_notes,
+          total_checks, sleeved, box_wrapped, base_game_id,
+          deposit, cost_price, game_size
         FROM games
         WHERE base_game_id = $1
         ORDER BY name ASC`,
@@ -370,6 +408,8 @@ class GamesDbService {
           'Min Players': row.min_players,
           'Max. Players': row.max_players,
           'Best Player Amount': row.best_player_amount,
+          'Min Playtime': row.min_playtime,
+          'Max Playtime': row.max_playtime,
           'Date of Aquisition': row.date_of_acquisition,
           'Latest Check Date': row.latest_check_date,
           'Latest Check Status': row.latest_check_status ? [row.latest_check_status] : [],
@@ -378,6 +418,9 @@ class GamesDbService {
           'Sleeved': row.sleeved,
           'Box Wrapped': row.box_wrapped,
           'Base Game ID': row.base_game_id,
+          'Deposit': row.deposit,
+          'Cost Price': row.cost_price,
+          'Game Size': row.game_size,
         },
       }));
     } catch (error) {
