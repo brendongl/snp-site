@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { awardPoints } from './points-service';
 
 export interface ContentCheck {
   id: string;
@@ -328,7 +329,30 @@ class ContentChecksDbService {
         );
       }
 
-      return this.mapRowToCheck(result.rows[0]);
+      const createdCheck = this.mapRowToCheck(result.rows[0]);
+
+      // Fetch game complexity for point calculation
+      const gameResult = await this.pool.query(
+        'SELECT complexity FROM games WHERE id = $1',
+        [check.gameId]
+      );
+      const gameComplexity = gameResult.rows[0]?.complexity || 1;
+
+      // Award points for content check (async, non-blocking)
+      awardPoints({
+        staffId: check.inspectorId,
+        actionType: 'content_check',
+        metadata: {
+          gameId: check.gameId,
+          gameComplexity: gameComplexity
+        },
+        context: `Content check for game ${check.gameId}`
+      }).catch(err => {
+        console.error('Failed to award content check points:', err);
+        // Main operation succeeded, just log error
+      });
+
+      return createdCheck;
     } catch (error) {
       console.error('Error creating content check in PostgreSQL:', error);
       throw error;

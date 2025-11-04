@@ -14,9 +14,11 @@ interface GameCardProps {
   picturesOnlyMode?: boolean;
   staffKnowledgeLevel?: string;
   onKnowledgeBadgeClick?: () => void; // v1.2.0: Callback for knowledge badge click
+  unresolvedIssueCount?: number; // v1.5.0: Number of unresolved issues for this game
+  onIssueBadgeClick?: () => void; // v1.5.0: Callback for issue badge click
 }
 
-export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = false, staffKnowledgeLevel, onKnowledgeBadgeClick }: GameCardProps) {
+export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = false, staffKnowledgeLevel, onKnowledgeBadgeClick, unresolvedIssueCount = 0, onIssueBadgeClick }: GameCardProps) {
   const { addToast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showPlayLogDialog, setShowPlayLogDialog] = useState(false);
@@ -85,6 +87,23 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
               <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium z-20">
                 {game.fields['Year Released']}
               </div>
+            )}
+
+            {/* v1.5.0: Issue badge - top left overlay (staff mode only) */}
+            {isStaff && unresolvedIssueCount > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onIssueBadgeClick) {
+                    onIssueBadgeClick();
+                  }
+                }}
+                className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-red-500/90 backdrop-blur-sm px-2 py-1 rounded hover:bg-red-600/90 transition-colors"
+                title={`${unresolvedIssueCount} unresolved issue${unresolvedIssueCount > 1 ? 's' : ''} (Click to view)`}
+              >
+                <AlertCircle className="h-3 w-3 text-white" />
+                <span className="text-xs text-white font-semibold">{unresolvedIssueCount}</span>
+              </button>
             )}
 
             {/* Staff Play Log Button - bottom right overlay (always visible on mobile) */}

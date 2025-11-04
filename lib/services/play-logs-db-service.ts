@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { awardPoints } from './points-service';
 
 export interface PlayLog {
   id: string;
@@ -179,7 +180,20 @@ class PlayLogsDbService {
         ]
       );
 
-      return this.mapRowToPlayLog(result.rows[0]);
+      const createdLog = this.mapRowToPlayLog(result.rows[0]);
+
+      // Award points for play log (async, non-blocking)
+      awardPoints({
+        staffId: log.staffListId,
+        actionType: 'play_log',
+        metadata: { gameId: log.gameId },
+        context: `Play log for game ${log.gameId}`
+      }).catch(err => {
+        console.error('Failed to award play log points:', err);
+        // Main operation succeeded, just log error
+      });
+
+      return createdLog;
     } catch (error) {
       console.error('Error creating play log in PostgreSQL:', error);
       throw error;

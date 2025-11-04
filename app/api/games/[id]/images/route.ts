@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logPhotoAdded } from '@/lib/services/changelog-service';
+import { awardPoints } from '@/lib/services/points-service';
 
 const IMAGE_CACHE_DIR = path.join(process.cwd(), 'data', 'images');
 
@@ -106,6 +107,22 @@ export async function POST(
       );
     } catch (changelogError) {
       console.error('Failed to log photo addition to changelog:', changelogError);
+    }
+
+    // Award points for photo uploads (async, non-blocking)
+    if (staffId && staffId !== 'system') {
+      for (let i = 0; i < uploadedHashes.length; i++) {
+        awardPoints({
+          staffId: staffId,
+          actionType: 'photo_upload',
+          metadata: {
+            gameId: gameId
+          },
+          context: `Photo upload for game ${gameId} (${i + 1}/${uploadedHashes.length})`
+        }).catch(err => {
+          console.error('Failed to award photo upload points:', err);
+        });
+      }
     }
 
     await pool.end();

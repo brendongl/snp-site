@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { awardPoints } from './points-service';
 
 export interface StaffKnowledge {
   id: string;
@@ -151,6 +152,26 @@ class StaffKnowledgeDbService {
             knowledge.notes,
           ]
         );
+
+        // Fetch game complexity for knowledge upgrade points
+        const gameResult = await this.pool.query(
+          'SELECT complexity FROM games WHERE id = $1',
+          [knowledge.gameId]
+        );
+        const gameComplexity = gameResult.rows[0]?.complexity || 1;
+
+        // Award points for knowledge upgrade (async, non-blocking)
+        awardPoints({
+          staffId: knowledge.staffMemberId,
+          actionType: 'knowledge_upgrade',
+          metadata: {
+            gameId: knowledge.gameId,
+            gameComplexity: gameComplexity
+          },
+          context: `Knowledge upgrade for game ${knowledge.gameId} to level ${knowledge.confidenceLevel}`
+        }).catch(err => {
+          console.error('Failed to award knowledge upgrade points:', err);
+        });
       } else {
         result = await this.pool.query(
           `INSERT INTO staff_knowledge (
@@ -168,6 +189,27 @@ class StaffKnowledgeDbService {
             knowledge.notes,
           ]
         );
+
+        // Fetch game complexity for knowledge add points
+        const gameResult = await this.pool.query(
+          'SELECT complexity FROM games WHERE id = $1',
+          [knowledge.gameId]
+        );
+        const gameComplexity = gameResult.rows[0]?.complexity || 1;
+
+        // Award points for new knowledge add (async, non-blocking)
+        awardPoints({
+          staffId: knowledge.staffMemberId,
+          actionType: 'knowledge_add',
+          metadata: {
+            gameId: knowledge.gameId,
+            gameComplexity: gameComplexity,
+            knowledgeLevel: knowledge.confidenceLevel
+          },
+          context: `Knowledge add for game ${knowledge.gameId} at level ${knowledge.confidenceLevel}`
+        }).catch(err => {
+          console.error('Failed to award knowledge add points:', err);
+        });
       }
 
       return this.mapRowToKnowledge(result.rows[0]);

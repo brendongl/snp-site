@@ -229,3 +229,128 @@ export async function completeTask(taskId: number): Promise<TaskWithPoints> {
   const task: VikunjaTask = await response.json();
   return enhanceTask(task);
 }
+
+// ============================================================================
+// BOARD GAME ISSUES PROJECT METHODS (v1.5.0)
+// ============================================================================
+
+/**
+ * Get issue resolution base points by category
+ */
+function getIssueResolutionPoints(category: string): number {
+  const pointMap: Record<string, number> = {
+    'broken_sleeves': 500,
+    'needs_sorting': 500,
+    'needs_cleaning': 500,
+    'box_rewrap': 1000,
+    'customer_reported': 0, // Just triggers content check
+    'other_actionable': 500
+  };
+  return pointMap[category] || 0;
+}
+
+/**
+ * Calculate due date based on issue urgency
+ */
+function calculateDueDate(issueCategory: string): string {
+  const urgencyMap: Record<string, number> = {
+    'broken_sleeves': 7,      // 1 week
+    'needs_sorting': 3,       // 3 days
+    'needs_cleaning': 2,      // 2 days
+    'box_rewrap': 7,          // 1 week
+    'customer_reported': 1,   // 1 day (urgent)
+    'other_actionable': 3     // 3 days
+  };
+
+  const daysUntilDue = urgencyMap[issueCategory] || 3;
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + daysUntilDue);
+  return dueDate.toISOString();
+}
+
+/**
+ * Calculate priority (1-5, 5 = highest)
+ */
+function calculatePriority(issueCategory: string): number {
+  const priorityMap: Record<string, number> = {
+    'customer_reported': 5,   // Highest
+    'needs_cleaning': 4,
+    'broken_sleeves': 3,
+    'needs_sorting': 3,
+    'box_rewrap': 2,
+    'other_actionable': 3
+  };
+  return priorityMap[issueCategory] || 3;
+}
+
+/**
+ * Create a Board Game Issue task in Vikunja
+ */
+export async function createBoardGameIssueTask(params: {
+  gameName: string;
+  gameId: string;
+  gameComplexity: number;
+  issueCategory: string;
+  issueDescription: string;
+  reportedBy: string;
+  reportedByVikunjaUserId: number;
+}): Promise<number> {
+  if (!VIKUNJA_TOKEN) {
+    throw new Error('VIKUNJA_API_TOKEN not configured');
+  }
+
+  const projectId = parseInt(process.env.VIKUNJA_BG_ISSUES_PROJECT_ID || '3');
+
+  // Calculate points for task completion
+  const basePoints = getIssueResolutionPoints(params.issueCategory);
+  const points = params.gameComplexity >= 3 ? basePoints * 2 : basePoints;
+
+  // Calculate due date and priority
+  const dueDate = calculateDueDate(params.issueCategory);
+  const priority = calculatePriority(params.issueCategory);
+
+  // Create task
+  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
+      description: `
+**Issue:** ${params.issueDescription}
+
+**Reported by:** ${params.reportedBy}
+**Game ID:** ${params.gameId}
+**Complexity:** ${params.gameComplexity}
+
+Complete this task to resolve the issue and earn ${points} points!
+      `.trim(),
+      due_date: dueDate,
+      priority: priority,
+      labels: [{ title: `points:${points}` }],
+      assignees: [{ id: params.reportedByVikunjaUserId }]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create Vikunja task: ${response.status} - ${errorText}`);
+  }
+
+  const task = await response.json();
+  return task.id;
+}
+
+/**
+ * Get all tasks from Board Game Issues project
+ */
+export async function getBoardGameIssueTasks(): Promise<TaskWithPoints[]> {
+  const projectId = parseInt(process.env.VIKUNJA_BG_ISSUES_PROJECT_ID || '3');
+
+  const allTasks = await getProjectTasks(projectId);
+
+  // Filter to incomplete tasks only
+  return allTasks.filter(task => !task.done);
+}
