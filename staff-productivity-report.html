@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Productivity Report - Sip & Play</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      font-size: 1.1rem;
+      margin-bottom: 40px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .summary-card .value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #667eea;
+      margin: 10px 0;
+    }
+
+    .summary-card .label {
+      color: #666;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #667eea;
+    }
+
+    .staff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .staff-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 10px;
+      padding: 20px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .staff-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100px;
+      height: 100px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      transform: translate(30%, -30%);
+    }
+
+    .staff-card.unmatched {
+      background: linear-gradient(135deg, #999 0%, #666 100%);
+      opacity: 0.7;
+    }
+
+    .staff-card .name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .staff-card .staff-name {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 15px;
+    }
+
+    .staff-card .stats {
+      margin-top: 15px;
+    }
+
+    .staff-card .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .staff-card .stat-label {
+      opacity: 0.9;
+    }
+
+    .staff-card .stat-value {
+      font-weight: bold;
+    }
+
+    .staff-card .productivity {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.3);
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 400px;
+      margin: 30px 0;
+    }
+
+    .unmatched-note {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      color: #856404;
+    }
+
+    .rank-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th {
+      background: #667eea;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    tr:hover {
+      background: #f5f5f5;
+    }
+
+    .rank-1 { background: #ffd700; color: #333; }
+    .rank-2 { background: #c0c0c0; color: #333; }
+    .rank-3 { background: #cd7f32; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Staff Productivity Report</h1>
+    <p class="subtitle">Sip & Play Board Game Knowledge vs. Work Hours Analysis</p>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="label">Total Staff</div>
+        <div class="value">12</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Matched Records</div>
+        <div class="value">11</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Total Hours</div>
+        <div class="value">13751</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Total Games Learned</div>
+        <div class="value">1022</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Avg Games/Hour</div>
+        <div class="value">0.135</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🏆 Top Performers by Learning Efficiency (Games per Hour)</h2>
+      <div class="chart-container">
+        <canvas id="productivityChart"></canvas>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>Hours Worked</th>
+            <th>Games Learned</th>
+            <th>Games/Hour</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+            <tr class="rank-1">
+              <td><strong>1</strong></td>
+              <td>Thịnh Văn Hoàng Vũ (Vũ)</td>
+              <td>549.50</td>
+              <td>251</td>
+              <td><strong>0.4568</strong></td>
+            </tr>
+          
+            <tr class="rank-2">
+              <td><strong>2</strong></td>
+              <td>Phạm Nguyễn Thái An (An)</td>
+              <td>82.00</td>
+              <td>36</td>
+              <td><strong>0.4390</strong></td>
+            </tr>
+          
+            <tr class="rank-3">
+              <td><strong>3</strong></td>
+              <td>Nguyễn Phước Thọ  (Thọ)</td>
+              <td>1145.50</td>
+              <td>176</td>
+              <td><strong>0.1536</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>4</strong></td>
+              <td>Nguyen Thanh Phong (Chase) (Chase)</td>
+              <td>223.00</td>
+              <td>26</td>
+              <td><strong>0.1166</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>5</strong></td>
+              <td>Nguyễn Thế Sơn (Sơn)</td>
+              <td>776.50</td>
+              <td>55</td>
+              <td><strong>0.0708</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>6</strong></td>
+              <td>Lê Minh Huy (Huy)</td>
+              <td>1534.15</td>
+              <td>85</td>
+              <td><strong>0.0554</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>7</strong></td>
+              <td>Nguyen Ngoc Bao Nhi (Nhi)</td>
+              <td>1707.50</td>
+              <td>92</td>
+              <td><strong>0.0539</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>8</strong></td>
+              <td>Nguyễn Minh Hiếu  (Hiếu)</td>
+              <td>3633.31</td>
+              <td>181</td>
+              <td><strong>0.0498</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>9</strong></td>
+              <td>Đặng Nhật Minh (Minh)</td>
+              <td>1327.00</td>
+              <td>48</td>
+              <td><strong>0.0362</strong></td>
+            </tr>
+          
+            <tr class="">
+              <td><strong>10</strong></td>
+              <td>Chu Đức Hoàng Phong  (Phong)</td>
+              <td>2088.25</td>
+              <td>55</td>
+              <td><strong>0.0263</strong></td>
+            </tr>
+          
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>📚 Most Games Learned (Total Knowledge)</h2>
+      <div class="chart-container">
+        <canvas id="gamesLearnedChart"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>⏰ Most Hours Worked</h2>
+      <div class="chart-container">
+        <canvas id="hoursWorkedChart"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>👥 Individual Staff Cards</h2>
+      <div class="staff-grid">
+        
+          <div class="staff-card ">
+            <div class="rank-badge">#1</div>
+            <div class="name">Thịnh Văn Hoàng Vũ</div>
+            <div class="staff-name">Nickname: Vũ</div>
+            <div class="staff-name">Excel: Thịnh Văn Hoàng Vũ</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">549.50</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">251</span>
+              </div>
+              
+                <div class="productivity">
+                  0.4568 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            <div class="rank-badge">#2</div>
+            <div class="name">Phạm Nguyễn Thái An</div>
+            <div class="staff-name">Nickname: An</div>
+            <div class="staff-name">Excel: Phạm Nguyễn Thái An</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">82.00</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">36</span>
+              </div>
+              
+                <div class="productivity">
+                  0.4390 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            <div class="rank-badge">#3</div>
+            <div class="name">Nguyễn Phước Thọ </div>
+            <div class="staff-name">Nickname: Thọ</div>
+            <div class="staff-name">Excel: Nguyễn Phước Thọ</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">1145.50</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">176</span>
+              </div>
+              
+                <div class="productivity">
+                  0.1536 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Nguyen Thanh Phong (Chase)</div>
+            <div class="staff-name">Nickname: Chase</div>
+            <div class="staff-name">Excel: Trần Anh Phong (Chase)</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">223.00</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">26</span>
+              </div>
+              
+                <div class="productivity">
+                  0.1166 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Nguyễn Thế Sơn</div>
+            <div class="staff-name">Nickname: Sơn</div>
+            <div class="staff-name">Excel: Nguyễn Thế Sơn</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">776.50</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">55</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0708 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Lê Minh Huy</div>
+            <div class="staff-name">Nickname: Huy</div>
+            <div class="staff-name">Excel: Lê Minh Huy</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">1534.15</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">85</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0554 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Nguyen Ngoc Bao Nhi</div>
+            <div class="staff-name">Nickname: Nhi</div>
+            <div class="staff-name">Excel: Nguyen Ngoc Bao Nhi</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">1707.50</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">92</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0539 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Nguyễn Minh Hiếu </div>
+            <div class="staff-name">Nickname: Hiếu</div>
+            <div class="staff-name">Excel: NGUYEN MINH HIEU</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">3633.31</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">181</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0498 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Đặng Nhật Minh</div>
+            <div class="staff-name">Nickname: Minh</div>
+            <div class="staff-name">Excel: Đặng Nhật Minh</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">1327.00</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">48</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0362 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Chu Đức Hoàng Phong </div>
+            <div class="staff-name">Nickname: Phong</div>
+            <div class="staff-name">Excel: Chu Đức Hoàng Phong</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">2088.25</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">55</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0263 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+          <div class="staff-card ">
+            
+            <div class="name">Hoang Quang Phi Long</div>
+            <div class="staff-name">Nickname: Long</div>
+            <div class="staff-name">Excel: Hoang Quang Phi Long</div>
+            <div class="stats">
+              <div class="stat-row">
+                <span class="stat-label">Hours Worked:</span>
+                <span class="stat-value">684.50</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Games Learned:</span>
+                <span class="stat-value">17</span>
+              </div>
+              
+                <div class="productivity">
+                  0.0248 games/hour
+                </div>
+              
+            </div>
+          </div>
+        
+      </div>
+
+      
+        <div class="unmatched-note">
+          <strong>⚠️ Note:</strong> 1 staff members could not be matched with payslip data.
+          This may be due to name mismatches between the database and Excel files.
+        </div>
+      
+    </div>
+  </div>
+
+  <script>
+    const stats = [{"name":"Thịnh Văn Hoàng Vũ","nickname":"Vũ","excelName":"Thịnh Văn Hoàng Vũ","totalHours":549.5,"gamesLearned":251,"gamesPerHour":0.456778889899909,"matched":true,"hourBreakdown":{"Standard Hours":211,"Overtime Hours":3,"Holiday Hours":6,"Weekend hours":329.5}},{"name":"Phạm Nguyễn Thái An","nickname":"An","excelName":"Phạm Nguyễn Thái An","totalHours":82,"gamesLearned":36,"gamesPerHour":0.43902439024390244,"matched":true,"hourBreakdown":{"Standard Hours":45,"Overtime Hours":1,"Weekend hours":36}},{"name":"Nguyễn Phước Thọ ","nickname":"Thọ","excelName":"Nguyễn Phước Thọ","totalHours":1145.5,"gamesLearned":176,"gamesPerHour":0.15364469663902225,"matched":true,"hourBreakdown":{"Standard Hours":832.5,"Holiday Hours":7,"Weekend Hours":305,"Weekend Overtime Hours":1}},{"name":"Nguyen Thanh Phong (Chase)","nickname":"Chase","excelName":"Trần Anh Phong (Chase)","totalHours":223,"gamesLearned":26,"gamesPerHour":0.11659192825112108,"matched":true,"hourBreakdown":{"Standard Hours":114,"Weekend hours":109}},{"name":"Nguyễn Thế Sơn","nickname":"Sơn","excelName":"Nguyễn Thế Sơn","totalHours":776.5,"gamesLearned":55,"gamesPerHour":0.07083065035415326,"matched":true,"hourBreakdown":{"Standard Hours":448,"Weekend hours":328.5}},{"name":"Lê Minh Huy","nickname":"Huy","excelName":"Lê Minh Huy","totalHours":1534.15,"gamesLearned":85,"gamesPerHour":0.05540527327836261,"matched":true,"hourBreakdown":{"Standard Hours":947.9,"Overtime Hours":5,"Holiday Hours":23,"Weekend hours":557.25,"Other Hours":1}},{"name":"Nguyen Ngoc Bao Nhi","nickname":"Nhi","excelName":"Nguyen Ngoc Bao Nhi","totalHours":1707.5,"gamesLearned":92,"gamesPerHour":0.053879941434846264,"matched":true,"hourBreakdown":{"Standard Hours":1085.5,"Overtime Hours":1,"Holiday Hours":16.5,"Weekend hours":604.5}},{"name":"Nguyễn Minh Hiếu ","nickname":"Hiếu","excelName":"NGUYEN MINH HIEU","totalHours":3633.31,"gamesLearned":181,"gamesPerHour":0.04981683368608789,"matched":true,"hourBreakdown":{"Standard Hours":2378.1,"Overtime Hours":9.5,"Holiday Hours":84.05,"Weekend Hours":1155.1599999999999,"Weekend Overtime Hours":6.5}},{"name":"Đặng Nhật Minh","nickname":"Minh","excelName":"Đặng Nhật Minh","totalHours":1327,"gamesLearned":48,"gamesPerHour":0.03617181612660136,"matched":true,"hourBreakdown":{"Standard Hours":770.8,"Overtime Hours":0.5,"Holiday Hours":31.5,"Weekend Hours":522.7,"Weekend Overtime Hours":1.5}},{"name":"Chu Đức Hoàng Phong ","nickname":"Phong","excelName":"Chu Đức Hoàng Phong","totalHours":2088.25,"gamesLearned":55,"gamesPerHour":0.026337842691248652,"matched":true,"hourBreakdown":{"Standard Hours":1216.5,"Overtime Hours":4.25,"Holiday Hours":5,"Weekend hours":860,"Other Hours":2.5}},{"name":"Hoang Quang Phi Long","nickname":"Long","excelName":"Hoang Quang Phi Long","totalHours":684.5,"gamesLearned":17,"gamesPerHour":0.02483564645726808,"matched":true,"hourBreakdown":{"Standard Hours":416,"Overtime Hours":2.5,"Holiday Hours":5,"Weekend Hours":261}}];
+    const sortedByGames = [{"name":"Thịnh Văn Hoàng Vũ","nickname":"Vũ","excelName":"Thịnh Văn Hoàng Vũ","totalHours":549.5,"gamesLearned":251,"gamesPerHour":0.456778889899909,"matched":true,"hourBreakdown":{"Standard Hours":211,"Overtime Hours":3,"Holiday Hours":6,"Weekend hours":329.5}},{"name":"Nguyễn Minh Hiếu ","nickname":"Hiếu","excelName":"NGUYEN MINH HIEU","totalHours":3633.31,"gamesLearned":181,"gamesPerHour":0.04981683368608789,"matched":true,"hourBreakdown":{"Standard Hours":2378.1,"Overtime Hours":9.5,"Holiday Hours":84.05,"Weekend Hours":1155.1599999999999,"Weekend Overtime Hours":6.5}},{"name":"Nguyễn Phước Thọ ","nickname":"Thọ","excelName":"Nguyễn Phước Thọ","totalHours":1145.5,"gamesLearned":176,"gamesPerHour":0.15364469663902225,"matched":true,"hourBreakdown":{"Standard Hours":832.5,"Holiday Hours":7,"Weekend Hours":305,"Weekend Overtime Hours":1}},{"name":"Nguyen Ngoc Bao Nhi","nickname":"Nhi","excelName":"Nguyen Ngoc Bao Nhi","totalHours":1707.5,"gamesLearned":92,"gamesPerHour":0.053879941434846264,"matched":true,"hourBreakdown":{"Standard Hours":1085.5,"Overtime Hours":1,"Holiday Hours":16.5,"Weekend hours":604.5}},{"name":"Lê Minh Huy","nickname":"Huy","excelName":"Lê Minh Huy","totalHours":1534.15,"gamesLearned":85,"gamesPerHour":0.05540527327836261,"matched":true,"hourBreakdown":{"Standard Hours":947.9,"Overtime Hours":5,"Holiday Hours":23,"Weekend hours":557.25,"Other Hours":1}},{"name":"Nguyễn Thế Sơn","nickname":"Sơn","excelName":"Nguyễn Thế Sơn","totalHours":776.5,"gamesLearned":55,"gamesPerHour":0.07083065035415326,"matched":true,"hourBreakdown":{"Standard Hours":448,"Weekend hours":328.5}},{"name":"Chu Đức Hoàng Phong ","nickname":"Phong","excelName":"Chu Đức Hoàng Phong","totalHours":2088.25,"gamesLearned":55,"gamesPerHour":0.026337842691248652,"matched":true,"hourBreakdown":{"Standard Hours":1216.5,"Overtime Hours":4.25,"Holiday Hours":5,"Weekend hours":860,"Other Hours":2.5}},{"name":"Đặng Nhật Minh","nickname":"Minh","excelName":"Đặng Nhật Minh","totalHours":1327,"gamesLearned":48,"gamesPerHour":0.03617181612660136,"matched":true,"hourBreakdown":{"Standard Hours":770.8,"Overtime Hours":0.5,"Holiday Hours":31.5,"Weekend Hours":522.7,"Weekend Overtime Hours":1.5}},{"name":"Phạm Nguyễn Thái An","nickname":"An","excelName":"Phạm Nguyễn Thái An","totalHours":82,"gamesLearned":36,"gamesPerHour":0.43902439024390244,"matched":true,"hourBreakdown":{"Standard Hours":45,"Overtime Hours":1,"Weekend hours":36}},{"name":"Nguyen Thanh Phong (Chase)","nickname":"Chase","excelName":"Trần Anh Phong (Chase)","totalHours":223,"gamesLearned":26,"gamesPerHour":0.11659192825112108,"matched":true,"hourBreakdown":{"Standard Hours":114,"Weekend hours":109}},{"name":"Hoang Quang Phi Long","nickname":"Long","excelName":"Hoang Quang Phi Long","totalHours":684.5,"gamesLearned":17,"gamesPerHour":0.02483564645726808,"matched":true,"hourBreakdown":{"Standard Hours":416,"Overtime Hours":2.5,"Holiday Hours":5,"Weekend Hours":261}},{"name":"Ivy","nickname":"Ivy","excelName":null,"totalHours":0,"gamesLearned":0,"gamesPerHour":0,"matched":false,"hourBreakdown":{}}];
+    const sortedByHours = [{"name":"Nguyễn Minh Hiếu ","nickname":"Hiếu","excelName":"NGUYEN MINH HIEU","totalHours":3633.31,"gamesLearned":181,"gamesPerHour":0.04981683368608789,"matched":true,"hourBreakdown":{"Standard Hours":2378.1,"Overtime Hours":9.5,"Holiday Hours":84.05,"Weekend Hours":1155.1599999999999,"Weekend Overtime Hours":6.5}},{"name":"Chu Đức Hoàng Phong ","nickname":"Phong","excelName":"Chu Đức Hoàng Phong","totalHours":2088.25,"gamesLearned":55,"gamesPerHour":0.026337842691248652,"matched":true,"hourBreakdown":{"Standard Hours":1216.5,"Overtime Hours":4.25,"Holiday Hours":5,"Weekend hours":860,"Other Hours":2.5}},{"name":"Nguyen Ngoc Bao Nhi","nickname":"Nhi","excelName":"Nguyen Ngoc Bao Nhi","totalHours":1707.5,"gamesLearned":92,"gamesPerHour":0.053879941434846264,"matched":true,"hourBreakdown":{"Standard Hours":1085.5,"Overtime Hours":1,"Holiday Hours":16.5,"Weekend hours":604.5}},{"name":"Lê Minh Huy","nickname":"Huy","excelName":"Lê Minh Huy","totalHours":1534.15,"gamesLearned":85,"gamesPerHour":0.05540527327836261,"matched":true,"hourBreakdown":{"Standard Hours":947.9,"Overtime Hours":5,"Holiday Hours":23,"Weekend hours":557.25,"Other Hours":1}},{"name":"Đặng Nhật Minh","nickname":"Minh","excelName":"Đặng Nhật Minh","totalHours":1327,"gamesLearned":48,"gamesPerHour":0.03617181612660136,"matched":true,"hourBreakdown":{"Standard Hours":770.8,"Overtime Hours":0.5,"Holiday Hours":31.5,"Weekend Hours":522.7,"Weekend Overtime Hours":1.5}},{"name":"Nguyễn Phước Thọ ","nickname":"Thọ","excelName":"Nguyễn Phước Thọ","totalHours":1145.5,"gamesLearned":176,"gamesPerHour":0.15364469663902225,"matched":true,"hourBreakdown":{"Standard Hours":832.5,"Holiday Hours":7,"Weekend Hours":305,"Weekend Overtime Hours":1}},{"name":"Nguyễn Thế Sơn","nickname":"Sơn","excelName":"Nguyễn Thế Sơn","totalHours":776.5,"gamesLearned":55,"gamesPerHour":0.07083065035415326,"matched":true,"hourBreakdown":{"Standard Hours":448,"Weekend hours":328.5}},{"name":"Hoang Quang Phi Long","nickname":"Long","excelName":"Hoang Quang Phi Long","totalHours":684.5,"gamesLearned":17,"gamesPerHour":0.02483564645726808,"matched":true,"hourBreakdown":{"Standard Hours":416,"Overtime Hours":2.5,"Holiday Hours":5,"Weekend Hours":261}},{"name":"Thịnh Văn Hoàng Vũ","nickname":"Vũ","excelName":"Thịnh Văn Hoàng Vũ","totalHours":549.5,"gamesLearned":251,"gamesPerHour":0.456778889899909,"matched":true,"hourBreakdown":{"Standard Hours":211,"Overtime Hours":3,"Holiday Hours":6,"Weekend hours":329.5}},{"name":"Nguyen Thanh Phong (Chase)","nickname":"Chase","excelName":"Trần Anh Phong (Chase)","totalHours":223,"gamesLearned":26,"gamesPerHour":0.11659192825112108,"matched":true,"hourBreakdown":{"Standard Hours":114,"Weekend hours":109}},{"name":"Phạm Nguyễn Thái An","nickname":"An","excelName":"Phạm Nguyễn Thái An","totalHours":82,"gamesLearned":36,"gamesPerHour":0.43902439024390244,"matched":true,"hourBreakdown":{"Standard Hours":45,"Overtime Hours":1,"Weekend hours":36}}];
+
+    // Productivity Chart
+    new Chart(document.getElementById('productivityChart'), {
+      type: 'bar',
+      data: {
+        labels: stats.slice(0, 10).map(s => s.name),
+        datasets: [{
+          label: 'Games per Hour',
+          data: stats.slice(0, 10).map(s => s.gamesPerHour),
+          backgroundColor: 'rgba(102, 126, 234, 0.8)',
+          borderColor: 'rgba(102, 126, 234, 1)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: {
+            display: true,
+            text: 'Learning Efficiency - Higher is Better',
+            font: { size: 16 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Games per Hour' }
+          }
+        }
+      }
+    });
+
+    // Games Learned Chart
+    new Chart(document.getElementById('gamesLearnedChart'), {
+      type: 'bar',
+      data: {
+        labels: sortedByGames.slice(0, 10).map(s => s.name),
+        datasets: [{
+          label: 'Games Learned',
+          data: sortedByGames.slice(0, 10).map(s => s.gamesLearned),
+          backgroundColor: 'rgba(118, 75, 162, 0.8)',
+          borderColor: 'rgba(118, 75, 162, 1)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: {
+            display: true,
+            text: 'Total Board Games Known',
+            font: { size: 16 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Number of Games' }
+          }
+        }
+      }
+    });
+
+    // Hours Worked Chart
+    new Chart(document.getElementById('hoursWorkedChart'), {
+      type: 'bar',
+      data: {
+        labels: sortedByHours.slice(0, 10).map(s => s.name),
+        datasets: [{
+          label: 'Hours Worked',
+          data: sortedByHours.slice(0, 10).map(s => s.totalHours),
+          backgroundColor: 'rgba(255, 159, 64, 0.8)',
+          borderColor: 'rgba(255, 159, 64, 1)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: {
+            display: true,
+            text: 'Total Hours Worked (2025 YTD)',
+            font: { size: 16 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Hours' }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

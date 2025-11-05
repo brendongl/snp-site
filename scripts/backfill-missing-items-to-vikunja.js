@@ -39,7 +39,7 @@ async function main() {
         cc.notes,
         cc.inspector_id,
         g.id as game_id,
-        g.game_name,
+        g.name as game_name,
         g.complexity,
         s.staff_name as inspector_name,
         s.nickname as inspector_nickname
@@ -115,7 +115,7 @@ This issue was found during a content check and needs attention.`;
           }
         }
 
-        // Create the task
+        // Create the task (without labels - they can be added manually later)
         const createResponse = await fetch(
           `${VIKUNJA_URL}/projects/${BOARD_GAME_ISSUES_PROJECT_ID}/tasks`,
           {
@@ -128,7 +128,6 @@ This issue was found during a content check and needs attention.`;
               title: taskTitle,
               description: taskDescription,
               project_id: BOARD_GAME_ISSUES_PROJECT_ID,
-              labels: [MISSING_PIECES_LABEL_ID], // Missing pieces label
               priority: 2, // Medium priority
               done: false
             })

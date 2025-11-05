@@ -280,7 +280,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                   className="gap-2 w-full sm:w-auto"
                 >
                   <ClipboardCheck className="w-4 h-4" />
-                  Do Content Check
+                  Content Check
                 </Button>
                 <Button
                   variant="default"

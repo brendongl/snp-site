@@ -115,12 +115,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   };
 
   const handleSubmit = async () => {
-    // Validation: Force issue reporting for problem statuses
-    if (status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable') {
-      alert('Please report the issue using the "Report Issue" button instead of submitting a regular content check.');
-      return;
-    }
-
     // Validation with detailed error messaging
     const missingFields: string[] = [];
     if (!status) missingFields.push('Status');
@@ -132,7 +126,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       return;
     }
 
-
     // If inspector is not set (auto-selection failed), show specific error
     if (!inspector) {
       alert('Unable to identify inspector. Please ensure you are logged in as staff.');
@@ -140,6 +133,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
     }
 
     setLoading(true);
+    const selectedStatus = status; // Capture status before reset
     try {
       const response = await fetch('/api/games/content-check', {
         method: 'POST',
@@ -195,6 +189,18 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       onSuccess();
       resetForm();
       onClose();
+
+      // After successful submission, handle issue reporting based on status
+      if (selectedStatus === 'Minor Issues') {
+        // For Minor Issues: Ask user if they want to report
+        const wantToReport = window.confirm('Would you also like to Report an Issue for this game?');
+        if (wantToReport) {
+          setShowIssueReport(true);
+        }
+      } else if (selectedStatus === 'Major Issues' || selectedStatus === 'Unplayable') {
+        // For Major/Unplayable: Force issue reporting
+        setShowIssueReport(true);
+      }
     } catch (error) {
       console.error('Error creating content check:', error);
       setErrorDialog({
@@ -336,21 +342,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
             </Select>
           </div>
 
-          {/* Warning for problem statuses */}
-          {(status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable') && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-amber-900 dark:text-amber-100">Issue Reporting Required</p>
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                    Since you've selected "{status}", you must report the specific issue using the "Report Issue" button below. Regular content check submission is disabled for games with problems.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
@@ -394,26 +385,8 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
             Cancel
           </Button>
           <Button
-            variant={status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable' ? 'default' : 'outline'}
-            onClick={() => setShowIssueReport(true)}
-            disabled={loading}
-            className={`gap-2 ${
-              status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable'
-                ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                : ''
-            }`}
-          >
-            <AlertCircle className="w-4 h-4" />
-            Report Issue
-          </Button>
-          <Button
             onClick={handleSubmit}
-            disabled={loading || status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable'}
-            className={
-              status === 'Minor Issues' || status === 'Major Issues' || status === 'Unplayable'
-                ? 'opacity-50 cursor-not-allowed'
-                : ''
-            }
+            disabled={loading}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit Content Check

@@ -511,7 +511,7 @@ class ContentChecksDbService {
           g.name AS game_name,
           cc.check_date,
           cc.inspector_id,
-          sl.staff_name AS inspector_name,
+          COALESCE(sl.nickname, sl.staff_name) AS inspector_name,
           cc.status,
           cc.notes,
           cc.box_condition,

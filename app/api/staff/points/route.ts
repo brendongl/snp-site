@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     const result = await pool.query(
       `SELECT
         id,
-        staff_name as name,
+        staff_name,
+        nickname,
         staff_email as email,
         points,
         vikunja_user_id as "vikunjaUserId",
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       id: staff.id,
-      name: staff.name,
+      full_name: staff.staff_name,
+      nickname: staff.nickname,
       email: staff.email,
       points: staff.points || 0,
       vikunjaUserId: staff.vikunjaUserId,
