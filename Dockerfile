@@ -31,14 +31,8 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
     DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/dummy \
     DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 
-# Build arg to optionally enable iPOS/Playwright support
-ARG ENABLE_IPOS=false
-
-# Only install Playwright browsers if explicitly enabled
-RUN if [ "$ENABLE_IPOS" = "true" ]; then \
-      npm install playwright && \
-      npx playwright install chromium; \
-    fi
+# Install Playwright browsers for iPOS scraping
+RUN npx playwright install --with-deps chromium
 
 RUN npm run build
 
@@ -52,27 +46,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Build arg for optional iPOS support
-ARG ENABLE_IPOS=false
-
-# Install gosu and optionally Playwright dependencies
-RUN apt-get update && apt-get install -y gosu && \
-    if [ "$ENABLE_IPOS" = "true" ]; then \
-      apt-get install -y \
+# Install gosu and Playwright dependencies for iPOS scraping
+RUN apt-get update && apt-get install -y gosu \
       libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
       libcups2 libdrm2 libdbus-1-3 libatspi2.0-0 \
       libx11-6 libxcomposite1 libxdamage1 libxext6 \
       libxfixes3 libxrandr2 libgbm1 libxcb1 \
-      libxkbcommon0 libpango-1.0-0 libcairo2 libasound2; \
-    fi && \
+      libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
-
-# Copy Playwright if enabled
-RUN if [ "$ENABLE_IPOS" = "true" ]; then \
-      mkdir -p /root/.cache/ms-playwright; \
-    fi
 
 # Automatically leverage output traces to reduce image size
 # Copy the entire standalone directory which includes the correct .next structure

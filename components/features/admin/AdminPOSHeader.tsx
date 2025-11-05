@@ -75,12 +75,12 @@ export function AdminPOSHeader() {
         <div className="h-4 w-px bg-white/30"></div>
 
         <div className="flex items-center gap-2">
-          <span className="opacity-90">🪑 Tables:</span>
+          <span className="opacity-90">🪑 <span className="hidden sm:inline">Tables:</span></span>
           <span className="font-bold">{data.currentTables}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="opacity-90">👥 Customers:</span>
+          <span className="opacity-90">👥 <span className="hidden sm:inline">Customers:</span></span>
           <span className="font-bold">{data.currentCustomers}</span>
         </div>
       </div>

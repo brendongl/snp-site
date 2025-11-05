@@ -417,7 +417,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
                 onCheckedChange={(checked) => setSleevedAtCheck(checked as boolean)}
               />
               <Label htmlFor="sleeved" className="cursor-pointer">
-                Sleeved at check
+                All cards are Sleeved
               </Label>
             </div>
 
@@ -428,7 +428,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
                 onCheckedChange={(checked) => setBoxWrappedAtCheck(checked as boolean)}
               />
               <Label htmlFor="boxWrapped" className="cursor-pointer">
-                Box wrapped at check
+                Box is wrapped
               </Label>
             </div>
           </div>
