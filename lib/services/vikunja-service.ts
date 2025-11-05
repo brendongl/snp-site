@@ -248,19 +248,44 @@ export async function completeTask(taskId: number): Promise<TaskWithPoints> {
 
 /**
  * Map point values to Vikunja label IDs
- * Labels created via scripts/create-vikunja-point-labels.js
+ * Labels created via scripts/reset-vikunja-db-sequence.js
+ * Last reset: 2025-11-05 (IDs 1-26) - Comprehensive coverage
+ *
+ * Covers all possible point values the system can award:
+ * - Play logs: 100
+ * - Knowledge adds: 100-2500 (various complexity combinations)
+ * - Issue resolution: 500, 1000, 2000
+ * - Content checks: 1000-5000 (complexity × 1000)
+ * - Teaching: 1000-15000 (complexity × students × 1000)
+ * - Photo uploads: 1000
+ * - Major projects: 20000, 50000
  */
 function getPointLabelId(points: number): number | null {
   const labelMap: Record<number, number> = {
-    100: 1,
-    200: 2,
-    500: 3,
-    1000: 4,
-    2000: 14,  // Complex game multiplier (1000 × 2)
-    5000: 5,
-    10000: 6,
-    20000: 7,
-    50000: 8
+    100: 1,     // Play log, knowledge upgrade, simple task
+    200: 2,     // Knowledge add level 1-2
+    300: 3,     // Knowledge add level 1-3
+    400: 4,     // Knowledge add level 1-4
+    500: 5,     // Knowledge add level 1-5, issue resolution basic
+    600: 6,     // Knowledge add level 2-3
+    800: 7,     // Knowledge add level 2-4
+    900: 8,     // Knowledge add level 3
+    1000: 9,    // Content check ×1, teaching ×1×1, photo upload
+    1200: 10,   // Knowledge add level 3-4
+    1500: 11,   // Knowledge add level 3-5, level 4-3
+    2000: 12,   // Content check ×2, teaching ×2×1, knowledge level 4-4
+    2500: 13,   // Knowledge add level 4-5
+    3000: 14,   // Content check ×3, teaching ×3×1 or ×1×3
+    4000: 15,   // Content check ×4, teaching ×4×1 or ×2×2
+    5000: 16,   // Content check ×5, teaching ×5×1
+    6000: 17,   // Teaching ×3×2 or ×2×3
+    8000: 18,   // Teaching ×4×2 or ×2×4
+    9000: 19,   // Teaching ×3×3
+    10000: 20,  // Teaching ×5×2 or ×2×5
+    12000: 21,  // Teaching ×4×3 or ×3×4
+    15000: 22,  // Teaching ×5×3 or ×3×5
+    20000: 23,  // Major project, teaching ×4×5
+    50000: 24   // Epic achievement (1+ week)
   };
   return labelMap[points] || null;
 }
@@ -316,10 +341,11 @@ function calculatePriority(issueCategory: string): number {
 
 /**
  * Map issue type to Vikunja label IDs
- * Labels created via scripts/create-vikunja-issue-labels.js
+ * Labels created via scripts/reset-vikunja-db-sequence.js
+ * Last reset: 2025-11-05 (IDs 25-26)
  */
 function getIssueTypeLabelId(issueType: 'task' | 'note'): number {
-  return issueType === 'task' ? 19 : 20; // task=19, note=20
+  return issueType === 'task' ? 25 : 26; // task=25, note=26
 }
 
 /**
@@ -425,9 +451,9 @@ export async function getBoardGameIssueTasks(): Promise<TaskWithPoints[]> {
   return allTasks.filter(task => {
     if (task.done) return false;
 
-    // Check if task has the 'note' label (ID: 20) - these are observation notes
+    // Check if task has the 'note' label (ID: 26) - these are observation notes
     // Handle null/undefined labels array with optional chaining
-    const hasNoteLabel = task.labels?.some(label => label.id === 20) ?? false;
+    const hasNoteLabel = task.labels?.some(label => label.id === 26) ?? false;
 
     // Exclude all observation notes - include everything else (actionable tasks)
     return !hasNoteLabel;
