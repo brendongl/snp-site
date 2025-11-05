@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         success: true,
         staffId: staffRecord.id, // UUID primary key
         staffName: staffRecord.name,
+        staffNickname: staffRecord.nickname,
         email,
         type: staffRecord.type,
       },

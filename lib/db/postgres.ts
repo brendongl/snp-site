@@ -152,11 +152,11 @@ export async function getStaffList(): Promise<Array<{ id: string; name: string; 
  * Get staff member by email
  * Returns staff with UUID primary key
  */
-export async function getStaffByEmail(email: string): Promise<{ id: string; name: string; email: string; type: string } | null> {
+export async function getStaffByEmail(email: string): Promise<{ id: string; name: string; nickname: string | null; email: string; type: string } | null> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT id, staff_name, staff_email, staff_type FROM staff_list WHERE LOWER(staff_email) = LOWER($1)`,
+      `SELECT id, staff_name, nickname, staff_email, staff_type FROM staff_list WHERE LOWER(staff_email) = LOWER($1)`,
       [email]
     );
 
@@ -168,6 +168,7 @@ export async function getStaffByEmail(email: string): Promise<{ id: string; name
     return {
       id: row.id, // UUID primary key
       name: row.staff_name,
+      nickname: row.nickname,
       email: row.staff_email,
       type: row.staff_type || 'Staff',
     };

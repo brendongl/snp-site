@@ -12,13 +12,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BoardGame } from '@/types';
-import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil, Upload } from 'lucide-react';
+import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil, Upload, AlertCircle } from 'lucide-react';
 import { ContentCheckBadge } from '@/components/features/content-check/ContentCheckBadge';
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
 import { AddGameKnowledgeDialog } from '@/components/features/staff/AddGameKnowledgeDialog';
 import { PlayLogDialog } from '@/components/features/staff/PlayLogDialog';
 import { EditGameDialog } from '@/components/features/games/EditGameDialog';
+import { IssueReportDialog } from '@/components/features/games/IssueReportDialog';
 import { useStaffMode } from '@/lib/hooks/useStaffMode';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
@@ -38,6 +39,8 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
   const [showAddKnowledge, setShowAddKnowledge] = useState(false);
   const [showPlayLog, setShowPlayLog] = useState(false);
   const [showEditGame, setShowEditGame] = useState(false);
+  const [showIssueReport, setShowIssueReport] = useState(false);
+  const [linkedIssues, setLinkedIssues] = useState<any[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const [expansions, setExpansions] = useState<BoardGame[]>([]);
@@ -90,6 +93,30 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
 
     fetchExpansions();
   }, [open, game]);
+
+  // Fetch linked issues when modal opens (v1.5.7)
+  useEffect(() => {
+    const fetchLinkedIssues = async () => {
+      if (!open || !game || !isStaff) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/games/${game.id}/issues`);
+        const data = await response.json();
+
+        if (data.success && data.issues) {
+          // Filter for unresolved issues only
+          const unresolvedIssues = data.issues.filter((issue: any) => !issue.resolvedAt);
+          setLinkedIssues(unresolvedIssues);
+        }
+      } catch (error) {
+        console.error('Failed to fetch linked issues:', error);
+      }
+    };
+
+    fetchLinkedIssues();
+  }, [open, game, isStaff]);
 
   // Scroll to 2nd image by default when modal opens
   useEffect(() => {
@@ -198,6 +225,15 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                   <History className="w-4 h-4" />
                   Check History
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowIssueReport(true)}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  Report Issue
+                </Button>
               </div>
             </div>
 
@@ -220,6 +256,26 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                 <p className="text-xs font-medium mb-1">Latest Notes:</p>
                 <p className="text-xs text-muted-foreground whitespace-pre-wrap">
                   {game.fields['Latest Check Notes'][0]}
+                </p>
+              </div>
+            )}
+
+            {/* v1.5.7: Linked issues from database */}
+            {linkedIssues.length > 0 && (
+              <div className="mt-3 p-3 border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 rounded-md">
+                <h4 className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Active Issues ({linkedIssues.length})
+                </h4>
+                <ul className="space-y-1">
+                  {linkedIssues.map((issue: any) => (
+                    <li key={issue.id} className="text-xs text-yellow-900 dark:text-yellow-100">
+                      • {issue.issueCategory.replace(/_/g, ' ')} - {issue.description}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+                  These issues can be resolved from the staff dashboard.
                 </p>
               </div>
             )}
@@ -513,6 +569,30 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
             onSuccess={() => {
               setShowPlayLog(false);
               // Optionally refresh or show toast
+            }}
+          />
+        )}
+
+        {/* Issue Report Dialog (v1.5.7) */}
+        {isStaff && (
+          <IssueReportDialog
+            isOpen={showIssueReport}
+            onClose={() => setShowIssueReport(false)}
+            gameId={game.id}
+            gameName={game.fields['Game Name']}
+            staffId={localStorage.getItem('staff_id') || ''}
+            onSuccess={(message) => {
+              setShowIssueReport(false);
+              // Refresh linked issues after reporting
+              fetch(`/api/games/${game.id}/issues`)
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.success && data.issues) {
+                    const unresolvedIssues = data.issues.filter((issue: any) => !issue.resolvedAt);
+                    setLinkedIssues(unresolvedIssues);
+                  }
+                })
+                .catch(console.error);
             }}
           />
         )}

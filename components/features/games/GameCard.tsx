@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { BoardGame } from '@/types';
 import { Users, Calendar, Brain, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { PlayLogDialog } from '@/components/features/staff/PlayLogDialog';
-import { ContentCheckOrIssueDialog } from '@/components/features/content-check/ContentCheckOrIssueDialog';
 import { IssueReportDialog } from '@/components/features/games/IssueReportDialog';
 import { useToast } from '@/lib/context/toast-context';
 
@@ -25,7 +24,6 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
   const { addToast } = useToast();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showPlayLogDialog, setShowPlayLogDialog] = useState(false);
-  const [showContentCheckOrIssueDialog, setShowContentCheckOrIssueDialog] = useState(false);
   const [showIssueReportDialog, setShowIssueReportDialog] = useState(false);
 
   // Reset image loaded state when game changes
@@ -108,20 +106,6 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
               >
                 <AlertCircle className="h-3 w-3 text-white" />
                 <span className="text-xs text-white font-semibold">{unresolvedIssueCount}</span>
-              </button>
-            )}
-
-            {/* v1.5.0: Content Check or Report Issue Button - bottom center overlay */}
-            {isStaff && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowContentCheckOrIssueDialog(true);
-                }}
-                className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 transition-colors"
-                title="Content Check or Report Issue"
-              >
-                <span className="text-xl">📋</span>
               </button>
             )}
 
@@ -274,20 +258,6 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
         gameId={game.id}
         gameName={game.fields['Game Name']}
         onSuccess={handlePlayLogSuccess}
-      />
-
-      {/* v1.5.0: Content Check or Issue Dialog */}
-      <ContentCheckOrIssueDialog
-        game={game}
-        isOpen={showContentCheckOrIssueDialog}
-        onClose={() => setShowContentCheckOrIssueDialog(false)}
-        onOpenContentCheck={() => {
-          // Open existing content check dialog (to be implemented)
-          addToast('Content check feature coming soon', 'info', 2000);
-        }}
-        onOpenIssueReport={() => {
-          setShowIssueReportDialog(true);
-        }}
       />
 
       {/* v1.5.0: Issue Report Dialog */}

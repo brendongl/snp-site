@@ -54,6 +54,13 @@ export function StaffLoginDialog({ isOpen, onClose, onLoginSuccess }: StaffLogin
       localStorage.setItem('staff_id', verifyData.staffId); // UUID primary key
       localStorage.setItem('staff_type', verifyData.type || 'Staff');
 
+      // Store nickname if available
+      if (verifyData.staffNickname) {
+        localStorage.setItem('staff_nickname', verifyData.staffNickname);
+      } else {
+        localStorage.removeItem('staff_nickname');
+      }
+
       console.log('✅ Staff login successful - stored UUID:', verifyData.staffId);
 
       // Close dialog and trigger success (which reloads the page)

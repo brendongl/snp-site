@@ -86,6 +86,14 @@ export default function StaffProfilePage() {
 
       const data = await response.json();
       setProfileData(data);
+
+      // Update nickname in localStorage for display in StaffMenu
+      if (data.profile && data.profile.nickname) {
+        localStorage.setItem('staff_nickname', data.profile.nickname);
+      } else {
+        // Clear nickname if it's null/empty
+        localStorage.removeItem('staff_nickname');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {

@@ -13,10 +13,12 @@ export function StaffMenu() {
   const router = useRouter();
   const isAdmin = useAdminMode();
 
-  // Get staff name from localStorage
+  // Get staff name/nickname from localStorage
   useEffect(() => {
+    // Prefer nickname if available, fallback to full name
+    const nickname = localStorage.getItem('staff_nickname');
     const name = localStorage.getItem('staff_name');
-    setStaffName(name);
+    setStaffName(nickname || name);
   }, []);
 
   // Close menu when clicking outside
@@ -36,6 +38,7 @@ export function StaffMenu() {
   const handleLogout = () => {
     localStorage.removeItem('staff_email');
     localStorage.removeItem('staff_name');
+    localStorage.removeItem('staff_nickname');
     localStorage.removeItem('staff_id');
     localStorage.removeItem('staff_type');
     setIsOpen(false);

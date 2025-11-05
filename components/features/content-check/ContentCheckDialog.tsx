@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { BoardGame } from '@/types';
 import { useToast } from '@/lib/context/toast-context';
+import { IssueReportDialog } from '@/components/features/games/IssueReportDialog';
 
 interface ContentCheckDialogProps {
   open: boolean;
@@ -54,7 +55,7 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   const [notes, setNotes] = useState<string>('');
   const [sleevedAtCheck, setSleevedAtCheck] = useState(false);
   const [boxWrappedAtCheck, setBoxWrappedAtCheck] = useState(false);
-  const [hasIssueToggle, setHasIssueToggle] = useState(false); // v1.2.0: Issue tracking toggle
+  const [showIssueReport, setShowIssueReport] = useState(false);
 
   // Load inspectors and auto-select current staff member when dialog opens
   useEffect(() => {
@@ -97,15 +98,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
     }
   }, [open, inspectors, inspector]);
 
-  // v1.2.0: Control hasIssueToggle based on selected status
-  useEffect(() => {
-    if (status === 'Perfect Condition') {
-      setHasIssueToggle(false); // Force OFF for perfect condition
-    } else if (status === 'Major Issues' || status === 'Unplayable') {
-      setHasIssueToggle(true); // Lock ON for severe issues
-    }
-    // For 'Minor Issues', toggle remains in current state (manual control)
-  }, [status]);
 
   const loadInspectors = async () => {
     setLoadingInspectors(true);
@@ -134,25 +126,12 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
       return;
     }
 
-    // v1.2.0: Validate issue toggle logic
-    if (status === 'Perfect Condition' && hasIssueToggle) {
-      alert('Cannot have issues with Perfect Condition status');
-      return;
-    }
-
-    if ((status === 'Major Issues' || status === 'Unplayable') && (!missingPieces || !missingPieces.trim())) {
-      alert('Issue description required for Major Issues or Unplayable status');
-      return;
-    }
 
     // If inspector is not set (auto-selection failed), show specific error
     if (!inspector) {
       alert('Unable to identify inspector. Please ensure you are logged in as staff.');
       return;
     }
-
-    // v1.2.0: Calculate has_issue flag
-    const hasIssue = hasIssueToggle && missingPieces.trim().length > 0;
 
     setLoading(true);
     try {
@@ -167,11 +146,10 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
           status,
           boxCondition,
           cardCondition,
-          missingPieces: hasIssueToggle ? missingPieces : null, // Only send if toggle enabled
+          missingPieces: missingPieces || null,
           notes,
           sleevedAtCheck,
           boxWrappedAtCheck,
-          hasIssue, // v1.2.0: Issue tracking flag
         }),
       });
 
@@ -236,7 +214,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
     setNotes('');
     setSleevedAtCheck(false);
     setBoxWrappedAtCheck(false);
-    setHasIssueToggle(false); // v1.2.0
   };
 
   const handleClose = () => {
@@ -353,49 +330,6 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
             </Select>
           </div>
 
-          {/* v1.2.0: Issue Toggle + Description */}
-          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="hasIssue" className="text-base font-semibold">
-                Report an Issue
-              </Label>
-              <Checkbox
-                id="hasIssue"
-                checked={hasIssueToggle}
-                onCheckedChange={(checked) => setHasIssueToggle(checked as boolean)}
-                disabled={status === 'Perfect Condition' || status === 'Major Issues' || status === 'Unplayable'}
-                className={status === 'Perfect Condition' ? 'opacity-50 cursor-not-allowed' : ''}
-              />
-            </div>
-
-            {status === 'Perfect Condition' && (
-              <p className="text-xs text-muted-foreground">
-                Cannot report issues for Perfect Condition
-              </p>
-            )}
-
-            {(status === 'Major Issues' || status === 'Unplayable') && (
-              <p className="text-xs text-amber-600 font-medium">
-                Issue description required for this status
-              </p>
-            )}
-
-            {hasIssueToggle && (
-              <div className="space-y-2">
-                <Label htmlFor="issueDescription">
-                  Issue Description {(status === 'Major Issues' || status === 'Unplayable') && <span className="text-red-500">*</span>}
-                </Label>
-                <Textarea
-                  id="issueDescription"
-                  value={missingPieces}
-                  onChange={(e) => setMissingPieces(e.target.value)}
-                  placeholder="Describe the issue (e.g., missing 1 white road, broken sleeves, damaged box corner)"
-                  className="min-h-[80px]"
-                />
-              </div>
-            )}
-          </div>
-
           {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
@@ -434,9 +368,18 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleClose} disabled={loading}>
             Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowIssueReport(true)}
+            disabled={loading}
+            className="gap-2"
+          >
+            <AlertCircle className="w-4 h-4" />
+            Report Issue
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -445,6 +388,19 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Issue Report Dialog */}
+    <IssueReportDialog
+      isOpen={showIssueReport}
+      onClose={() => setShowIssueReport(false)}
+      gameId={game.id}
+      gameName={game.fields['Game Name']}
+      staffId={localStorage.getItem('staff_id') || ''}
+      onSuccess={(message) => {
+        setShowIssueReport(false);
+        addToast(message, 'success');
+      }}
+    />
     </>
   );
 }
