@@ -8,16 +8,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Fetch recent activity from changelog with staff names
+    // Fetch recent activity from changelog with staff names (v1.5.9: added points and nickname)
     const result = await pool.query(
       `
       SELECT
         c.category as type,
         c.created_at as timestamp,
         COALESCE(s.staff_name, c.staff_member) as staff_name,
+        s.nickname as nickname,
+        s.full_name as full_name,
         c.description,
         c.event_type,
-        c.metadata
+        c.metadata,
+        COALESCE(c.points_awarded, 0) as points_earned
       FROM changelog c
       LEFT JOIN staff_list s ON c.staff_id = s.id
       ORDER BY c.created_at DESC
@@ -111,9 +114,12 @@ export async function GET(request: NextRequest) {
         type: row.type,
         timestamp: row.timestamp,
         staff_name: row.staff_name || 'Unknown',
+        nickname: row.nickname,
+        full_name: row.full_name,
         game_name,
         action,
         description: row.description,
+        points_earned: row.points_earned,
       };
     });
 

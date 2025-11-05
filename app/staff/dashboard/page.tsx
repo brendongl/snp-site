@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { ArrowRight, CheckCircle2, GamepadIcon, TrendingUp, ArrowLeft, Clock, AlertCircle, Star, ChevronDown, ChevronUp, Eye, ClipboardCheck, PlayCircle, BookOpen, AlertTriangle, CheckSquare, Settings, Activity as ActivityIcon } from 'lucide-react';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
 interface DashboardStats {
@@ -19,9 +19,12 @@ interface Activity {
   type: string;
   timestamp: string;
   staff_name: string;
+  nickname?: string;
+  full_name?: string;
   game_name: string;
   action: string;
   description?: string;
+  points_earned?: number;
 }
 
 
@@ -46,6 +49,28 @@ interface StaffInfo {
   vikunjaUserId: number | null;
   vikunjaUsername: string | null;
 }
+
+// Helper function to get activity icon based on type (v1.5.9)
+const getActivityIcon = (type: string) => {
+  switch (type) {
+    case 'content_check':
+      return <ClipboardCheck className="h-4 w-4 text-blue-500" />;
+    case 'play_log':
+      return <PlayCircle className="h-4 w-4 text-green-500" />;
+    case 'staff_knowledge':
+      return <BookOpen className="h-4 w-4 text-purple-500" />;
+    case 'issue_report':
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    case 'task':
+      return <CheckSquare className="h-4 w-4 text-green-600" />;
+    case 'points':
+      return <Star className="h-4 w-4 text-yellow-500" />;
+    case 'board_game':
+      return <GamepadIcon className="h-4 w-4 text-blue-600" />;
+    default:
+      return <ActivityIcon className="h-4 w-4 text-gray-400" />;
+  }
+};
 
 export default function StaffDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -573,12 +598,31 @@ export default function StaffDashboard() {
             <p className="text-gray-500 text-center py-4">No recent activity</p>
           ) : (
             recentActivity.map((activity, index) => (
-              <div key={index} className="text-sm py-2 border-b last:border-0">
-                <span className="font-medium">{activity.staff_name}</span>
-                <span className="text-gray-600"> {activity.action}</span>
-                <span className="text-gray-400 ml-2">
-                  • {formatTimeAgo(activity.timestamp)}
-                </span>
+              <div key={index} className="flex items-start gap-3 p-3 border rounded hover:bg-accent/50 transition-colors">
+                {/* Activity icon (v1.5.9) */}
+                <div className="mt-1">
+                  {getActivityIcon(activity.type)}
+                </div>
+
+                {/* Activity details */}
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    <span className="font-semibold">{activity.nickname || activity.staff_name}</span>
+                    {' '}
+                    <span className="text-muted-foreground">{activity.action}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatTimeAgo(activity.timestamp)}
+                  </p>
+                </div>
+
+                {/* Points earned (v1.5.9) */}
+                {activity.points_earned && activity.points_earned > 0 && (
+                  <div className="flex items-center gap-1 text-sm font-medium text-yellow-600">
+                    <Star className="h-4 w-4 fill-yellow-500" />
+                    +{activity.points_earned}
+                  </div>
+                )}
               </div>
             ))
           )}

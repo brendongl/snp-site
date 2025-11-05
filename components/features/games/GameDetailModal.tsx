@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BoardGame } from '@/types';
-import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil, Upload, AlertCircle } from 'lucide-react';
+import { Users, Calendar, Brain, Clock, History, ClipboardCheck, ChevronLeft, ChevronRight, Pencil, Upload, AlertCircle, GraduationCap, BookOpen, Loader2 } from 'lucide-react';
 import { ContentCheckBadge } from '@/components/features/content-check/ContentCheckBadge';
 import { ContentCheckHistory } from '@/components/features/content-check/ContentCheckHistory';
 import { ContentCheckDialog } from '@/components/features/content-check/ContentCheckDialog';
@@ -47,6 +47,11 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
   const [loadingExpansions, setLoadingExpansions] = useState(false);
   const [selectedExpansion, setSelectedExpansion] = useState<BoardGame | null>(null);
   const [showExpansionModal, setShowExpansionModal] = useState(false);
+  const [staffKnowledgeData, setStaffKnowledgeData] = useState<{
+    knows: any[];
+    canTeach: any[];
+  }>({ knows: [], canTeach: [] });
+  const [loadingKnowledge, setLoadingKnowledge] = useState(false);
 
   // Reset loaded images when modal closes
   useEffect(() => {
@@ -117,6 +122,29 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
 
     fetchLinkedIssues();
   }, [open, game, isStaff]);
+
+  // Fetch staff knowledge when modal opens (v1.5.9)
+  useEffect(() => {
+    const fetchStaffKnowledge = async () => {
+      if (!open || !game) {
+        return;
+      }
+
+      setLoadingKnowledge(true);
+      try {
+        const response = await fetch(`/api/games/${game.id}/staff-knowledge`);
+        const data = await response.json();
+        setStaffKnowledgeData(data);
+      } catch (error) {
+        console.error('Failed to fetch staff knowledge:', error);
+        setStaffKnowledgeData({ knows: [], canTeach: [] });
+      } finally {
+        setLoadingKnowledge(false);
+      }
+    };
+
+    fetchStaffKnowledge();
+  }, [open, game]);
 
   // Scroll to 2nd image by default when modal opens
   useEffect(() => {
@@ -456,6 +484,71 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
               </div>
             )}
           </div>
+        </div>
+
+        {/* Staff Knowledge Section (v1.5.9) */}
+        <div className="border-t pt-4 mt-4">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Staff Knowledge
+          </h3>
+
+          {loadingKnowledge ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading staff knowledge...
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Staff who can teach */}
+              {staffKnowledgeData.canTeach.length > 0 && (
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded p-3">
+                  <h4 className="text-sm font-medium text-green-900 dark:text-green-200 mb-2 flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    Can Teach This Game
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {staffKnowledgeData.canTeach.map((staff) => (
+                      <span
+                        key={staff.staff_id}
+                        className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm rounded"
+                      >
+                        {staff.nickname || staff.full_name}
+                        {staff.expertise_level === 'instructor' && ' ⭐'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Staff who know the game */}
+              {staffKnowledgeData.knows.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3">
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Knows This Game
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {staffKnowledgeData.knows.map((staff) => (
+                      <span
+                        key={staff.staff_id}
+                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded"
+                      >
+                        {staff.nickname || staff.full_name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No knowledge recorded */}
+              {staffKnowledgeData.knows.length === 0 && staffKnowledgeData.canTeach.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">
+                  No staff knowledge recorded for this game yet.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Expansions Section */}

@@ -248,6 +248,78 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // v1.5.9: Points analytics
+    // Query 1: Cumulative points over time by staff
+    const cumulativePointsQuery = `
+      WITH daily_points AS (
+        SELECT
+          DATE(c.created_at) as date,
+          c.staff_id,
+          sl.nickname,
+          sl.full_name,
+          SUM(COALESCE(c.points_awarded, 0)) as daily_points
+        FROM changelog c
+        LEFT JOIN staff_list sl ON c.staff_id = sl.id
+        WHERE c.created_at >= $1 AND c.created_at < $2
+          AND c.staff_id IS NOT NULL
+        GROUP BY DATE(c.created_at), c.staff_id, sl.nickname, sl.full_name
+      )
+      SELECT
+        date,
+        staff_id,
+        nickname,
+        full_name,
+        daily_points,
+        SUM(daily_points) OVER (
+          PARTITION BY staff_id
+          ORDER BY date
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) as cumulative_points
+      FROM daily_points
+      ORDER BY date ASC, nickname ASC
+    `;
+
+    const cumulativePointsResult = await pool.query(cumulativePointsQuery, [
+      startDate,
+      endDatePlusOne.toISOString()
+    ]);
+
+    // Query 2: Total points by staff
+    const totalPointsByStaffQuery = `
+      SELECT
+        sl.nickname,
+        sl.full_name,
+        SUM(COALESCE(c.points_awarded, 0)) as total_points
+      FROM changelog c
+      LEFT JOIN staff_list sl ON c.staff_id = sl.id
+      WHERE c.created_at >= $1 AND c.created_at < $2
+        AND c.staff_id IS NOT NULL
+      GROUP BY sl.id, sl.nickname, sl.full_name
+      ORDER BY total_points DESC
+    `;
+
+    const totalPointsByStaffResult = await pool.query(totalPointsByStaffQuery, [
+      startDate,
+      endDatePlusOne.toISOString()
+    ]);
+
+    // Query 3: Points by category
+    const pointsByCategoryQuery = `
+      SELECT
+        c.category,
+        SUM(COALESCE(c.points_awarded, 0)) as total_points
+      FROM changelog c
+      WHERE c.created_at >= $1 AND c.created_at < $2
+        AND c.points_awarded > 0
+      GROUP BY c.category
+      ORDER BY total_points DESC
+    `;
+
+    const pointsByCategoryResult = await pool.query(pointsByCategoryQuery, [
+      startDate,
+      endDatePlusOne.toISOString()
+    ]);
+
     await pool.end();
 
     return NextResponse.json({
@@ -259,7 +331,10 @@ export async function GET(request: NextRequest) {
       changesByStaff,
       changesByStaffOverTime,
       staffKnowledgeCounts,
-      weightedContributions
+      weightedContributions,
+      cumulativePoints: cumulativePointsResult.rows,
+      totalPointsByStaff: totalPointsByStaffResult.rows,
+      pointsByCategory: pointsByCategoryResult.rows
     });
   } catch (error) {
     console.error('Error fetching changelog stats:', error);
