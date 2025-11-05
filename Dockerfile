@@ -42,6 +42,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -54,6 +55,9 @@ RUN apt-get update && apt-get install -y gosu \
       libxfixes3 libxrandr2 libgbm1 libxcb1 \
       libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 && \
     rm -rf /var/lib/apt/lists/*
+
+# Copy Playwright browsers from builder stage
+COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 COPY --from=builder /app/public ./public
 

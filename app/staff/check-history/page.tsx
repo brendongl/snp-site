@@ -8,6 +8,7 @@ import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { EditContentCheckDialog } from '@/components/features/content-check/EditContentCheckDialog';
 import BGIssuesAndChecks from '@/components/features/content-check/BGIssuesAndChecks';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { ContentCheck } from '@/types';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 
@@ -45,6 +46,8 @@ export default function CheckHistoryPage() {
   const [editingCheck, setEditingCheck] = useState<ContentCheck | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedNote, setSelectedNote] = useState<{ gameName: string; notes: string; date: string } | null>(null);
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -451,7 +454,18 @@ export default function CheckHistoryPage() {
 
                   {/* Notes */}
                   {check.notes && (
-                    <div className="p-2 bg-muted/50 rounded border text-xs text-muted-foreground line-clamp-2">
+                    <div
+                      className="p-2 bg-muted/50 rounded border text-xs text-muted-foreground line-clamp-2 cursor-pointer hover:bg-muted transition-colors"
+                      onClick={() => {
+                        setSelectedNote({
+                          gameName: check.gameName,
+                          notes: check.notes,
+                          date: formatDateShort(check.checkDate)
+                        });
+                        setShowNoteDialog(true);
+                      }}
+                      title="Click to view full note"
+                    >
                       {check.notes}
                     </div>
                   )}
@@ -494,7 +508,22 @@ export default function CheckHistoryPage() {
                         {check.status}
                       </span>
                     </div>
-                    <div className={`${isAdmin ? 'col-span-3' : 'col-span-4'} text-muted-foreground truncate`} title={check.notes}>
+                    <div
+                      className={`${isAdmin ? 'col-span-3' : 'col-span-4'} text-muted-foreground truncate ${
+                        check.notes ? 'cursor-pointer hover:text-foreground transition-colors' : ''
+                      }`}
+                      onClick={() => {
+                        if (check.notes) {
+                          setSelectedNote({
+                            gameName: check.gameName,
+                            notes: check.notes,
+                            date: formatDate(check.checkDate)
+                          });
+                          setShowNoteDialog(true);
+                        }
+                      }}
+                      title={check.notes ? 'Click to view full note' : undefined}
+                    >
                       {check.notes || '—'}
                     </div>
                     {isAdmin && (
@@ -552,6 +581,31 @@ export default function CheckHistoryPage() {
           </>
         )}
       </div>
+
+      {/* Note Dialog */}
+      <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-start gap-2">
+              <Package className="w-5 h-5 mt-0.5 text-primary" />
+              <div className="flex-1">
+                <div className="font-bold">{selectedNote?.gameName}</div>
+                <div className="text-sm font-normal text-muted-foreground mt-1">
+                  Check Date: {selectedNote?.date}
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-4 bg-muted/50 rounded-lg border">
+              <p className="text-sm whitespace-pre-wrap">{selectedNote?.notes}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowNoteDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       {editingCheck && (

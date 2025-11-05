@@ -92,22 +92,28 @@ export async function GET(request: NextRequest) {
           game_name = metadata.name || 'a game';
           action = `added game ${game_name}`;
         }
-      } else if (row.type === 'points') {
-        // Handle points category (task completions, issue reports, etc)
+      } else if (row.type === 'task') {
+        // Handle task category (task completions from Vikunja)
         const taskMatch = row.description.match(/Completed task:\s*(.+)/);
-        const issueMatch = row.description.match(/Reported\s+(.+?)\s+issue for game\s+(.+)/);
-
         if (taskMatch) {
           game_name = taskMatch[1].trim();
           action = `completed task: ${game_name}`;
-        } else if (issueMatch) {
+        } else {
+          action = row.description.toLowerCase();
+        }
+      } else if (row.type === 'issue_report') {
+        // Handle issue reports
+        const issueMatch = row.description.match(/Reported\s+(.+?)\s+issue for game\s+(.+)/);
+        if (issueMatch) {
           const issueType = issueMatch[1].trim();
           game_name = issueMatch[2].trim();
           action = `reported ${issueType} issue for ${game_name}`;
         } else {
-          // Generic points award
           action = row.description.toLowerCase();
         }
+      } else if (row.type === 'points') {
+        // Handle generic points category (legacy)
+        action = row.description.toLowerCase();
       }
 
       return {

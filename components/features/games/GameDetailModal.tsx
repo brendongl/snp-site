@@ -41,6 +41,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
   const [showEditGame, setShowEditGame] = useState(false);
   const [showIssueReport, setShowIssueReport] = useState(false);
   const [linkedIssues, setLinkedIssues] = useState<any[]>([]);
+  const [resolvingTaskId, setResolvingTaskId] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const [expansions, setExpansions] = useState<BoardGame[]>([]);
@@ -122,6 +123,51 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
 
     fetchLinkedIssues();
   }, [open, game, isStaff]);
+
+  // Handle task resolution
+  const handleResolveTask = async (taskId: number, taskPoints: number) => {
+    if (!isStaff) return;
+
+    const staffId = localStorage.getItem('staff_id');
+    if (!staffId) {
+      alert('Please log in as staff to resolve issues');
+      return;
+    }
+
+    try {
+      setResolvingTaskId(taskId);
+
+      const response = await fetch('/api/vikunja/tasks/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          taskId,
+          staffId,
+          points: taskPoints
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve task');
+      }
+
+      // Refresh linked issues
+      const issuesResponse = await fetch(`/api/games/${game!.id}/issues`);
+      const issuesData = await issuesResponse.json();
+      if (issuesData.success) {
+        setLinkedIssues(issuesData.issues);
+      }
+
+      alert(`Task resolved! You earned ${taskPoints} points.`);
+    } catch (error) {
+      console.error('Error resolving task:', error);
+      alert('Failed to resolve task. Please try again.');
+    } finally {
+      setResolvingTaskId(null);
+    }
+  };
 
   // Fetch staff knowledge when modal opens (v1.5.9)
   useEffect(() => {
@@ -288,23 +334,50 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
               </div>
             )}
 
-            {/* v1.5.7: Linked issues from database */}
+            {/* v1.5.7: Linked issues from Vikunja */}
             {linkedIssues.length > 0 && (
               <div className="mt-3 p-3 border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 rounded-md">
-                <h4 className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-3 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
                   Active Issues ({linkedIssues.length})
                 </h4>
-                <ul className="space-y-1">
+                <div className="space-y-2">
                   {linkedIssues.map((issue: any) => (
-                    <li key={issue.id} className="text-xs text-yellow-900 dark:text-yellow-100">
-                      • {issue.issueCategory.replace(/_/g, ' ')} - {issue.description}
-                    </li>
+                    <div
+                      key={issue.id}
+                      className="flex items-start justify-between gap-2 p-2 bg-white dark:bg-gray-900 rounded border border-yellow-300 dark:border-yellow-700"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100 truncate">
+                          {issue.title.replace(/\s*-\s*[^-]+$/, '')}
+                        </p>
+                        {issue.points > 0 && (
+                          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
+                            {issue.points} points to resolve
+                          </p>
+                        )}
+                      </div>
+                      {isStaff && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 h-7 text-xs border-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+                          onClick={() => handleResolveTask(issue.id, issue.points)}
+                          disabled={resolvingTaskId === issue.id}
+                        >
+                          {resolvingTaskId === issue.id ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Resolving...
+                            </>
+                          ) : (
+                            'Resolve'
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   ))}
-                </ul>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                  These issues can be resolved from the staff dashboard.
-                </p>
+                </div>
               </div>
             )}
           </div>
