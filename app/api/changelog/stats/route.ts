@@ -256,19 +256,19 @@ export async function GET(request: NextRequest) {
           DATE(c.created_at) as date,
           c.staff_id,
           sl.nickname,
-          sl.full_name,
+          sl.staff_name,
           SUM(COALESCE(c.points_awarded, 0)) as daily_points
         FROM changelog c
         LEFT JOIN staff_list sl ON c.staff_id = sl.id
         WHERE c.created_at >= $1 AND c.created_at < $2
           AND c.staff_id IS NOT NULL
-        GROUP BY DATE(c.created_at), c.staff_id, sl.nickname, sl.full_name
+        GROUP BY DATE(c.created_at), c.staff_id, sl.nickname, sl.staff_name
       )
       SELECT
         date,
         staff_id,
         nickname,
-        full_name,
+        staff_name,
         daily_points,
         SUM(daily_points) OVER (
           PARTITION BY staff_id
@@ -288,13 +288,13 @@ export async function GET(request: NextRequest) {
     const totalPointsByStaffQuery = `
       SELECT
         sl.nickname,
-        sl.full_name,
+        sl.staff_name,
         SUM(COALESCE(c.points_awarded, 0)) as total_points
       FROM changelog c
       LEFT JOIN staff_list sl ON c.staff_id = sl.id
       WHERE c.created_at >= $1 AND c.created_at < $2
         AND c.staff_id IS NOT NULL
-      GROUP BY sl.id, sl.nickname, sl.full_name
+      GROUP BY sl.id, sl.nickname, sl.staff_name
       ORDER BY total_points DESC
     `;
 

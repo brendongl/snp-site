@@ -360,6 +360,24 @@ export interface ChangelogChartData {
     playLogs: number;
     totalScore: number;
   }>;
+  // v1.5.9: Points analytics
+  cumulativePoints?: Array<{
+    date: string;
+    staff_id: string;
+    nickname: string;
+    full_name: string;
+    daily_points: number;
+    cumulative_points: number;
+  }>;
+  totalPointsByStaff?: Array<{
+    nickname: string;
+    full_name: string;
+    total_points: number;
+  }>;
+  pointsByCategory?: Array<{
+    category: string;
+    total_points: number;
+  }>;
 }
 
 // Analytics Insights Types

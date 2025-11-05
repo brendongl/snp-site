@@ -7,6 +7,7 @@ import { useAdminMode } from "@/lib/hooks/useAdminMode";
 import { ToastProvider } from "@/lib/context/toast-context";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { AdminPOSHeader } from "@/components/features/admin/AdminPOSHeader";
+import { PersistentStaffHeader } from "@/components/features/staff/PersistentStaffHeader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,8 +33,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ToastProvider>
+          {/* Persistent Staff Header */}
+          <PersistentStaffHeader />
+
           {isAdmin && <AdminPOSHeader />}
-          {children}
+
+          {/* Add padding to compensate for fixed header */}
+          <div className="pt-10">
+            {children}
+          </div>
+
           <ToastContainer />
         </ToastProvider>
       </body>

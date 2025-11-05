@@ -15,7 +15,7 @@ export async function GET(
       SELECT
         sl.id as staff_id,
         sl.nickname,
-        sl.full_name,
+        sl.staff_name,
         sk.expertise_level,
         sk.can_teach,
         sk.confidence_level

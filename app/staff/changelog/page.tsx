@@ -21,6 +21,21 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import {
+  LineChart,
+  Line as RechartsLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+  ResponsiveContainer,
+  BarChart as RechartsBarChart,
+  Bar as RechartsBar,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
 // Register Chart.js components
 ChartJS.register(
@@ -336,6 +351,52 @@ export default function ChangelogPage() {
         <span>{value.toFixed(1)}%</span>
       </div>
     );
+  };
+
+  // Helper functions for points charts
+  const CHART_COLORS = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#f97316', // orange
+  ];
+
+  const formatCumulativePointsForChart = (data: any[]) => {
+    if (!data || data.length === 0) return [];
+
+    // Group by date and create object with staff as keys
+    const grouped: any = {};
+
+    data.forEach((item: any) => {
+      const date = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!grouped[date]) {
+        grouped[date] = { date };
+      }
+      const staffName = item.nickname || item.full_name;
+      grouped[date][staffName] = item.cumulative_points;
+    });
+
+    return Object.values(grouped);
+  };
+
+  const getUniqueStaff = (data: any[]) => {
+    if (!data || data.length === 0) return [];
+
+    const staffMap = new Map();
+    data.forEach((item: any) => {
+      if (!staffMap.has(item.staff_id)) {
+        staffMap.set(item.staff_id, {
+          staff_id: item.staff_id,
+          nickname: item.nickname || item.full_name,
+          full_name: item.full_name,
+        });
+      }
+    });
+    return Array.from(staffMap.values());
   };
 
   if (!staffName || !isAdmin) {
@@ -823,6 +884,96 @@ export default function ChangelogPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Points Analytics Charts (v1.5.9) */}
+        {chartData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Staff Points Over Time */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staff Points Over Time</h3>
+              <div className="h-72">
+                {chartData.cumulativePoints && chartData.cumulativePoints.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={formatCumulativePointsForChart(chartData.cumulativePoints)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <RechartsTooltip />
+                      <RechartsLegend />
+                      {getUniqueStaff(chartData.cumulativePoints).map((staff, index) => (
+                        <RechartsLine
+                          key={staff.staff_id}
+                          type="monotone"
+                          dataKey={staff.nickname}
+                          stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No points data available for this time period
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Total Points by Staff */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Total Points by Staff</h3>
+              <div className="h-72">
+                {chartData.totalPointsByStaff && chartData.totalPointsByStaff.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart data={chartData.totalPointsByStaff}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="nickname" />
+                      <YAxis />
+                      <RechartsTooltip />
+                      <RechartsBar dataKey="total_points" fill="#fbbf24" />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No points data available for this time period
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Points by Category */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Points by Category</h3>
+              <div className="h-72">
+                {chartData.pointsByCategory && chartData.pointsByCategory.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData.pointsByCategory}
+                        dataKey="total_points"
+                        nameKey="category"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={(entry: any) => `${entry.category.replace('_', ' ')}: ${entry.total_points}`}
+                      >
+                        {chartData.pointsByCategory.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                      <RechartsLegend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    No points data available for this time period
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

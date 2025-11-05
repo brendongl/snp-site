@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
         c.created_at as timestamp,
         COALESCE(s.staff_name, c.staff_member) as staff_name,
         s.nickname as nickname,
-        s.full_name as full_name,
+        s.staff_name as full_name,
         c.description,
         c.event_type,
         c.metadata,
