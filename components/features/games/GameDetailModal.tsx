@@ -513,8 +513,8 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                         key={staff.staff_id}
                         className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm rounded"
                       >
-                        {staff.nickname || staff.full_name}
-                        {staff.expertise_level === 'instructor' && ' ⭐'}
+                        {staff.nickname || staff.staff_name}
+                        {staff.confidence_level === 5 && ' ⭐'}
                       </span>
                     ))}
                   </div>
@@ -534,7 +534,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                         key={staff.staff_id}
                         className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded"
                       >
-                        {staff.nickname || staff.full_name}
+                        {staff.nickname || staff.staff_name}
                       </span>
                     ))}
                   </div>

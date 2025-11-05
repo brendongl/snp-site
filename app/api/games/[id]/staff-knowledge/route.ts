@@ -16,31 +16,27 @@ export async function GET(
         sl.id as staff_id,
         sl.nickname,
         sl.staff_name,
-        sk.expertise_level,
-        sk.can_teach,
-        sk.confidence_level
+        sk.confidence_level,
+        sk.can_teach
       FROM staff_knowledge sk
-      JOIN staff_list sl ON sk.staff_list_id = sl.id
-      WHERE sk.game_record_id = $1
+      JOIN staff_list sl ON sk.staff_member_id = sl.id
+      WHERE sk.game_id = $1
       ORDER BY
-        CASE sk.expertise_level
-          WHEN 'instructor' THEN 1
-          WHEN 'expert' THEN 2
-          WHEN 'intermediate' THEN 3
-          WHEN 'beginner' THEN 4
+        CASE
+          WHEN sk.confidence_level = 5 THEN 1
+          WHEN sk.confidence_level = 4 THEN 2
+          WHEN sk.confidence_level = 3 THEN 3
+          WHEN sk.confidence_level = 2 THEN 4
+          WHEN sk.confidence_level = 1 THEN 5
         END
       `,
       [gameId]
     );
 
-    // Group by expertise
+    // Group by can_teach status
     const knowledge = {
-      knows: result.rows.filter(
-        (k) => k.expertise_level === 'beginner' || k.expertise_level === 'intermediate'
-      ),
-      canTeach: result.rows.filter(
-        (k) => k.expertise_level === 'expert' || k.expertise_level === 'instructor'
-      ),
+      knows: result.rows.filter((k) => !k.can_teach),
+      canTeach: result.rows.filter((k) => k.can_teach),
     };
 
     return NextResponse.json(knowledge);
