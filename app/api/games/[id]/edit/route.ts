@@ -52,10 +52,16 @@ export async function POST(
     if (complexity !== undefined) updates.complexity = complexity;
     if (dateAcquired) updates.date_of_acquisition = dateAcquired;
     if (categories) updates.categories = categories; // Array of strings
-    if (baseGameId !== undefined) updates.base_game_id = baseGameId || null;
+    // Convert empty strings to null for base_game_id (integer column)
+    if (baseGameId !== undefined) {
+      updates.base_game_id = (typeof baseGameId === 'string' && baseGameId.trim() !== '') ? baseGameId : null;
+    }
     if (deposit !== undefined) updates.deposit = deposit;
     if (costPrice !== undefined) updates.cost_price = costPrice;
-    if (gameSize !== undefined) updates.game_size = gameSize || null;
+    // Convert empty strings to null for game_size
+    if (gameSize !== undefined) {
+      updates.game_size = (typeof gameSize === 'string' && gameSize.trim() !== '') ? gameSize : null;
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

@@ -23,10 +23,11 @@ interface NonActionableIssue {
 
 /**
  * BG Issues & Checks Component
- * v1.5.3: Displays observation notes (labeled as 'note' in Vikunja)
+ * v1.5.15: Displays observation notes directly from Vikunja (labeled as 'note')
  *
  * These notes are tracked for awareness but don't require immediate staff action.
- * Admins can resolve them once addressed.
+ * Staff can resolve them once addressed. Fetches directly from Vikunja to show
+ * all note tasks, including those created manually or via issue reporting.
  */
 export default function BGIssuesAndChecks() {
   const { addToast } = useToast();
@@ -61,7 +62,8 @@ export default function BGIssuesAndChecks() {
 
   const fetchIssues = async () => {
     try {
-      const response = await fetch('/api/issues/non-actionable');
+      // Fetch directly from Vikunja (tasks with "note" label)
+      const response = await fetch('/api/vikunja/observation-notes');
       if (response.ok) {
         const data = await response.json();
         setIssues(data.issues || []);
@@ -97,25 +99,23 @@ export default function BGIssuesAndChecks() {
         return;
       }
 
-      // Call resolution API
-      const response = await fetch(`/api/issues/${currentIssue.id}/resolve`, {
+      // Mark Vikunja task as done
+      const response = await fetch(`/api/vikunja/tasks/${currentIssue.vikunjaTaskId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          resolvedById: staffId,
+          staffId: staffId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to resolve issue');
+        throw new Error('Failed to mark task as complete');
       }
 
-      const result = await response.json();
-
       // Success!
-      addToast(result.message || `Issue resolved for ${currentIssue.gameName}`, 'success');
+      addToast(`Observation note resolved for ${currentIssue.gameName}`, 'success');
       setShowResolutionDialog(false);
       setCurrentIssue(null);
 
