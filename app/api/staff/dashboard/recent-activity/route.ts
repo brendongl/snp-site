@@ -83,7 +83,30 @@ export async function GET(request: NextRequest) {
         }
       } else if (row.type === 'staff_knowledge') {
         const metadata = row.metadata || {};
-        const level = metadata.confidenceLevel || 'Unknown';
+
+        // Extract confidence level from metadata or context/description
+        let level = metadata.confidenceLevel || 'Unknown';
+
+        // Try to extract level from description if not in metadata
+        // Patterns: "at level 4" or "- Instructor level" or "to level 3"
+        if (level === 'Unknown' && row.description) {
+          const levelMatch = row.description.match(/(?:at level|to level)\s+(\d+)/i);
+          if (levelMatch) {
+            const levelNum = parseInt(levelMatch[1]);
+            const levelMap: { [key: number]: string } = {
+              1: 'Beginner',
+              2: 'Intermediate',
+              3: 'Expert',
+              4: 'Instructor'
+            };
+            level = levelMap[levelNum] || level;
+          } else {
+            const levelNameMatch = row.description.match(/-\s*(?:Beginner|Intermediate|Expert|Instructor)\s*level/i);
+            if (levelNameMatch) {
+              level = levelNameMatch[0].replace(/[-\s]*level/i, '').trim();
+            }
+          }
+        }
 
         // Check for bulk creation (but only show as bulk if count > 1)
         if (metadata.isBulk && (metadata.gameCount || 1) > 1) {
@@ -91,13 +114,28 @@ export async function GET(request: NextRequest) {
           game_name = `${count} games`;
           action = `marked knowledge for ${game_name} as ${level}`;
         } else {
-          // Single game: "Added knowledge: GAME NAME - LEVEL level"
-          const match = row.description.match(/Added knowledge:\s*(.+?)\s*-\s*(.+?)\s*level/);
-          if (match) {
-            game_name = match[1].trim();
+          // v1.5.24: Use entity_name field if available (preferred)
+          if (row.entity_name && !row.entity_name.includes('rec')) {
+            game_name = row.entity_name;
             action = `marked knowledge for ${game_name} as ${level}`;
           } else {
-            action = `marked knowledge as ${level}`;
+            // Fallback: Parse from description
+            const match = row.description.match(/Added knowledge:\s*(.+?)\s*-\s*(.+?)\s*level/);
+            if (match) {
+              game_name = match[1].trim();
+              action = `marked knowledge for ${game_name} as ${level}`;
+            } else {
+              // Another pattern: "Knowledge add for GAME at level N"
+              const addMatch = row.description.match(/Knowledge add for\s+(.+?)\s+at level/i);
+              if (addMatch && !addMatch[1].includes('rec')) {
+                game_name = addMatch[1].trim();
+                action = `marked knowledge for ${game_name} as ${level}`;
+              } else {
+                // Use entity_name even if it looks like a rec ID (better than nothing)
+                game_name = row.entity_name || 'a game';
+                action = `marked knowledge for ${game_name} as ${level}`;
+              }
+            }
           }
         }
       } else if (row.type === 'board_game') {

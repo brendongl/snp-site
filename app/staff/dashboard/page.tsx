@@ -74,7 +74,6 @@ const getActivityIcon = (type: string) => {
 
 export default function StaffDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [vikunjaTasks, setVikunjaTasks] = useState<VikunjaTask[]>([]);
   const [gamesNeedingAttention, setGamesNeedingAttention] = useState<VikunjaTask[]>([]); // v1.5.0: From Vikunja Board Game Issues
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
@@ -84,7 +83,6 @@ export default function StaffDashboard() {
   const [showGameIssueDialog, setShowGameIssueDialog] = useState(false);
 
   // Collapsible section states
-  const [upcomingTasksCollapsed, setUpcomingTasksCollapsed] = useState(false);
   const [gamesNeedingAttentionCollapsed, setGamesNeedingAttentionCollapsed] = useState(false);
   const [recentActivityCollapsed, setRecentActivityCollapsed] = useState(false);
 
@@ -174,9 +172,8 @@ export default function StaffDashboard() {
   const fetchDashboardData = async () => {
     try {
       // v1.5.0: Fetch from Vikunja for Games Needing Attention
-      const [statsRes, vikunjaRes, gamesAttentionRes, activityRes] = await Promise.all([
+      const [statsRes, gamesAttentionRes, activityRes] = await Promise.all([
         fetch('/api/staff/dashboard/stats'),
-        fetch('/api/vikunja/tasks/priority'),
         fetch('/api/vikunja/board-game-issues'),
         fetch('/api/staff/dashboard/recent-activity?limit=10'),
       ]);
@@ -184,12 +181,6 @@ export default function StaffDashboard() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
-      }
-
-      // Fetch Vikunja priority tasks
-      if (vikunjaRes.ok) {
-        const vikunjaData = await vikunjaRes.json();
-        setVikunjaTasks(vikunjaData.tasks || []);
       }
 
       // v1.5.0: Fetch Games Needing Attention from Vikunja
@@ -470,126 +461,6 @@ export default function StaffDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Upcoming Tasks (Vikunja - other projects) */}
-      {vikunjaTasks.length > 0 && (
-        <Card className="p-6 border-orange-200 bg-orange-50/30">
-          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setUpcomingTasksCollapsed(!upcomingTasksCollapsed)}>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-orange-800">📋 Upcoming Tasks</h2>
-              <span className="text-sm text-orange-700 font-medium">
-                ({vikunjaTasks.length} task{vikunjaTasks.length !== 1 ? 's' : ''})
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-orange-300"
-                asChild
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Link href="https://tasks.sipnplay.cafe" target="_blank" rel="noopener noreferrer">
-                  Open Task Manager
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              {upcomingTasksCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-            </div>
-          </div>
-          {!upcomingTasksCollapsed && (
-          <div className="space-y-2">
-            {vikunjaTasks.map((task) => {
-              // Determine card styling based on priority
-              const getCardStyles = () => {
-                if (task.isOverdue) {
-                  return 'border-red-200 bg-red-50/50 hover:bg-red-50';
-                }
-                if (task.isDueToday) {
-                  return 'border-orange-200 bg-white hover:bg-orange-50/50';
-                }
-                // Due soon (within 3 days)
-                return 'border-blue-200 bg-blue-50/30 hover:bg-blue-50/50';
-              };
-
-              return (
-              <div
-                key={task.id}
-                className={`flex items-start justify-between p-3 border rounded-lg transition-colors ${getCardStyles()}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`font-medium ${
-                      task.isOverdue ? 'text-red-900' :
-                      task.isDueToday ? 'text-orange-900' :
-                      'text-blue-900'
-                    }`}>
-                      {task.title}
-                    </div>
-                    {task.points > 0 && (
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getPointBadgeColor(task.points)}`}>
-                        {task.points.toLocaleString()} pts
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    {task.isOverdue ? (
-                      <span className="flex items-center gap-1 text-red-600">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                        Overdue
-                      </span>
-                    ) : task.isDueToday ? (
-                      <span className="flex items-center gap-1 text-orange-600">
-                        <Clock className="h-3.5 w-3.5" />
-                        Due today
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-blue-600">
-                        <Clock className="h-3.5 w-3.5" />
-                        Due soon
-                      </span>
-                    )}
-                    {task.due_date && (
-                      <span className={
-                        task.isOverdue ? 'text-red-600' :
-                        task.isDueToday ? 'text-orange-600' :
-                        'text-blue-600'
-                      }>
-                        • {formatDueDate(task.due_date)}
-                      </span>
-                    )}
-                  </div>
-                  {task.description && (
-                    <div className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {task.description}
-                    </div>
-                  )}
-                </div>
-                <Button
-                  onClick={() => handleCompleteTask(task.id, task.points)}
-                  disabled={completingTaskId === task.id}
-                  size="sm"
-                  className="ml-3 shrink-0"
-                >
-                  {completingTaskId === task.id ? (
-                    <>
-                      <Clock className="h-4 w-4 mr-1 animate-spin" />
-                      Completing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Complete
-                    </>
-                  )}
-                </Button>
-              </div>
-              );
-            })}
-          </div>
-          )}
-        </Card>
-      )}
 
       {/* Recent Activity */}
       <Card className="p-6">

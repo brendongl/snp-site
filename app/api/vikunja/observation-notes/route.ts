@@ -54,19 +54,35 @@ export async function GET(request: NextRequest) {
 
     const projectId = 25; // Board Game Issues project
 
-    // Fetch all tasks from Project 25
-    const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
-      headers: {
-        'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
-        'Content-Type': 'application/json'
+    // Fetch all tasks from Project 25 with pagination
+    // v1.5.24: Vikunja API has a hardcoded limit of 50 tasks per page
+    let allTasks: VikunjaTask[] = [];
+    let page = 1;
+    let hasMorePages = true;
+
+    while (hasMorePages) {
+      const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks?per_page=50&page=${page}&sort_by=id&order_by=desc`, {
+        headers: {
+          'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tasks: ${response.status} ${response.statusText}`);
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tasks: ${response.status} ${response.statusText}`);
+      const tasks: VikunjaTask[] = await response.json();
+      allTasks = allTasks.concat(tasks);
+
+      // Check pagination headers to see if there are more pages
+      const totalPages = response.headers.get('x-pagination-total-pages');
+      if (totalPages && parseInt(totalPages) > page) {
+        page++;
+      } else {
+        hasMorePages = false;
+      }
     }
-
-    const allTasks: VikunjaTask[] = await response.json();
 
     // Filter to only tasks with "note" label that are not done
     const noteTasks = allTasks.filter(task => {
@@ -81,17 +97,27 @@ export async function GET(request: NextRequest) {
       const issueCategory = titleMatch ? titleMatch[1].trim().toLowerCase().replace(/\s+/g, '_') : 'unknown';
       const gameName = titleMatch ? titleMatch[2].trim() : task.title;
 
-      // Extract game ID from description (if available)
-      const gameIdMatch = task.description.match(/\*\*Game ID:\*\*\s*(\S+)/);
-      const gameId = gameIdMatch ? gameIdMatch[1] : null;
+      // v1.5.24: Parse new natural language format
+      // Format:
+      // Line 1: Description (e.g., "Missing: chips" or "Broken components: box corner")
+      // Line 2: "{Reporter Name} reported it on {Date}."
+      const descriptionLines = task.description.split('\n');
 
-      // Extract reporter name from description
-      const reporterMatch = task.description.match(/\*\*Reported by:\*\*\s*(.+)/);
-      const reporterName = reporterMatch ? reporterMatch[1].trim() : 'Unknown';
+      // First line is the actual issue description
+      const issueDescription = descriptionLines[0]?.trim() || task.description;
 
-      // Extract actual issue description from description
-      const issueDescMatch = task.description.match(/\*\*Note:\*\*\s*(.+?)\n/);
-      const issueDescription = issueDescMatch ? issueDescMatch[1].trim() : task.description;
+      // Second line contains reporter name
+      // Pattern: "Brendon Gan-Le reported it on Nov 6, 2025."
+      let reporterName = 'Unknown';
+      if (descriptionLines.length > 1) {
+        const reporterMatch = descriptionLines[1].match(/^(.+?)\s+reported it on/);
+        if (reporterMatch) {
+          reporterName = reporterMatch[1].trim();
+        }
+      }
+
+      // No game ID in new format (removed to simplify)
+      const gameId = null;
 
       // Calculate days ago
       const createdDate = new Date(task.created);

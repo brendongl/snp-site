@@ -140,29 +140,48 @@ export function enhanceTask(task: VikunjaTask): TaskWithPoints {
 }
 
 /**
- * Fetch all tasks from a project
- * v1.5.23: Added per_page=500 and sort_by=id&order_by=desc to fetch all tasks including newest ones
+ * Fetch all tasks from a project with pagination support
+ * v1.5.24: Vikunja API has a hardcoded limit of 50 tasks per page
+ * We need to fetch all pages to get complete task list
  */
 export async function getProjectTasks(projectId: number): Promise<TaskWithPoints[]> {
   if (!VIKUNJA_TOKEN) {
     throw new Error('VIKUNJA_API_TOKEN not configured');
   }
 
-  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks?per_page=500&sort_by=id&order_by=desc`, {
-    headers: {
-      'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    cache: 'no-store' // Always fetch fresh data (no caching)
-  });
+  let allTasks: VikunjaTask[] = [];
+  let page = 1;
+  let hasMorePages = true;
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Vikunja API error: ${response.status} - ${error}`);
+  while (hasMorePages) {
+    const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks?per_page=50&page=${page}&sort_by=id&order_by=desc`, {
+      headers: {
+        'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store' // Always fetch fresh data (no caching)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Vikunja API error: ${response.status} - ${error}`);
+    }
+
+    const tasks: VikunjaTask[] = await response.json();
+
+    // Add tasks from this page
+    allTasks = allTasks.concat(tasks);
+
+    // Check pagination headers to see if there are more pages
+    const totalPages = response.headers.get('x-pagination-total-pages');
+    if (totalPages && parseInt(totalPages) > page) {
+      page++;
+    } else {
+      hasMorePages = false;
+    }
   }
 
-  const tasks: VikunjaTask[] = await response.json();
-  return tasks.map(enhanceTask);
+  return allTasks.map(enhanceTask);
 }
 
 /**
@@ -403,28 +422,53 @@ export async function createBoardGameIssueTask(params: {
     issueTypeLabelId
   });
 
+  // v1.5.24: Generate natural language descriptions based on issue category
+  const reportedDate = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  // Generate category-specific description
+  let description = '';
+
+  if (issueType === 'task') {
+    // Actionable tasks
+    const categoryDescriptions: Record<string, string> = {
+      'broken_sleeves': `${params.gameName} has some broken sleeves.`,
+      'needs_sorting': `${params.gameName} needs sorting.`,
+      'needs_cleaning': `${params.gameName} needs cleaning.`,
+      'box_rewrap': `${params.gameName} needs the box rewrapped.`,
+      'customer_reported': `A customer reported an issue with ${params.gameName}.`,
+      'other_actionable': `${params.gameName} has an issue that needs attention.`
+    };
+
+    description = categoryDescriptions[params.issueCategory] || `${params.gameName} needs attention.`;
+    description += `\n${params.reportedBy} reported it on ${reportedDate}.`;
+
+    // Add staff note if provided
+    if (params.issueDescription && params.issueDescription.trim()) {
+      description += `\n${params.reportedBy} wrote: ${params.issueDescription}`;
+    }
+  } else {
+    // Non-actionable observations
+    const categoryDescriptions: Record<string, string> = {
+      'missing_pieces': `Missing: ${params.issueDescription}`,
+      'broken_components': `Broken components: ${params.issueDescription}`,
+      'component_wear': `Component wear: ${params.issueDescription}`,
+      'staining': `Staining: ${params.issueDescription}`,
+      'water_damage': `Water damage: ${params.issueDescription}`,
+      'other_observation': `${params.issueDescription}`
+    };
+
+    description = categoryDescriptions[params.issueCategory] || params.issueDescription;
+    description += `\n${params.reportedBy} reported it on ${reportedDate}.`;
+  }
+
   // Build request body
   const taskBody: any = {
     title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
-    description: issueType === 'task'
-      ? `
-**Issue:** ${params.issueDescription}
-
-**Reported by:** ${params.reportedBy}
-**Game ID:** ${params.gameId}
-**Complexity:** ${params.gameComplexity}
-
-Complete this task to resolve the issue and earn ${points} points!
-    `.trim()
-      : `
-**Note:** ${params.issueDescription}
-
-**Reported by:** ${params.reportedBy}
-**Game ID:** ${params.gameId}
-**Complexity:** ${params.gameComplexity}
-
-This is a non-actionable observation. No points awarded upon completion.
-    `.trim(),
+    description: description.trim(),
     project_id: projectId,
     assignees: [{ id: params.reportedByVikunjaUserId }]
   };

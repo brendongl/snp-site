@@ -153,11 +153,12 @@ class StaffKnowledgeDbService {
           ]
         );
 
-        // Fetch game complexity for knowledge upgrade points
+        // Fetch game name and complexity for knowledge upgrade points
         const gameResult = await this.pool.query(
-          'SELECT complexity FROM games WHERE id = $1',
+          'SELECT name, complexity FROM games WHERE id = $1',
           [knowledge.gameId]
         );
+        const gameName = gameResult.rows[0]?.name || 'Unknown Game';
         const gameComplexity = gameResult.rows[0]?.complexity || 1;
 
         // Award points for knowledge upgrade (async, non-blocking)
@@ -166,9 +167,10 @@ class StaffKnowledgeDbService {
           actionType: 'knowledge_upgrade',
           metadata: {
             gameId: knowledge.gameId,
+            gameName: gameName,
             gameComplexity: gameComplexity
           },
-          context: `Knowledge upgrade for game ${knowledge.gameId} to level ${knowledge.confidenceLevel}`
+          context: `Knowledge upgrade for ${gameName} to level ${knowledge.confidenceLevel}`
         }).catch(err => {
           console.error('Failed to award knowledge upgrade points:', err);
         });
@@ -190,11 +192,12 @@ class StaffKnowledgeDbService {
           ]
         );
 
-        // Fetch game complexity for knowledge add points
+        // Fetch game name and complexity for knowledge add points
         const gameResult = await this.pool.query(
-          'SELECT complexity FROM games WHERE id = $1',
+          'SELECT name, complexity FROM games WHERE id = $1',
           [knowledge.gameId]
         );
+        const gameName = gameResult.rows[0]?.name || 'Unknown Game';
         const gameComplexity = gameResult.rows[0]?.complexity || 1;
 
         // Award points for new knowledge add (async, non-blocking)
@@ -203,10 +206,11 @@ class StaffKnowledgeDbService {
           actionType: 'knowledge_add',
           metadata: {
             gameId: knowledge.gameId,
+            gameName: gameName,
             gameComplexity: gameComplexity,
             knowledgeLevel: knowledge.confidenceLevel
           },
-          context: `Knowledge add for game ${knowledge.gameId} at level ${knowledge.confidenceLevel}`
+          context: `Knowledge add for ${gameName} at level ${knowledge.confidenceLevel}`
         }).catch(err => {
           console.error('Failed to award knowledge add points:', err);
         });
