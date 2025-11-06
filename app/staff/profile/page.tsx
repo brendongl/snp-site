@@ -220,9 +220,9 @@ export default function StaffProfilePage() {
           <CardContent>
             <Tabs defaultValue="account" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="account">Account Information</TabsTrigger>
-                <TabsTrigger value="activity">My Activity</TabsTrigger>
-                <TabsTrigger value="knowledge">My Knowledge</TabsTrigger>
+                <TabsTrigger value="account">Info</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
               </TabsList>
 
               <TabsContent value="account" className="space-y-4">

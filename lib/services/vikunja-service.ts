@@ -381,6 +381,13 @@ export async function createBoardGameIssueTask(params: {
   const pointLabelId = getPointLabelId(points);
   const issueTypeLabelId = getIssueTypeLabelId(issueType);
 
+  console.log(`🏷️  Label calculation for ${params.issueCategory}:`, {
+    issueType,
+    points,
+    pointLabelId,
+    issueTypeLabelId
+  });
+
   // Build request body
   const taskBody: any = {
     title: `${params.issueCategory.replace(/_/g, ' ')} - ${params.gameName}`,
@@ -418,6 +425,9 @@ This is a non-actionable observation. No points awarded upon completion.
   }
   taskBody.labels = labels;
 
+  console.log(`🏷️  Final labels being sent to Vikunja:`, labels);
+  console.log(`📝 Task body:`, JSON.stringify(taskBody, null, 2));
+
   // Create task using PUT method
   const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
     method: 'PUT',
@@ -430,10 +440,18 @@ This is a non-actionable observation. No points awarded upon completion.
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`❌ Vikunja API error: ${response.status} - ${errorText}`);
     throw new Error(`Failed to create Vikunja task: ${response.status} - ${errorText}`);
   }
 
   const task = await response.json();
+  console.log(`✅ Vikunja task created successfully:`, {
+    id: task.id,
+    title: task.title,
+    labels: task.labels,
+    project_id: task.project_id
+  });
+
   return task.id;
 }
 

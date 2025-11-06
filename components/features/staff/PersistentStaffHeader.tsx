@@ -15,17 +15,28 @@ export function PersistentStaffHeader() {
     const staffId = localStorage.getItem('staff_id');
     if (!staffId) return;
 
-    // Fetch staff info
-    fetch(`/api/staff/points?staffId=${staffId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStaffInfo({
-          name: data.nickname || data.full_name,
-          points: data.points || 0,
-        });
-        setIsVisible(true);
-      })
-      .catch((err) => console.error('Error fetching staff info:', err));
+    // Function to fetch staff info
+    const fetchStaffInfo = () => {
+      fetch(`/api/staff/points?staffId=${staffId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setStaffInfo({
+            name: data.nickname || data.full_name,
+            points: data.points || 0,
+          });
+          setIsVisible(true);
+        })
+        .catch((err) => console.error('Error fetching staff info:', err));
+    };
+
+    // Initial fetch
+    fetchStaffInfo();
+
+    // Set up polling for real-time points updates (every 30 seconds)
+    const pointsInterval = setInterval(fetchStaffInfo, 30000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(pointsInterval);
   }, []);
 
   if (!isVisible || !staffInfo) return null;

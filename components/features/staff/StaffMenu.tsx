@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, LogOut, User, Users, LayoutDashboard, Gamepad2, Tv } from 'lucide-react';
+import { Menu, LogOut, User, Users, LayoutDashboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 
@@ -61,27 +61,24 @@ export function StaffMenu() {
       {isOpen && (
         <div className="fixed right-2 sm:right-4 mt-2 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 z-[100] max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ top: '3rem' }}>
           {/* Logged in as header */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-muted-foreground mb-1">Logged in as</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {staffName}
-              <span className={`ml-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                ({isAdmin ? 'admin' : 'staff'})
-              </span>
-            </p>
-          </div>
+          <Link
+            href="/staff/profile"
+            className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            onClick={() => setIsOpen(false)}
+          >
+            <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <div>
+              <p className="text-xs text-muted-foreground">Logged in as</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {staffName}
+                <span className={`ml-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                  ({isAdmin ? 'admin' : 'staff'})
+                </span>
+              </p>
+            </div>
+          </Link>
 
           <nav className="py-2">
-            {/* My Profile */}
-            <Link
-              href="/staff/profile"
-              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              <User className="w-4 h-4" />
-              <span>My Profile</span>
-            </Link>
-
             {/* Staff Directory */}
             <Link
               href="/staff/directory"
@@ -100,29 +97,6 @@ export function StaffMenu() {
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Staff Dashboard</span>
-            </Link>
-
-            {/* Divider */}
-            <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
-
-            {/* Board Games Gallery */}
-            <Link
-              href="/games?staff=true"
-              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              <Gamepad2 className="w-4 h-4" />
-              <span>Board Games</span>
-            </Link>
-
-            {/* Video Games Gallery */}
-            <Link
-              href="/video-games"
-              className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              <Tv className="w-4 h-4" />
-              <span>Video Games</span>
             </Link>
 
             {/* Divider */}
