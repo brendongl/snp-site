@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
           actionType: 'content_check',
           metadata: {
             gameId,
+            gameName,  // v1.5.20: Add game name to metadata so it appears in changelog entity_name
             gameComplexity
           },
           context: `Content check for ${gameName}`

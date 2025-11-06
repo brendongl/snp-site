@@ -417,15 +417,16 @@ This is a non-actionable observation. No points awarded upon completion.
   };
 
   // Add labels: always add issue type label, optionally add points label for actionable tasks
-  const labels = [{ id: issueTypeLabelId }];
+  // Vikunja API expects an array of label IDs (numbers), not objects
+  const labels = [issueTypeLabelId];
   if (issueType === 'task' && pointLabelId) {
-    labels.push({ id: pointLabelId });
+    labels.push(pointLabelId);
   } else if (issueType === 'task' && points > 0 && !pointLabelId) {
     console.warn(`⚠️  No label found for ${points} points. Task will use description fallback.`);
   }
   taskBody.labels = labels;
 
-  console.log(`🏷️  Final labels being sent to Vikunja:`, labels);
+  console.log(`🏷️  Final label IDs being sent to Vikunja:`, labels);
   console.log(`📝 Task body:`, JSON.stringify(taskBody, null, 2));
 
   // Create task using PUT method

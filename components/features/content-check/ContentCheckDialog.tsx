@@ -115,6 +115,12 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   };
 
   const handleSubmit = async () => {
+    // v1.5.20: Prevent duplicate submissions
+    if (loading) {
+      console.log('⚠️ Submission already in progress, ignoring duplicate click');
+      return;
+    }
+
     // Validation with detailed error messaging
     const missingFields: string[] = [];
     if (!status) missingFields.push('Status');

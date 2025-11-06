@@ -31,6 +31,7 @@ export interface PointAwardParams {
   points?: number; // Optional explicit points (for task_complete)
   metadata?: {
     gameId?: string;
+    gameName?: string;  // v1.5.20: Add game name for changelog entity_name
     gameComplexity?: number;
     knowledgeLevel?: number;
     studentCount?: number;
@@ -271,6 +272,8 @@ async function logPointAward(
 
   if (params.metadata?.taskTitle) {
     entityName = params.metadata.taskTitle;
+  } else if (params.metadata?.gameName) {
+    entityName = params.metadata.gameName;  // v1.5.20: Add support for gameName in metadata
   }
 
   // Determine category and event_type based on action

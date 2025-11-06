@@ -102,12 +102,12 @@ export async function GET(request: NextRequest) {
           action = row.description.toLowerCase();
         }
       } else if (row.type === 'issue_report') {
-        // Handle issue reports
-        const issueMatch = row.description.match(/Reported\s+(.+?)\s+issue for game\s+(.+)/);
+        // Handle issue reports (v1.5.20: updated format - "Reported X for Y")
+        const issueMatch = row.description.match(/Reported\s+(.+?)\s+for\s+(.+)/);
         if (issueMatch) {
           const issueType = issueMatch[1].trim();
           game_name = issueMatch[2].trim();
-          action = `reported ${issueType} issue for ${game_name}`;
+          action = `reported ${issueType} for ${game_name}`;
         } else {
           action = row.description.toLowerCase();
         }

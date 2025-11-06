@@ -155,9 +155,10 @@ export async function POST(
       staffId: body.reportedById,
       actionType: 'issue_report',
       metadata: {
-        gameId: gameId
+        gameId: gameId,
+        gameName: game.name  // v1.5.20: Add game name to metadata
       },
-      context: `Reported ${body.issueCategory.replace(/_/g, ' ')} issue for game ${game.name}`
+      context: `Reported ${body.issueCategory.replace(/_/g, ' ')} for ${game.name}`  // v1.5.20: Shortened description
     }).catch(err => {
       console.error('Failed to award issue report points:', err);
     });

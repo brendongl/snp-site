@@ -18,7 +18,12 @@ export function PersistentStaffHeader() {
 
     // Function to fetch staff info
     const fetchStaffInfo = () => {
-      fetch(`/api/staff/points?staffId=${staffId}`)
+      fetch(`/api/staff/points?staffId=${staffId}`, {
+        cache: 'no-store',  // v1.5.20: Disable caching to always get fresh points
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
         .then((res) => res.json())
         .then((data) => {
           setStaffInfo({
