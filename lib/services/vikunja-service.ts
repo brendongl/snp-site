@@ -166,26 +166,40 @@ export async function getProjectTasks(projectId: number): Promise<TaskWithPoints
 
 /**
  * Get priority tasks (due within 3 days, today, or overdue) for staff dashboard
+ * v1.5.22: Only fetch tasks from Board Game Issues project (ID: 25)
  */
-export async function getPriorityTasks(projectId: number = 2): Promise<TaskWithPoints[]> {
-  const allTasks = await getProjectTasks(projectId);
+export async function getPriorityTasks(): Promise<TaskWithPoints[]> {
+  try {
+    // Only fetch from Board Game Issues project
+    const allTasks = await getProjectTasks(25);
 
-  // Include tasks that are: overdue, due today, or due within next 3 days
-  const priorityTasks = allTasks.filter(task =>
-    !task.done && (task.isOverdue || task.isDueToday || task.isDueSoon)
-  );
+    // Filter for actionable tasks only (exclude observation notes with 'note' label)
+    const actionableTasks = allTasks.filter(task => {
+      if (task.done) return false;
 
-  // Sort: overdue first, then by due date (soonest first)
-  return priorityTasks.sort((a, b) => {
-    if (a.isOverdue && !b.isOverdue) return -1;
-    if (!a.isOverdue && b.isOverdue) return 1;
+      // Exclude tasks with 'note' label (ID: 26)
+      const hasNoteLabel = task.labels?.some(label => label.id === 26) ?? false;
+      if (hasNoteLabel) return false;
 
-    if (a.due_date && b.due_date) {
-      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-    }
+      // Include priority tasks: overdue, due today, or due within next 3 days
+      return task.isOverdue || task.isDueToday || task.isDueSoon;
+    });
 
-    return 0;
-  });
+    // Sort: overdue first, then by due date (soonest first)
+    return actionableTasks.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+
+      return 0;
+    });
+  } catch (error) {
+    console.error('Error fetching priority tasks:', error);
+    return [];
+  }
 }
 
 /**
