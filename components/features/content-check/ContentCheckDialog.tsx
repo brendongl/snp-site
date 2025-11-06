@@ -115,11 +115,14 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
   };
 
   const handleSubmit = async () => {
-    // v1.5.20: Prevent duplicate submissions
+    // v1.5.22: Prevent duplicate submissions - immediately set loading state
     if (loading) {
       console.log('⚠️ Submission already in progress, ignoring duplicate click');
       return;
     }
+
+    // Set loading immediately to prevent double clicks
+    setLoading(true);
 
     // Validation with detailed error messaging
     const missingFields: string[] = [];
@@ -129,16 +132,16 @@ export function ContentCheckDialog({ open, onClose, game, onSuccess }: ContentCh
 
     if (missingFields.length > 0) {
       alert(`Please fill in all required fields:\n${missingFields.join(', ')}`);
+      setLoading(false); // Reset loading if validation fails
       return;
     }
 
     // If inspector is not set (auto-selection failed), show specific error
     if (!inspector) {
       alert('Unable to identify inspector. Please ensure you are logged in as staff.');
+      setLoading(false); // Reset loading if validation fails
       return;
     }
-
-    setLoading(true);
     const selectedStatus = status; // Capture status before reset
     try {
       const response = await fetch('/api/games/content-check', {

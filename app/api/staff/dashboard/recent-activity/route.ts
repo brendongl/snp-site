@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
         s.nickname as nickname,
         s.staff_name as full_name,
         c.description,
+        c.entity_name,
         c.event_type,
         c.metadata,
         COALESCE(c.points_awarded, 0) as points_earned
@@ -37,23 +38,48 @@ export async function GET(request: NextRequest) {
 
       // Extract game name and format action based on category
       if (row.type === 'content_check') {
-        // Format: "Content check: TIME BOMB (JAPANESE) - Minor Issues"
-        const match = row.description.match(/Content check:\s*(.+?)\s*-\s*(.+)/);
-        if (match) {
-          game_name = match[1].trim();
-          status_info = match[2].trim();
-          action = `checked ${game_name} - Has ${status_info}`;
+        // v1.5.22: Use entity_name field for game name if available
+        if (row.entity_name) {
+          game_name = row.entity_name;
+          action = `checked ${game_name}`;
         } else {
-          action = 'checked a game';
+          // Legacy format: "Content check: TIME BOMB (JAPANESE) - Minor Issues"
+          const match = row.description.match(/Content check:\s*(.+?)\s*-\s*(.+)/);
+          if (match) {
+            game_name = match[1].trim();
+            status_info = match[2].trim();
+            action = `checked ${game_name} - Has ${status_info}`;
+          } else if (row.description.match(/Content check for (.+)/)) {
+            // v1.5.22: Handle "Content check for GAME_NAME" format
+            const gameMatch = row.description.match(/Content check for (.+)/);
+            game_name = gameMatch[1].trim();
+            // If it looks like a rec ID, use entity_name if available
+            if (game_name.startsWith('rec')) {
+              game_name = row.entity_name || 'a game';
+            }
+            action = `checked ${game_name}`;
+          } else {
+            action = 'checked a game';
+          }
         }
       } else if (row.type === 'play_log') {
-        // Format: "Logged play session for GAME NAME"
-        const match = row.description.match(/Logged play session for\s*(.+)/);
-        if (match) {
-          game_name = match[1].trim();
+        // v1.5.22: Use entity_name field for game name if available
+        if (row.entity_name) {
+          game_name = row.entity_name;
           action = `logged play for ${game_name}`;
         } else {
-          action = 'logged play';
+          // Format: "Logged play session for GAME NAME" or "Play log for GAME_NAME"
+          const match = row.description.match(/(?:Logged play session for|Play log for)\s*(.+)/);
+          if (match) {
+            game_name = match[1].trim();
+            // If it looks like a rec ID, check entity_name
+            if (game_name.startsWith('rec') || game_name.startsWith('game rec')) {
+              game_name = row.entity_name || 'a game';
+            }
+            action = `logged play for ${game_name}`;
+          } else {
+            action = 'logged play';
+          }
         }
       } else if (row.type === 'staff_knowledge') {
         const metadata = row.metadata || {};

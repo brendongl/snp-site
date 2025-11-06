@@ -38,8 +38,8 @@ export function PersistentStaffHeader() {
     // Initial fetch
     fetchStaffInfo();
 
-    // Set up polling for real-time points updates (every 30 seconds)
-    const pointsInterval = setInterval(fetchStaffInfo, 30000);
+    // v1.5.22: Set up polling for real-time points updates (every 2 seconds for near-immediate updates)
+    const pointsInterval = setInterval(fetchStaffInfo, 2000);
 
     // Cleanup interval on unmount
     return () => clearInterval(pointsInterval);

@@ -41,6 +41,7 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
   const [showEditGame, setShowEditGame] = useState(false);
   const [showIssueReport, setShowIssueReport] = useState(false);
   const [linkedIssues, setLinkedIssues] = useState<any[]>([]);
+  const [observationNotes, setObservationNotes] = useState<any[]>([]);
   const [resolvingTaskId, setResolvingTaskId] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
@@ -112,9 +113,21 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
         const data = await response.json();
 
         if (data.success && data.issues) {
-          // Filter for unresolved issues only
-          const unresolvedIssues = data.issues.filter((issue: any) => !issue.resolvedAt);
-          setLinkedIssues(unresolvedIssues);
+          // v1.5.22: Separate actionable tasks from observation notes based on labels
+          const actionableTasks = data.issues.filter((issue: any) => {
+            if (issue.resolvedAt) return false;
+            // Check if has "task" label (ID: 25)
+            return issue.labels?.some((label: any) => label.id === 25);
+          });
+
+          const notes = data.issues.filter((issue: any) => {
+            if (issue.resolvedAt) return false;
+            // Check if has "note" label (ID: 26)
+            return issue.labels?.some((label: any) => label.id === 26);
+          });
+
+          setLinkedIssues(actionableTasks);
+          setObservationNotes(notes);
         }
       } catch (error) {
         console.error('Failed to fetch linked issues:', error);
@@ -157,7 +170,15 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
       const issuesResponse = await fetch(`/api/games/${game!.id}/issues`);
       const issuesData = await issuesResponse.json();
       if (issuesData.success) {
-        setLinkedIssues(issuesData.issues);
+        // v1.5.22: Separate actionable tasks from observation notes
+        const actionableTasks = issuesData.issues.filter((issue: any) =>
+          issue.labels?.some((label: any) => label.id === 25) && !issue.resolvedAt
+        );
+        const notes = issuesData.issues.filter((issue: any) =>
+          issue.labels?.some((label: any) => label.id === 26) && !issue.resolvedAt
+        );
+        setLinkedIssues(actionableTasks);
+        setObservationNotes(notes);
       }
 
       alert(`Task resolved! You earned ${taskPoints} points.`);
@@ -374,6 +395,33 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                             'Resolve'
                           )}
                         </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* v1.5.22: Observation notes from Vikunja */}
+            {observationNotes.length > 0 && (
+              <div className="mt-3 p-3 border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 rounded-md">
+                <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Observation Notes ({observationNotes.length})
+                </h4>
+                <div className="space-y-2">
+                  {observationNotes.map((note: any) => (
+                    <div
+                      key={note.id}
+                      className="p-2 bg-white dark:bg-gray-900 rounded border border-blue-300 dark:border-blue-700"
+                    >
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        {note.title.replace(/\s*-\s*[^-]+$/, '')}
+                      </p>
+                      {note.description && (
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                          {note.description}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -754,8 +802,15 @@ export function GameDetailModal({ game, open, onClose, onRefresh, staffKnowledge
                 .then((res) => res.json())
                 .then((data) => {
                   if (data.success && data.issues) {
-                    const unresolvedIssues = data.issues.filter((issue: any) => !issue.resolvedAt);
-                    setLinkedIssues(unresolvedIssues);
+                    // v1.5.22: Separate actionable tasks from observation notes
+                    const actionableTasks = data.issues.filter((issue: any) =>
+                      issue.labels?.some((label: any) => label.id === 25) && !issue.resolvedAt
+                    );
+                    const notes = data.issues.filter((issue: any) =>
+                      issue.labels?.some((label: any) => label.id === 26) && !issue.resolvedAt
+                    );
+                    setLinkedIssues(actionableTasks);
+                    setObservationNotes(notes);
                   }
                 })
                 .catch(console.error);
