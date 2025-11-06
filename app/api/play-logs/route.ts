@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
 import { logPlayLogCreated, logPlayLogDeleted } from '@/lib/services/changelog-service';
+import { awardPoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
 
     console.log(`✅ Play log created successfully: ${playLog.id}`);
 
-    // Get game and staff details for changelog
+    // Get game and staff details for changelog and points
     try {
       const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
       const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [staffListId]);
@@ -91,6 +92,17 @@ export async function POST(request: Request) {
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;
         const staffName = staffResult.rows[0].staff_name;
+
+        // v1.5.22: Award points for play log with game name
+        await awardPoints({
+          staffId: staffListId,
+          actionType: 'play_log',
+          metadata: {
+            gameId,
+            gameName  // Include game name for proper entity_name in changelog
+          },
+          context: `Play log for ${gameName}`
+        });
 
         await logPlayLogCreated(
           playLog.id,
@@ -101,7 +113,7 @@ export async function POST(request: Request) {
         );
       }
     } catch (changelogError) {
-      console.error('Failed to log play log creation to changelog:', changelogError);
+      console.error('Failed to log play log creation to changelog or award points:', changelogError);
       // Don't fail the request if changelog logging fails
     }
 

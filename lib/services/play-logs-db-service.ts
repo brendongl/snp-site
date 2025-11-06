@@ -1,5 +1,4 @@
 import { Pool } from 'pg';
-import { awardPoints } from './points-service';
 
 export interface PlayLog {
   id: string;
@@ -184,16 +183,8 @@ class PlayLogsDbService {
 
       const createdLog = this.mapRowToPlayLog(result.rows[0]);
 
-      // Award points for play log (async, non-blocking)
-      awardPoints({
-        staffId: log.staffListId,
-        actionType: 'play_log',
-        metadata: { gameId: log.gameId },
-        context: `Play log for game ${log.gameId}`
-      }).catch(err => {
-        console.error('Failed to award play log points:', err);
-        // Main operation succeeded, just log error
-      });
+      // v1.5.22: Removed duplicate awardPoints call - points are handled by the API endpoint
+      // which has the game name for proper changelog entry
 
       return createdLog;
     } catch (error) {

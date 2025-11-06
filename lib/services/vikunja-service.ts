@@ -165,8 +165,8 @@ export async function getProjectTasks(projectId: number): Promise<TaskWithPoints
 }
 
 /**
- * Get priority tasks (due within 3 days, today, or overdue) for staff dashboard
- * v1.5.22: Only fetch tasks from Board Game Issues project (ID: 25)
+ * Get priority tasks for staff dashboard
+ * v1.5.22: Show ALL actionable tasks from Board Game Issues, not just due soon
  */
 export async function getPriorityTasks(): Promise<TaskWithPoints[]> {
   try {
@@ -174,6 +174,7 @@ export async function getPriorityTasks(): Promise<TaskWithPoints[]> {
     const allTasks = await getProjectTasks(25);
 
     // Filter for actionable tasks only (exclude observation notes with 'note' label)
+    // v1.5.22: Show ALL actionable tasks, regardless of due date
     const actionableTasks = allTasks.filter(task => {
       if (task.done) return false;
 
@@ -181,8 +182,8 @@ export async function getPriorityTasks(): Promise<TaskWithPoints[]> {
       const hasNoteLabel = task.labels?.some(label => label.id === 26) ?? false;
       if (hasNoteLabel) return false;
 
-      // Include priority tasks: overdue, due today, or due within next 3 days
-      return task.isOverdue || task.isDueToday || task.isDueSoon;
+      // Include ALL actionable tasks (not just those due soon)
+      return true;
     });
 
     // Sort: overdue first, then by due date (soonest first)
@@ -387,9 +388,7 @@ export async function createBoardGameIssueTask(params: {
   const basePoints = getIssueResolutionPoints(params.issueCategory);
   const points = issueType === 'task' && params.gameComplexity >= 3 ? basePoints * 2 : basePoints;
 
-  // Calculate due date and priority
-  const dueDate = calculateDueDate(params.issueCategory);
-  const priority = calculatePriority(params.issueCategory);
+  // v1.5.22: No due dates or priority - all tasks are equally important
 
   // Get label IDs for points and issue type
   const pointLabelId = getPointLabelId(points);
@@ -425,8 +424,6 @@ Complete this task to resolve the issue and earn ${points} points!
 This is a non-actionable observation. No points awarded upon completion.
     `.trim(),
     project_id: projectId,
-    due_date: dueDate,
-    priority: priority,
     assignees: [{ id: params.reportedByVikunjaUserId }]
   };
 
