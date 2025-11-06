@@ -62,7 +62,8 @@ class PlayLogsDbService {
           pl.created_at,
           pl.updated_at,
           g.name AS game_name,
-          sl.staff_name AS staff_name
+          sl.staff_name AS staff_name,
+          sl.nickname AS staff_nickname
         FROM play_logs pl
         LEFT JOIN games g ON pl.game_id = g.id
         LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
@@ -75,6 +76,7 @@ class PlayLogsDbService {
         gameName: row.game_name || 'Unknown Game',
         staffListId: row.staff_list_id,
         staffName: row.staff_name || 'Unknown',
+        staffNickname: row.staff_nickname || null,
         sessionDate: row.session_date,
         notes: row.notes,
         durationHours: row.duration_hours,

@@ -86,7 +86,7 @@ export default function PlayLogStats() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-sm text-gray-600 mb-1">Unique Games</div>
           <div className="text-2xl font-bold">{stats?.uniqueGames || 0}</div>

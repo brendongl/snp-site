@@ -379,13 +379,17 @@ export default function StaffDashboard() {
           </div>
           {!gamesNeedingAttentionCollapsed && (
             <div className="space-y-3">
-              {gamesNeedingAttention.map((task) => (
+              {gamesNeedingAttention.map((task) => {
+                // Extract issue type from title (text before " - ")
+                const issueType = task.title.split(' - ')[0] || task.title;
+
+                return (
                 <div
                   key={task.id}
                   className="flex items-center justify-between p-4 border border-red-300 bg-white rounded-lg hover:bg-red-50/50 transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="font-medium text-red-900 truncate">{task.title}</div>
+                    <div className="font-medium text-red-900 truncate">{issueType}</div>
                     {task.points > 0 && (
                       <div className={`shrink-0 px-3 py-1 border rounded-full text-sm font-semibold ${getPointBadgeColor(task.points)}`}>
                         {task.points} pts
@@ -405,7 +409,8 @@ export default function StaffDashboard() {
                     View
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

@@ -59,7 +59,7 @@ export function StaffMenu() {
 
       {/* Dropdown Menu - Fixed positioning to stay in viewport */}
       {isOpen && (
-        <div className="fixed right-2 sm:right-4 mt-2 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 z-[100]" style={{ top: '3rem' }}>
+        <div className="fixed right-2 sm:right-4 mt-2 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 z-[100] max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ top: '3rem' }}>
           {/* Logged in as header */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <p className="text-xs text-muted-foreground mb-1">Logged in as</p>

@@ -12,7 +12,8 @@ interface PlayLogEntry {
   id: string;
   gameId: string;
   gameName: string;
-  staffName: string; // Changed from playedBy
+  staffName: string; // Full name
+  staffNickname?: string | null; // Nickname
   sessionDate: string; // Changed from playDate
   durationHours?: number | null;
   notes?: string | null;
@@ -41,6 +42,7 @@ export default function PlayLogsPage() {
 
   // Filter state
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [showAllLogs, setShowAllLogs] = useState<boolean>(false);
 
   // Check authentication
   useEffect(() => {
@@ -96,17 +98,30 @@ export default function PlayLogsPage() {
 
   // Filter logs
   const filteredLogs = useMemo(() => {
-    return playLogs.filter(log => {
-      // Date filter
-      if (dateFilter) {
+    let filtered = playLogs;
+
+    // If not showing all logs and no date filter, show only last 7 days
+    if (!showAllLogs && !dateFilter) {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      filtered = playLogs.filter(log => {
+        if (!log.sessionDate) return false;
+        const logDate = new Date(log.sessionDate);
+        return logDate >= sevenDaysAgo;
+      });
+    }
+
+    // Date filter (overrides 7-day filter)
+    if (dateFilter) {
+      filtered = playLogs.filter(log => {
         const logDate = new Date(log.sessionDate).toISOString().split('T')[0];
-        if (logDate !== dateFilter) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [playLogs, dateFilter]);
+        return logDate === dateFilter;
+      });
+    }
+
+    return filtered;
+  }, [playLogs, dateFilter, showAllLogs]);
 
   // Group logs by date
   const groupedLogs = useMemo(() => {
@@ -129,7 +144,7 @@ export default function PlayLogsPage() {
       const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
       const dayNum = dateObj.getDate();
 
-      const uniqueStaff = new Set(logs.map(log => log.staffName));
+      const uniqueStaff = new Set(logs.map(log => log.staffNickname || log.staffName));
 
       return {
         date,
@@ -292,11 +307,20 @@ export default function PlayLogsPage() {
         </div>
 
         {/* Results count */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {groupedLogs.length} day{groupedLogs.length !== 1 ? 's' : ''} • {filteredLogs.length} play log{filteredLogs.length !== 1 ? 's' : ''}
+            {!showAllLogs && !dateFilter && ` (last 7 days)`}
             {dateFilter && ` (filtered from ${playLogs.length} total)`}
           </p>
+          {!dateFilter && (
+            <button
+              onClick={() => setShowAllLogs(!showAllLogs)}
+              className="px-3 py-1 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              {showAllLogs ? 'Show Last 7 Days' : 'Show All Logs'}
+            </button>
+          )}
         </div>
 
         {/* Loading State */}
@@ -374,7 +398,7 @@ export default function PlayLogsPage() {
                                   disabled={isSaving}
                                 />
                                 <div className="col-span-3 text-sm">{log.gameName}</div>
-                                <div className="col-span-2 text-sm">{log.staffName}</div>
+                                <div className="col-span-2 text-sm">{log.staffNickname || log.staffName}</div>
                                 <textarea
                                   value={editingData?.notes || ''}
                                   onChange={(e) => setEditingData(prev => prev ? {
@@ -412,7 +436,7 @@ export default function PlayLogsPage() {
                               <div className="grid grid-cols-12 gap-4 text-sm items-start">
                                 <div className="col-span-2 text-muted-foreground">{formatDate(log.sessionDate)}</div>
                                 <div className="col-span-3 font-medium">{log.gameName || 'Unknown Game'}</div>
-                                <div className="col-span-2 text-muted-foreground">{log.staffName || 'Unknown'}</div>
+                                <div className="col-span-2 text-muted-foreground">{log.staffNickname || log.staffName || 'Unknown'}</div>
                                 <div className="col-span-3 text-muted-foreground truncate" title={log.notes || undefined}>
                                   {log.notes || '—'}
                                 </div>

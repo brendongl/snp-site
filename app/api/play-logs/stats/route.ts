@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
       ? { game_name: mostPlayedEntry[1].name, count: mostPlayedEntry[1].count }
       : null;
 
-    // Top logger
+    // Top logger (prefer nickname over full name)
     const loggerCounts: Record<string, { name: string; count: number }> = {};
     filteredLogs.forEach((log) => {
       if (!loggerCounts[log.staffListId]) {
-        loggerCounts[log.staffListId] = { name: log.staffName, count: 0 };
+        loggerCounts[log.staffListId] = { name: log.staffNickname || log.staffName, count: 0 };
       }
       loggerCounts[log.staffListId].count++;
     });
