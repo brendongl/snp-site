@@ -60,24 +60,6 @@ export function StaffMenu() {
       {/* Dropdown Menu - Fixed positioning to stay in viewport */}
       {isOpen && (
         <div className="fixed right-2 sm:right-4 mt-2 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 z-[100] max-h-[calc(100vh-4rem)] overflow-y-auto" style={{ top: '3rem' }}>
-          {/* Logged in as header */}
-          <Link
-            href="/staff/profile"
-            className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-            onClick={() => setIsOpen(false)}
-          >
-            <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <div>
-              <p className="text-xs text-muted-foreground">Logged in as</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {staffName}
-                <span className={`ml-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                  ({isAdmin ? 'admin' : 'staff'})
-                </span>
-              </p>
-            </div>
-          </Link>
-
           <nav className="py-2">
             {/* Staff Directory */}
             <Link

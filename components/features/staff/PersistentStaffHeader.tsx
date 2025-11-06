@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Star, User } from 'lucide-react';
+import Link from 'next/link';
 
 export function PersistentStaffHeader() {
   const [staffInfo, setStaffInfo] = useState<{
@@ -44,10 +45,14 @@ export function PersistentStaffHeader() {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-yellow-900">
+        <Link
+          href="/staff/profile"
+          className="flex items-center gap-2 text-sm font-medium text-yellow-900 hover:text-yellow-950 transition-colors cursor-pointer"
+          title="View My Profile"
+        >
           <User className="h-4 w-4" />
-          <span>Logged in as: {staffInfo.name}</span>
-        </div>
+          <span>{staffInfo.name}</span>
+        </Link>
 
         <div className="flex items-center gap-1 text-sm font-bold text-yellow-900">
           <Star className="h-4 w-4 fill-yellow-600" />

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import DatabaseService from '@/lib/services/db-service';
 import { logContentCheckCreated } from '@/lib/services/changelog-service';
+import { awardPoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,15 +101,18 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if game update fails
     }
 
-    // Get game and staff details for changelog
+    // Get game and staff details for changelog and points award
+    let pointsAwarded = 0;
     try {
-      const gameResult = await db.pool.query('SELECT name FROM games WHERE id = $1', [gameId]);
+      const gameResult = await db.pool.query('SELECT name, complexity FROM games WHERE id = $1', [gameId]);
       const staffResult = await db.pool.query('SELECT staff_name FROM staff_list WHERE id = $1', [inspector]);
 
       if (gameResult.rows.length > 0 && staffResult.rows.length > 0) {
         const gameName = gameResult.rows[0].name;
+        const gameComplexity = gameResult.rows[0].complexity || 1;
         const staffName = staffResult.rows[0].staff_name;
 
+        // Log to changelog
         await logContentCheckCreated(
           contentCheck.id,
           gameName,
@@ -117,17 +121,38 @@ export async function POST(request: NextRequest) {
           Array.isArray(status) ? status[0] : status,
           notes
         );
+
+        // Award points for content check (1000 × complexity)
+        const pointsResult = await awardPoints({
+          staffId: inspector,
+          actionType: 'content_check',
+          metadata: {
+            gameId,
+            gameComplexity
+          },
+          context: `Content check for ${gameName}`
+        });
+
+        if (pointsResult.success) {
+          pointsAwarded = pointsResult.pointsAwarded;
+          logger.info('Content Check', `Awarded ${pointsAwarded} points to ${staffName}`, {
+            gameId,
+            gameName,
+            complexity: gameComplexity
+          });
+        }
       }
     } catch (changelogError) {
-      logger.error('Content Check', 'Failed to log to changelog', changelogError instanceof Error ? changelogError : new Error(String(changelogError)));
-      // Don't fail the request if changelog logging fails
+      logger.error('Content Check', 'Failed to log to changelog or award points', changelogError instanceof Error ? changelogError : new Error(String(changelogError)));
+      // Don't fail the request if changelog logging or points award fails
     }
 
     return NextResponse.json({
       success: true,
       contentCheckId: contentCheck.id,
       record: contentCheck,
-      message: 'Content check created successfully',
+      pointsAwarded,
+      message: `Content check created successfully${pointsAwarded > 0 ? ` and ${pointsAwarded} points awarded` : ''}`,
     }, { status: 201 });
   } catch (error) {
     logger.error('Content Check', 'Error creating content check', error instanceof Error ? error : new Error(String(error)));

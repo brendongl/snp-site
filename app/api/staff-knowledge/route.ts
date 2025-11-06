@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
-import { logKnowledgeCreated, logKnowledgeDeleted } from '@/lib/services/changelog-service';
+import { logKnowledgeCreated, logKnowledgeDeleted, logKnowledgeUpdated } from '@/lib/services/changelog-service';
+import { awardPoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -251,6 +252,31 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Get current knowledge details before updating (for changelog and points)
+    const currentKnowledgeResult = await db.pool.query(`
+      SELECT
+        sk.confidence_level,
+        sk.staff_member_id,
+        sk.game_id,
+        g.name as game_name,
+        g.complexity as game_complexity,
+        sl.staff_name
+      FROM staff_knowledge sk
+      LEFT JOIN games g ON sk.game_id = g.id
+      LEFT JOIN staff_list sl ON sk.staff_member_id = sl.id
+      WHERE sk.id = $1
+    `, [recordId]);
+
+    if (currentKnowledgeResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Knowledge entry not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentKnowledge = currentKnowledgeResult.rows[0];
+    const oldConfidenceLevel = currentKnowledge.confidence_level;
+
     // Update record in PostgreSQL
     console.log(`[staff-knowledge PATCH] Updating knowledge entry: ${recordId}`);
 
@@ -262,12 +288,22 @@ export async function PATCH(request: Request) {
       'Instructor': 4,
     };
 
+    const reverseLevelMap: { [key: number]: string } = {
+      1: 'Beginner',
+      2: 'Intermediate',
+      3: 'Expert',
+      4: 'Instructor',
+    };
+
     const updates: any = {};
+    let newConfidenceLevel = oldConfidenceLevel;
+
     if (confidenceLevel !== undefined) {
       // Convert string to integer if it's a string
-      updates.confidenceLevel = typeof confidenceLevel === 'string'
+      newConfidenceLevel = typeof confidenceLevel === 'string'
         ? confidenceLevelMap[confidenceLevel] || 1
         : confidenceLevel;
+      updates.confidenceLevel = newConfidenceLevel;
     }
     if (canTeach !== undefined) updates.canTeach = canTeach;
     if (notes !== undefined) updates.notes = notes;
@@ -276,11 +312,49 @@ export async function PATCH(request: Request) {
 
     console.log(`✅ Knowledge entry updated successfully: ${recordId}`);
 
+    // Award points and log to changelog if confidence level was upgraded
+    let pointsAwarded = 0;
+    const isUpgrade = newConfidenceLevel > oldConfidenceLevel;
+
+    if (isUpgrade && currentKnowledge.game_name && currentKnowledge.staff_name) {
+      try {
+        // Log to changelog
+        await logKnowledgeUpdated(
+          recordId,
+          currentKnowledge.game_name,
+          currentKnowledge.staff_name,
+          currentKnowledge.staff_member_id,
+          reverseLevelMap[oldConfidenceLevel] || 'Unknown',
+          reverseLevelMap[newConfidenceLevel] || 'Unknown'
+        );
+
+        // Award points for knowledge upgrade (100 × complexity)
+        const pointsResult = await awardPoints({
+          staffId: currentKnowledge.staff_member_id,
+          actionType: 'knowledge_upgrade',
+          metadata: {
+            gameId: currentKnowledge.game_id,
+            gameComplexity: currentKnowledge.game_complexity || 1
+          },
+          context: `Upgraded knowledge for ${currentKnowledge.game_name} from ${reverseLevelMap[oldConfidenceLevel]} to ${reverseLevelMap[newConfidenceLevel]}`
+        });
+
+        if (pointsResult.success) {
+          pointsAwarded = pointsResult.pointsAwarded;
+          console.log(`✅ Awarded ${pointsAwarded} points for knowledge upgrade`);
+        }
+      } catch (changelogError) {
+        console.error('Failed to log knowledge upgrade or award points:', changelogError);
+        // Don't fail the request if changelog/points fails
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
         knowledge: updatedKnowledge,
-        message: 'Knowledge entry updated successfully',
+        pointsAwarded,
+        message: `Knowledge entry updated successfully${pointsAwarded > 0 ? ` and ${pointsAwarded} points awarded` : ''}`,
       },
       { status: 200 }
     );
