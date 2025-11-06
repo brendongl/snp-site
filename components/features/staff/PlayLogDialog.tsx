@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar, AlertCircle, Loader2, Star } from 'lucide-react';
 
 interface PlayLogDialogProps {
   isOpen: boolean;
@@ -184,7 +184,13 @@ export function PlayLogDialog({
                   Logging...
                 </>
               ) : (
-                '📊 Log Game'
+                <span className="flex items-center gap-1.5">
+                  📊 Log Game
+                  <span className="flex items-center gap-0.5 text-yellow-300">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                    <span className="text-xs font-semibold">+100</span>
+                  </span>
+                </span>
               )}
             </Button>
           </div>

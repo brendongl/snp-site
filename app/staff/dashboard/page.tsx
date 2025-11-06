@@ -621,11 +621,11 @@ export default function StaffDashboard() {
                   </p>
                 </div>
 
-                {/* Points earned (v1.5.9) */}
+                {/* Points earned (v1.5.9 - made more compact in v1.5.20) */}
                 {activity.points_earned && activity.points_earned > 0 && (
-                  <div className="flex items-center gap-1 text-sm font-medium text-yellow-600">
-                    <Star className="h-4 w-4 fill-yellow-500" />
-                    +{activity.points_earned}
+                  <div className="flex items-center gap-0.5 text-xs font-semibold text-yellow-600 flex-shrink-0">
+                    <Star className="h-3.5 w-3.5 fill-yellow-500" />
+                    <span>+{activity.points_earned.toLocaleString()}</span>
                   </div>
                 )}
               </div>

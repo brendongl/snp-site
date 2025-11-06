@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Star } from 'lucide-react';
 
 interface IssueReportDialogProps {
   isOpen: boolean;
@@ -245,18 +245,20 @@ export function IssueReportDialog({
                     <p className="font-medium text-green-800 dark:text-green-200">
                       ✓ This will create a task for resolution
                     </p>
-                    <p className="text-green-700 dark:text-green-300 mt-1">
-                      You'll earn 100 points for reporting. The resolver will earn points for completing the task.
-                    </p>
+                    <div className="flex items-center gap-1 text-green-700 dark:text-green-300 mt-1">
+                      <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-600" />
+                      <span className="text-sm font-medium">+100</span>
+                    </div>
                   </>
                 ) : (
                   <>
                     <p className="font-medium text-amber-800 dark:text-amber-200">
                       ⚠ This issue will be tracked for awareness only
                     </p>
-                    <p className="text-amber-700 dark:text-amber-300 mt-1">
-                      You'll earn 100 points for reporting. No task will be created.
-                    </p>
+                    <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300 mt-1">
+                      <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-600" />
+                      <span className="text-sm font-medium">+100</span>
+                    </div>
                   </>
                 )}
               </div>

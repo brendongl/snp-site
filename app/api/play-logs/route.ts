@@ -142,26 +142,72 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Get play log details before deleting for changelog
-    let gameName = 'Unknown Game';
-    let staffName = 'Unknown Staff';
-    let staffId = '';
-    try {
-      const logDetails = await db.pool.query(`
-        SELECT g.name as game_name, sl.staff_name, sl.id as staff_id
-        FROM play_logs pl
-        LEFT JOIN games g ON pl.game_id = g.id
-        LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
-        WHERE pl.id = $1
-      `, [recordId]);
+    // Get play log details before deleting for changelog and point refund
+    const logDetails = await db.pool.query(`
+      SELECT g.name as game_name, g.id as game_id, sl.staff_name, sl.id as staff_id
+      FROM play_logs pl
+      LEFT JOIN games g ON pl.game_id = g.id
+      LEFT JOIN staff_list sl ON pl.staff_list_id = sl.id
+      WHERE pl.id = $1
+    `, [recordId]);
 
-      if (logDetails.rows.length > 0) {
-        gameName = logDetails.rows[0].game_name || gameName;
-        staffName = logDetails.rows[0].staff_name || staffName;
-        staffId = logDetails.rows[0].staff_id || staffId;
-      }
-    } catch (error) {
-      console.error('Failed to get play log details for changelog:', error);
+    if (logDetails.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Play log not found' },
+        { status: 404 }
+      );
+    }
+
+    const log = logDetails.rows[0];
+    const gameName = log.game_name || 'Unknown Game';
+    const staffName = log.staff_name || 'Unknown Staff';
+    const staffId = log.staff_id || '';
+    const gameId = log.game_id || '';
+
+    // Play logs award 100 points flat (no complexity multiplier)
+    const pointsToRefund = -100;
+
+    // Log deletion to changelog with negative points
+    try {
+      const maxIdResult = await db.pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
+      const changelogId = maxIdResult.rows[0].next_id;
+
+      await db.pool.query(`
+        INSERT INTO changelog (
+          id,
+          event_type,
+          category,
+          staff_id,
+          entity_id,
+          entity_name,
+          points_awarded,
+          point_category,
+          description,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      `, [
+        changelogId,
+        'deleted',
+        'play_log',
+        staffId,
+        gameId,
+        gameName,
+        pointsToRefund,
+        'play_log',
+        `Play log deleted for ${gameName}`
+      ]);
+
+      // Subtract points from staff member
+      await db.pool.query(`
+        UPDATE staff_list
+        SET points = points + $1,
+            updated_at = NOW()
+        WHERE id = $2
+      `, [pointsToRefund, staffId]);
+
+      console.log(`✅ Refunded ${pointsToRefund} points to ${staffName}`);
+    } catch (refundError) {
+      console.error('Failed to log deletion or refund points:', refundError);
     }
 
     // Delete record from PostgreSQL
@@ -170,17 +216,11 @@ export async function DELETE(request: Request) {
 
     console.log(`✅ Play log deleted successfully: ${recordId}`);
 
-    // Log to changelog
-    try {
-      await logPlayLogDeleted(recordId, gameName, staffName, staffId);
-    } catch (changelogError) {
-      console.error('Failed to log play log deletion to changelog:', changelogError);
-    }
-
     return NextResponse.json(
       {
         success: true,
-        message: 'Play log deleted successfully',
+        message: 'Play log deleted successfully and points refunded',
+        pointsRefunded: Math.abs(pointsToRefund),
       },
       { status: 200 }
     );

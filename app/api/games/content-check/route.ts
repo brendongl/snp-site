@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import DatabaseService from '@/lib/services/db-service';
-import { logContentCheckCreated } from '@/lib/services/changelog-service';
 import { awardPoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
@@ -112,17 +111,8 @@ export async function POST(request: NextRequest) {
         const gameComplexity = gameResult.rows[0].complexity || 1;
         const staffName = staffResult.rows[0].staff_name;
 
-        // Log to changelog
-        await logContentCheckCreated(
-          contentCheck.id,
-          gameName,
-          staffName,
-          inspector,
-          Array.isArray(status) ? status[0] : status,
-          notes
-        );
-
         // Award points for content check (1000 × complexity)
+        // This also logs to changelog with proper category
         const pointsResult = await awardPoints({
           staffId: inspector,
           actionType: 'content_check',

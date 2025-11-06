@@ -181,26 +181,98 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Get knowledge details before deleting for changelog
+    // Get knowledge details before deleting for changelog and point refund
     let gameName = 'Unknown Game';
     let staffName = 'Unknown Staff';
     let staffId = '';
-    try {
-      const knowledgeDetails = await db.pool.query(`
-        SELECT g.name as game_name, sl.staff_name, sk.staff_member_id
-        FROM staff_knowledge sk
-        LEFT JOIN games g ON sk.game_id = g.id
-        LEFT JOIN staff_list sl ON sk.staff_member_id = sl.id
-        WHERE sk.id = $1
-      `, [recordId]);
+    let gameId = '';
 
-      if (knowledgeDetails.rows.length > 0) {
-        gameName = knowledgeDetails.rows[0].game_name || gameName;
-        staffName = knowledgeDetails.rows[0].staff_name || staffName;
-        staffId = knowledgeDetails.rows[0].staff_member_id || staffId;
-      }
+    const knowledgeDetails = await db.pool.query(`
+      SELECT
+        g.name as game_name,
+        g.id as game_id,
+        sl.staff_name,
+        sk.staff_member_id,
+        sk.confidence_level,
+        g.complexity
+      FROM staff_knowledge sk
+      LEFT JOIN games g ON sk.game_id = g.id
+      LEFT JOIN staff_list sl ON sk.staff_member_id = sl.id
+      WHERE sk.id = $1
+    `, [recordId]);
+
+    if (knowledgeDetails.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Knowledge entry not found' },
+        { status: 404 }
+      );
+    }
+
+    const knowledge = knowledgeDetails.rows[0];
+    gameName = knowledge.game_name || gameName;
+    staffName = knowledge.staff_name || staffName;
+    staffId = knowledge.staff_member_id || staffId;
+    gameId = knowledge.game_id || '';
+
+    // Calculate points to refund by checking changelog for all awards related to this staff+game
+    let pointsToRefund = 0;
+    try {
+      const pointsResult = await db.pool.query(`
+        SELECT COALESCE(SUM(points_awarded), 0) as total_points
+        FROM changelog
+        WHERE staff_id = $1
+          AND entity_id = $2
+          AND point_category IN ('knowledge_add', 'knowledge_upgrade')
+      `, [staffId, gameId]);
+
+      pointsToRefund = -(parseInt(pointsResult.rows[0].total_points) || 0);
     } catch (error) {
-      console.error('Failed to get knowledge details for changelog:', error);
+      console.error('Failed to calculate points to refund:', error);
+    }
+
+    // Log deletion to changelog with negative points
+    if (pointsToRefund !== 0) {
+      try {
+        const maxIdResult = await db.pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
+        const changelogId = maxIdResult.rows[0].next_id;
+
+        await db.pool.query(`
+          INSERT INTO changelog (
+            id,
+            event_type,
+            category,
+            staff_id,
+            entity_id,
+            entity_name,
+            points_awarded,
+            point_category,
+            description,
+            created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        `, [
+          changelogId,
+          'deleted',
+          'staff_knowledge',
+          staffId,
+          gameId,
+          gameName,
+          pointsToRefund,
+          'knowledge_add', // Use knowledge_add as the base category
+          `Knowledge entry deleted for ${gameName}`
+        ]);
+
+        // Subtract points from staff member
+        await db.pool.query(`
+          UPDATE staff_list
+          SET points = points + $1,
+              updated_at = NOW()
+          WHERE id = $2
+        `, [pointsToRefund, staffId]);
+
+        console.log(`✅ Refunded ${pointsToRefund} points to ${staffName}`);
+      } catch (refundError) {
+        console.error('Failed to log deletion or refund points:', refundError);
+      }
     }
 
     // Delete record from PostgreSQL
@@ -209,17 +281,11 @@ export async function DELETE(request: Request) {
 
     console.log(`✅ Knowledge entry deleted successfully: ${recordId}`);
 
-    // Log to changelog
-    try {
-      await logKnowledgeDeleted(recordId, gameName, staffName, staffId);
-    } catch (changelogError) {
-      console.error('Failed to log knowledge deletion to changelog:', changelogError);
-    }
-
     return NextResponse.json(
       {
         success: true,
-        message: 'Knowledge entry deleted successfully',
+        message: 'Knowledge entry deleted successfully' + (pointsToRefund !== 0 ? ' and points refunded' : ''),
+        pointsRefunded: Math.abs(pointsToRefund),
       },
       { status: 200 }
     );

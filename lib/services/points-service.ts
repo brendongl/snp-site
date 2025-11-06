@@ -277,15 +277,48 @@ async function logPointAward(
   let category = 'points';
   let eventType = 'created';
 
-  if (params.actionType === 'task_complete') {
-    category = 'task';
-    eventType = 'updated'; // Task completion is an update action
-  } else if (params.actionType === 'issue_report') {
-    category = 'issue_report';
-    eventType = 'created'; // Reporting an issue is a creation action
-  } else if (params.actionType === 'issue_resolution') {
-    category = 'task';
-    eventType = 'updated'; // Resolving an issue updates the task
+  // Map action types to their proper categories
+  switch (params.actionType) {
+    case 'content_check':
+      category = 'content_check';
+      eventType = 'created';
+      break;
+    case 'knowledge_add':
+      category = 'staff_knowledge';
+      eventType = 'created';
+      break;
+    case 'knowledge_upgrade':
+      category = 'staff_knowledge';
+      eventType = 'updated';
+      break;
+    case 'play_log':
+      category = 'play_log';
+      eventType = 'created';
+      break;
+    case 'photo_upload':
+      category = 'photo';
+      eventType = 'created';
+      break;
+    case 'teaching':
+      category = 'teaching';
+      eventType = 'created';
+      break;
+    case 'issue_report':
+      category = 'issue_report';
+      eventType = 'created';
+      break;
+    case 'issue_resolution':
+      category = 'task';
+      eventType = 'updated';
+      break;
+    case 'task_complete':
+      category = 'task';
+      eventType = 'updated';
+      break;
+    default:
+      // Fallback for unknown action types
+      category = 'points';
+      eventType = 'created';
   }
 
   await pool.query(`
