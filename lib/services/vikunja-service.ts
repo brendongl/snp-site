@@ -141,13 +141,14 @@ export function enhanceTask(task: VikunjaTask): TaskWithPoints {
 
 /**
  * Fetch all tasks from a project
+ * v1.5.23: Added per_page=500 and sort_by=id&order_by=desc to fetch all tasks including newest ones
  */
 export async function getProjectTasks(projectId: number): Promise<TaskWithPoints[]> {
   if (!VIKUNJA_TOKEN) {
     throw new Error('VIKUNJA_API_TOKEN not configured');
   }
 
-  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks`, {
+  const response = await fetch(`${VIKUNJA_URL}/projects/${projectId}/tasks?per_page=500&sort_by=id&order_by=desc`, {
     headers: {
       'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
       'Content-Type': 'application/json'
@@ -167,6 +168,7 @@ export async function getProjectTasks(projectId: number): Promise<TaskWithPoints
 /**
  * Get priority tasks for staff dashboard
  * v1.5.22: Show ALL actionable tasks from Board Game Issues, not just due soon
+ * v1.5.23: Fixed pagination - now fetches all tasks with per_page=500
  */
 export async function getPriorityTasks(): Promise<TaskWithPoints[]> {
   try {
