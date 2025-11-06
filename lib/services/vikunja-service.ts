@@ -453,25 +453,27 @@ This is a non-actionable observation. No points awarded upon completion.
     project_id: task.project_id
   });
 
-  // v1.5.21: Add labels via separate API call (PUT /tasks/{id}/labels/bulk)
+  // v1.5.21: Add labels via separate API calls (PUT /tasks/{id}/labels)
+  // Vikunja API requires one call per label, format: {"label_id": N}
+  // Source: https://community.vikunja.io/t/adding-labels-using-the-api/2062
   try {
-    const labelsResponse = await fetch(`${VIKUNJA_URL}/tasks/${task.id}/labels/bulk`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        labels: labelIds.map(id => ({ label_id: id }))
-      })
-    });
+    for (const labelId of labelIds) {
+      const labelsResponse = await fetch(`${VIKUNJA_URL}/tasks/${task.id}/labels`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ label_id: labelId })
+      });
 
-    if (!labelsResponse.ok) {
-      const errorText = await labelsResponse.text();
-      console.error(`⚠️  Failed to add labels to task ${task.id}: ${labelsResponse.status} - ${errorText}`);
-    } else {
-      const updatedLabels = await labelsResponse.json();
-      console.log(`✅ Labels added successfully:`, updatedLabels);
+      if (!labelsResponse.ok) {
+        const errorText = await labelsResponse.text();
+        console.error(`⚠️  Failed to add label ${labelId} to task ${task.id}: ${labelsResponse.status} - ${errorText}`);
+      } else {
+        const result = await labelsResponse.json();
+        console.log(`✅ Label ${labelId} added successfully to task ${task.id}`);
+      }
     }
   } catch (labelError) {
     console.error(`⚠️  Error adding labels to task:`, labelError);
