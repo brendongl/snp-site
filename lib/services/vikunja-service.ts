@@ -416,17 +416,18 @@ This is a non-actionable observation. No points awarded upon completion.
     assignees: [{ id: params.reportedByVikunjaUserId }]
   };
 
-  // Add labels: always add issue type label, optionally add points label for actionable tasks
-  // Vikunja API expects an array of label IDs (numbers), not objects
-  const labels = [issueTypeLabelId];
+  // v1.5.21: Build label array - Vikunja API needs array of label objects with id field
+  // We'll add labels after task creation using a separate API call
+  // For now, don't include labels in task creation body
+
+  const labelIds = [issueTypeLabelId];
   if (issueType === 'task' && pointLabelId) {
-    labels.push(pointLabelId);
+    labelIds.push(pointLabelId);
   } else if (issueType === 'task' && points > 0 && !pointLabelId) {
     console.warn(`⚠️  No label found for ${points} points. Task will use description fallback.`);
   }
-  taskBody.labels = labels;
 
-  console.log(`🏷️  Final label IDs being sent to Vikunja:`, labels);
+  console.log(`🏷️  Label IDs to apply after task creation:`, labelIds);
   console.log(`📝 Task body:`, JSON.stringify(taskBody, null, 2));
 
   // Create task using PUT method
@@ -449,9 +450,33 @@ This is a non-actionable observation. No points awarded upon completion.
   console.log(`✅ Vikunja task created successfully:`, {
     id: task.id,
     title: task.title,
-    labels: task.labels,
     project_id: task.project_id
   });
+
+  // v1.5.21: Add labels via separate API call (PUT /tasks/{id}/labels/bulk)
+  try {
+    const labelsResponse = await fetch(`${VIKUNJA_URL}/tasks/${task.id}/labels/bulk`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        labels: labelIds.map(id => ({ label_id: id }))
+      })
+    });
+
+    if (!labelsResponse.ok) {
+      const errorText = await labelsResponse.text();
+      console.error(`⚠️  Failed to add labels to task ${task.id}: ${labelsResponse.status} - ${errorText}`);
+    } else {
+      const updatedLabels = await labelsResponse.json();
+      console.log(`✅ Labels added successfully:`, updatedLabels);
+    }
+  } catch (labelError) {
+    console.error(`⚠️  Error adding labels to task:`, labelError);
+    // Don't fail the whole operation if labels fail - task was still created
+  }
 
   return task.id;
 }
