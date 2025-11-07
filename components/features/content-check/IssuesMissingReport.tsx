@@ -213,7 +213,7 @@ export default function IssuesMissingReport() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.location.href = `/games?staff=true&openGame=${issue.game_id}`}
+                        onClick={() => window.location.href = `/games?openGame=${issue.game_id}`}
                       >
                         View Game
                       </Button>

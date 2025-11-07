@@ -231,7 +231,8 @@ export default function BGIssuesAndChecks() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => router.push(`/games?staff=true&openGame=${issue.gameId}`)}
+                        onClick={() => router.push(`/games?openGame=${issue.gameId}`)}
+                        disabled={!issue.gameId}
                       >
                         View Game
                       </Button>

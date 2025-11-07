@@ -116,8 +116,25 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // No game ID in new format (removed to simplify)
-      const gameId = null;
+      // v1.6.1: Look up game ID from database by game name
+      let gameId = null;
+      try {
+        const client = await pool.connect();
+        try {
+          const result = await client.query(
+            `SELECT id FROM games WHERE LOWER(game_name) = LOWER($1) LIMIT 1`,
+            [gameName]
+          );
+          if (result.rows.length > 0) {
+            gameId = result.rows[0].id;
+          }
+        } finally {
+          client.release();
+        }
+      } catch (dbError) {
+        console.error(`Failed to look up game ID for "${gameName}":`, dbError);
+        // Continue with null gameId - View Game button will be disabled
+      }
 
       // Calculate days ago
       const createdDate = new Date(task.created);
