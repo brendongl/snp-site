@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,12 +25,14 @@ interface NonActionableIssue {
 /**
  * BG Issues & Checks Component
  * v1.5.15: Displays observation notes directly from Vikunja (labeled as 'note')
+ * v1.6.1: Fixed View Game button to properly open game dialog
  *
  * These notes are tracked for awareness but don't require immediate staff action.
  * Staff can resolve them once addressed. Fetches directly from Vikunja to show
  * all note tasks, including those created manually or via issue reporting.
  */
 export default function BGIssuesAndChecks() {
+  const router = useRouter();
   const { addToast } = useToast();
   const [issues, setIssues] = useState<NonActionableIssue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<NonActionableIssue[]>([]);
@@ -228,7 +231,7 @@ export default function BGIssuesAndChecks() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.location.href = `/games?staff=true&openGame=${issue.gameId}`}
+                        onClick={() => router.push(`/games?staff=true&openGame=${issue.gameId}`)}
                       >
                         View Game
                       </Button>

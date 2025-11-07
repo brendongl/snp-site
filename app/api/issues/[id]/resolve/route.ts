@@ -5,12 +5,20 @@
  * - Marks issue as resolved in database
  * - Completes associated Vikunja task (if actionable)
  * - Awards resolution points based on category and game complexity
+ * v1.6.1: Now adds completion comment to Vikunja tasks
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Pool } from 'pg';
 import { getIssueById, resolveIssue } from '@/lib/services/issues-db-service';
 import { completeTask } from '@/lib/services/vikunja-service';
 import { awardPoints } from '@/lib/services/points-service';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+});
 
 interface ResolveIssueRequest {
   resolvedById: string;
@@ -50,9 +58,27 @@ export async function POST(
     }
 
     // Mark Vikunja task as complete (if actionable issue with task)
+    // v1.6.1: Now includes staff name for completion comment
     if (issue.vikunja_task_id) {
       try {
-        await completeTask(issue.vikunja_task_id);
+        // Get staff name for completion comment
+        const client = await pool.connect();
+        let staffName: string | undefined;
+
+        try {
+          const result = await client.query(
+            `SELECT staff_name as name FROM staff_list WHERE id = $1`,
+            [body.resolvedById]
+          );
+
+          if (result.rows.length > 0) {
+            staffName = result.rows[0].name;
+          }
+        } finally {
+          client.release();
+        }
+
+        await completeTask(issue.vikunja_task_id, staffName);
         console.log(`✅ Completed Vikunja task ${issue.vikunja_task_id}`);
       } catch (vikunjaError) {
         console.error('❌ Failed to complete Vikunja task:', vikunjaError);

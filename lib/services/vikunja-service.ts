@@ -252,8 +252,9 @@ export async function getTask(taskId: number): Promise<TaskWithPoints | null> {
 
 /**
  * Mark task as complete
+ * v1.6.1: Now accepts optional staffName to add completion comment
  */
-export async function completeTask(taskId: number): Promise<TaskWithPoints> {
+export async function completeTask(taskId: number, staffName?: string): Promise<TaskWithPoints> {
   if (!VIKUNJA_TOKEN) {
     throw new Error('VIKUNJA_API_TOKEN not configured');
   }
@@ -275,6 +276,26 @@ export async function completeTask(taskId: number): Promise<TaskWithPoints> {
   }
 
   const task: VikunjaTask = await response.json();
+
+  // Add completion comment if staff name provided
+  if (staffName) {
+    try {
+      const timestamp = new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      const comment = `Done by ${staffName} on ${timestamp}`;
+      await createTaskComment(taskId, comment);
+    } catch (commentError) {
+      // Log error but don't fail the whole operation
+      console.error('Failed to add completion comment:', commentError);
+    }
+  }
+
   return enhanceTask(task);
 }
 
@@ -561,4 +582,33 @@ export async function getBoardGameIssueTasks(): Promise<TaskWithPoints[]> {
     // Exclude all observation notes - include everything else (actionable tasks)
     return !hasNoteLabel;
   });
+}
+
+/**
+ * Create a comment on a Vikunja task
+ * v1.6.1: Add completion comments when tasks are marked as done from website UI
+ */
+export async function createTaskComment(taskId: number, comment: string): Promise<void> {
+  if (!VIKUNJA_TOKEN) {
+    throw new Error('VIKUNJA_API_TOKEN not configured');
+  }
+
+  const response = await fetch(`${VIKUNJA_URL}/tasks/${taskId}/comments`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${VIKUNJA_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      comment: comment
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error(`Failed to create comment on task ${taskId}:`, error);
+    throw new Error(`Failed to create comment: ${response.status} - ${error}`);
+  }
+
+  console.log(`✅ Comment added to task ${taskId}`);
 }

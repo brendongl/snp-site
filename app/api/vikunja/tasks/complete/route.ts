@@ -2,11 +2,13 @@
  * POST /api/vikunja/tasks/complete
  *
  * Complete a Vikunja task and award points to staff member
+ * v1.6.1: Now adds completion comment to task
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { awardPoints } from '@/lib/services/points-service';
+import { createTaskComment } from '@/lib/services/vikunja-service';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +39,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Mark task as complete in Vikunja
+    // Step 1: Get staff info first (needed for completion comment)
+    const client = await pool.connect();
+    let staffName: string;
+
+    try {
+      const result = await client.query(
+        `SELECT staff_name as name FROM staff_list WHERE id = $1`,
+        [staffId]
+      );
+
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Staff member not found' },
+          { status: 404 }
+        );
+      }
+
+      staffName = result.rows[0].name;
+    } finally {
+      client.release();
+    }
+
+    // Step 2: Mark task as complete in Vikunja
     const vikunjaResponse = await fetch(`${VIKUNJA_URL}/tasks/${taskId}`, {
       method: 'POST',
       headers: {
@@ -60,7 +84,25 @@ export async function POST(request: NextRequest) {
 
     const completedTask = await vikunjaResponse.json();
 
-    // Step 2: Award points using centralized service (creates changelog entry)
+    // Step 3: Add completion comment to task
+    // v1.6.1: Add comment recording who completed the task and when
+    try {
+      const timestamp = new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      const comment = `Done by ${staffName} on ${timestamp}`;
+      await createTaskComment(taskId, comment);
+    } catch (commentError) {
+      // Log error but don't fail the whole operation
+      console.error('Failed to add completion comment:', commentError);
+    }
+
+    // Step 4: Award points using centralized service (creates changelog entry)
     await awardPoints({
       staffId: staffId,
       actionType: 'task_complete',
@@ -72,10 +114,10 @@ export async function POST(request: NextRequest) {
       context: `Completed task: ${completedTask.title}`
     });
 
-    // Step 3: Get updated staff info
-    const client = await pool.connect();
+    // Step 5: Get updated staff info
+    const client2 = await pool.connect();
     try {
-      const result = await client.query(
+      const result = await client2.query(
         `SELECT
           id,
           staff_name as name,
@@ -99,7 +141,7 @@ export async function POST(request: NextRequest) {
       });
 
     } finally {
-      client.release();
+      client2.release();
     }
 
   } catch (error) {
