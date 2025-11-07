@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
         year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: 'Asia/Ho_Chi_Minh'
       });
       const comment = `Done by ${staffName} on ${timestamp}`;
       await createTaskComment(taskId, comment);
