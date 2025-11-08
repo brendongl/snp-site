@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
 import { logPlayLogCreated, logPlayLogDeleted } from '@/lib/services/changelog-service';
-import { awardPoints } from '@/lib/services/points-service';
+import { awardPoints, calculatePoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -170,8 +170,13 @@ export async function DELETE(request: Request) {
     const staffId = log.staff_id || '';
     const gameId = log.game_id || '';
 
-    // Play logs award 100 points flat (no complexity multiplier)
-    const pointsToRefund = -100;
+    // v1.6.7: Calculate points to refund dynamically (same as award logic)
+    const pointsAwarded = await calculatePoints({
+      staffId,
+      actionType: 'play_log',
+      metadata: { gameId, gameName }
+    });
+    const pointsToRefund = -pointsAwarded;
 
     // Log deletion to changelog with negative points
     try {
