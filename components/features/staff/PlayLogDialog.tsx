@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,25 @@ export function PlayLogDialog({
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playLogPoints, setPlayLogPoints] = useState<number>(100); // Default fallback
+
+  // Fetch dynamic point values on mount
+  useEffect(() => {
+    const fetchPointValues = async () => {
+      try {
+        const response = await fetch('/api/points-display');
+        const data = await response.json();
+        if (data.success && data.points?.play_log) {
+          setPlayLogPoints(data.points.play_log);
+        }
+      } catch (error) {
+        console.error('Failed to fetch point values:', error);
+        // Keep fallback value
+      }
+    };
+
+    fetchPointValues();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,7 +207,7 @@ export function PlayLogDialog({
                   📊 Log Game
                   <span className="flex items-center gap-0.5 text-yellow-300">
                     <Star className="h-3.5 w-3.5 fill-yellow-400" />
-                    <span className="text-xs font-semibold">+100</span>
+                    <span className="text-xs font-semibold">+{playLogPoints}</span>
                   </span>
                 </span>
               )}

@@ -121,10 +121,25 @@ export async function GET(request: NextRequest) {
       totalChanges: parseInt(row.total_changes || '0'),
     }));
 
+    // v1.6.8: Calculate total points earned in the filtered period
+    const pointsEarnedQuery = `
+      SELECT COALESCE(SUM(points_awarded), 0) as total_points_earned
+      FROM changelog
+      WHERE created_at >= $1 AND created_at < $2
+        AND points_awarded > 0
+    `;
+
+    const pointsEarnedResult = await pool.query(pointsEarnedQuery, [
+      startDate,
+      endDatePlusOne.toISOString()
+    ]);
+
+    const pointsEarned = parseInt(pointsEarnedResult.rows[0].total_points_earned || '0');
+
     // Get overall stats
     const stats = {
       totalChanges: changesByDay.reduce((sum, day) => sum + day.created + day.updated + day.deleted + day.photo_added, 0),
-      gameUpdates: changesByCategory.board_game,
+      pointsEarned, // v1.6.8: Replace gameUpdates with pointsEarned
       playLogsAdded: changesByCategory.play_log,
       knowledgeUpdates: changesByCategory.staff_knowledge,
       contentChecks: changesByCategory.content_check,
@@ -225,7 +240,7 @@ export async function GET(request: NextRequest) {
 
       const prevStatsQuery = `
         SELECT
-          COUNT(*) FILTER (WHERE category = 'board_game') as game_updates,
+          COALESCE(SUM(points_awarded), 0) as points_earned,
           COUNT(*) FILTER (WHERE category = 'play_log') as play_logs_added,
           COUNT(*) FILTER (WHERE category = 'staff_knowledge') as knowledge_updates,
           COUNT(*) FILTER (WHERE category = 'content_check') as content_checks,
@@ -241,7 +256,7 @@ export async function GET(request: NextRequest) {
 
       previousStats = {
         totalChanges: parseInt(prevStatsResult.rows[0].total_changes || '0'),
-        gameUpdates: parseInt(prevStatsResult.rows[0].game_updates || '0'),
+        pointsEarned: parseInt(prevStatsResult.rows[0].points_earned || '0'),
         playLogsAdded: parseInt(prevStatsResult.rows[0].play_logs_added || '0'),
         knowledgeUpdates: parseInt(prevStatsResult.rows[0].knowledge_updates || '0'),
         contentChecks: parseInt(prevStatsResult.rows[0].content_checks || '0')
@@ -284,24 +299,18 @@ export async function GET(request: NextRequest) {
       endDatePlusOne.toISOString()
     ]);
 
-    // Query 2: Total points by staff
+    // v1.6.8: Total points by staff - current snapshot from staff_list.points
     const totalPointsByStaffQuery = `
       SELECT
         sl.nickname,
         sl.staff_name,
-        SUM(COALESCE(c.points_awarded, 0)) as total_points
-      FROM changelog c
-      LEFT JOIN staff_list sl ON c.staff_id = sl.id
-      WHERE c.created_at >= $1 AND c.created_at < $2
-        AND c.staff_id IS NOT NULL
-      GROUP BY sl.id, sl.nickname, sl.staff_name
+        COALESCE(sl.points, 0) as total_points
+      FROM staff_list sl
+      WHERE sl.points > 0
       ORDER BY total_points DESC
     `;
 
-    const totalPointsByStaffResult = await pool.query(totalPointsByStaffQuery, [
-      startDate,
-      endDatePlusOne.toISOString()
-    ]);
+    const totalPointsByStaffResult = await pool.query(totalPointsByStaffQuery);
 
     // Query 3: Points by category
     const pointsByCategoryQuery = `

@@ -319,7 +319,7 @@ export interface ChangelogFilters {
 
 export interface ChangelogStats {
   totalChanges: number;
-  gameUpdates: number;
+  pointsEarned?: number; // v1.6.8: Replace gameUpdates with pointsEarned
   playLogsAdded: number;
   knowledgeUpdates: number;
   contentChecks: number;

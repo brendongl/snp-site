@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3, Info } from 'lucide-react';
+import { ArrowLeft, Activity, Filter, TrendingUp, TrendingDown, Users, Package, CheckCircle, AlertCircle, GraduationCap, BarChart3, Info, Star } from 'lucide-react';
 import { useAdminMode } from '@/lib/hooks/useAdminMode';
 import { StaffMenu } from '@/components/features/staff/StaffMenu';
 import type { ChangelogEntry, ChangelogFilters, ChangelogStats, ChangelogChartData, AnalyticsInsights } from '@/types';
@@ -545,11 +545,11 @@ export default function ChangelogPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Game Updates</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.gameUpdates}</p>
-                  {previousStats && renderStatChange(stats.gameUpdates, previousStats.gameUpdates)}
+                  <p className="text-sm font-medium text-gray-600">Points Earned</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pointsEarned || 0}</p>
+                  {previousStats && renderStatChange(stats.pointsEarned || 0, previousStats.pointsEarned || 0)}
                 </div>
-                <Package className="w-8 h-8 text-indigo-600" />
+                <Star className="w-8 h-8 text-yellow-500 fill-yellow-400" />
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
