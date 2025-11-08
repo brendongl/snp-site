@@ -93,7 +93,7 @@ export async function POST(request: Request) {
         const gameName = gameResult.rows[0].name;
         const staffName = staffResult.rows[0].staff_name;
 
-        // v1.5.22: Award points for play log with game name
+        // v1.6.6: Award points for play log (this also creates changelog entry)
         await awardPoints({
           staffId: staffListId,
           actionType: 'play_log',
@@ -104,13 +104,7 @@ export async function POST(request: Request) {
           context: `Play log for ${gameName}`
         });
 
-        await logPlayLogCreated(
-          playLog.id,
-          gameName,
-          staffName,
-          staffListId,
-          durationHours
-        );
+        // Note: Removed logPlayLogCreated() call - awardPoints() already creates changelog entry
       }
     } catch (changelogError) {
       console.error('Failed to log play log creation to changelog or award points:', changelogError);
