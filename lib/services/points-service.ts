@@ -158,10 +158,9 @@ export async function calculatePoints(params: PointAwardParams): Promise<number>
     }
 
     case 'teaching': {
-      const students = metadata?.studentCount || 1;
       const cfg = config['teaching'];
       const basePoints = cfg ? cfg.base_points : 1000;
-      return basePoints * complexity * students;
+      return basePoints * complexity;
     }
 
     case 'photo_upload': {
