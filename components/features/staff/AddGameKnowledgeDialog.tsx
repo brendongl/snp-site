@@ -41,7 +41,7 @@ export function AddGameKnowledgeDialog({
   const router = useRouter();
   const isEditMode = !!existingKnowledgeId; // v1.2.0: Determine if in edit mode
   const [confidenceLevel, setConfidenceLevel] = useState<string>('');
-  const [taughtBy, setTaughtBy] = useState('Myself'); // Default to "Myself"
+  const [taughtBy, setTaughtBy] = useState(''); // Default to "" (Myself)
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false); // v1.2.0: Delete state
@@ -214,7 +214,7 @@ export function AddGameKnowledgeDialog({
                   staffName,
                   staffId,
                   confidenceLevel,
-                  taughtBy: taughtBy || null,
+                  taughtBy: taughtBy.trim() || null, // Convert empty string to null
                   notes: notes.trim() || null,
                 }
           ),
@@ -240,7 +240,7 @@ export function AddGameKnowledgeDialog({
 
       // Reset form and close
       setConfidenceLevel('');
-      setTaughtBy('Myself');
+      setTaughtBy(''); // Reset to "" (Myself)
       setNotes('');
       onClose();
 
@@ -309,9 +309,9 @@ export function AddGameKnowledgeDialog({
                   disabled={isLoading || loadingStaff}
                   className="w-full px-3 py-2 rounded-lg text-sm border border-border bg-background text-foreground cursor-pointer hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="Myself">Myself</option>
+                  <option value="">Myself</option>
                   {staffMembers.map((staff) => (
-                    <option key={staff.id} value={staff.name}>
+                    <option key={staff.id} value={staff.id}>
                       {staff.name}
                     </option>
                   ))}
