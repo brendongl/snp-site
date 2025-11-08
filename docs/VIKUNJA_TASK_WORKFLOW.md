@@ -1,6 +1,6 @@
 # Vikunja Task Management Workflow
 
-**Last Updated**: January 30, 2025
+**Last Updated**: November 7, 2025 (v1.6.1)
 **Task Manager URL**: https://tasks.sipnplay.cafe
 
 ---
@@ -8,6 +8,11 @@
 ## Overview
 
 Sip N Play uses Vikunja for staff task management with a gamified points system. Tasks appear on the Staff Dashboard when they are due today or overdue.
+
+**New in v1.6.1:**
+- ✅ Automatic completion comments added to all tasks completed from website
+- ✅ Comments use Vietnam timezone (Asia/Ho_Chi_Minh, UTC+7)
+- ✅ Fixed View Game button for observation notes
 
 ### ⚠️ Known Issue: Add Task Button Not Working
 
@@ -201,6 +206,53 @@ Tasks from Vikunja integrate seamlessly with existing staff workflows.
 
 ---
 
+## Task Completion Comments (v1.6.1)
+
+### Automatic Comment Tracking
+
+When tasks are completed from the website (via Staff Dashboard or any web interface), an automatic comment is added to track who completed the task and when.
+
+**Comment Format:**
+```
+Done by [Staff Name] on [Date and Time]
+```
+
+**Example:**
+```
+Done by Brendon Gan-Le on Nov 7, 2025, 4:52 PM
+```
+
+### Where Comments Are Added
+
+Comments are automatically added when tasks are completed through:
+
+1. **Staff Dashboard** - "Complete" button on task cards
+2. **Observation Notes** - "Resolve Issue" button
+3. **Issue Resolution** - When resolving board game issues
+
+### Timezone
+
+All completion timestamps use **Asia/Ho_Chi_Minh timezone (UTC+7)** to match Vietnam local time.
+
+### Viewing Comments
+
+1. Open the task in Vikunja
+2. Scroll to the bottom to see the "Comments" section
+3. Completion comment will show who marked it done and when
+
+### Implementation Details
+
+**Endpoints that add comments:**
+- `/api/vikunja/tasks/complete` - Main task completion with points
+- `/api/vikunja/tasks/[id]/complete` - Observation notes (no points)
+- `/api/issues/[id]/resolve` - Issue resolution workflow
+
+**Service function:**
+- `createTaskComment()` in `lib/services/vikunja-service.ts`
+- Uses Vikunja API: `PUT /tasks/{id}/comments`
+
+---
+
 ## Technical Details
 
 ### API Integration
@@ -214,6 +266,14 @@ Tasks from Vikunja integrate seamlessly with existing staff workflows.
 - Numeric value after colon is extracted
 - Invalid formats return 0 points
 - Multiple point labels on same task: only first is used
+
+### Completion Comments API
+**v1.6.1 Feature:**
+- Endpoint: `PUT /tasks/{taskId}/comments`
+- Payload: `{ "comment": "Done by [name] on [timestamp]" }`
+- Timezone: `Asia/Ho_Chi_Minh` (UTC+7)
+- Error handling: Logs failure but doesn't block task completion
+- Requires: `VIKUNJA_API_TOKEN` environment variable
 
 ### Environment Variables
 ```bash
