@@ -136,8 +136,8 @@ export async function DELETE(
 
     // Log deletion to changelog with negative points
     try {
-      const maxIdResult = await db.pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
-      const changelogId = maxIdResult.rows[0].next_id;
+      const seqResult = await db.pool.query("SELECT nextval('changelog_id_seq') as next_id");
+      const changelogId = seqResult.rows[0].next_id;
 
       await db.pool.query(`
         INSERT INTO changelog (
