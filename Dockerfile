@@ -31,17 +31,7 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
     DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/dummy \
     DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 
-# Install system dependencies needed for Playwright
-RUN apt-get update && apt-get install -y \
-      libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
-      libcups2 libdrm2 libdbus-1-3 libatspi2.0-0 \
-      libx11-6 libxcomposite1 libxdamage1 libxext6 \
-      libxfixes3 libxrandr2 libgbm1 libxcb1 \
-      libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Playwright browsers for iPOS scraping
-RUN npx playwright install chromium
+# No longer need Playwright - using direct iPOS API calls instead
 
 RUN npm run build
 
@@ -51,22 +41,13 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install gosu and Playwright dependencies for iPOS scraping
-RUN apt-get update && apt-get install -y gosu \
-      libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
-      libcups2 libdrm2 libdbus-1-3 libatspi2.0-0 \
-      libx11-6 libxcomposite1 libxdamage1 libxext6 \
-      libxfixes3 libxrandr2 libgbm1 libxcb1 \
-      libxkbcommon0 libpango-1.0-0 libcairo2 libasound2 && \
+# Install gosu for proper user switching
+RUN apt-get update && apt-get install -y gosu && \
     rm -rf /var/lib/apt/lists/*
-
-# Copy Playwright browsers from builder stage
-COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 COPY --from=builder /app/public ./public
 

@@ -1,23 +1,39 @@
 // app/api/pos/dashboard/route.ts
-// iPOS Dashboard API - Using Playwright HTML scraping due to CORS restrictions
+// iPOS Dashboard API - Using direct API calls to posapi.ipos.vn
 import { NextResponse } from 'next/server';
-import { fetchIPOSDashboardData, getIPOSCredentials } from '@/lib/services/ipos-playwright-service';
+import { getCurrentDashboardData } from '@/lib/services/ipos-api-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Revalidate every 60 seconds
 
+// Cache for 5 minutes to reduce API calls
+let cachedData: any = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function GET() {
   try {
-    console.log('[iPOS Playwright] Fetching dashboard data...');
+    console.log('[iPOS API] Fetching dashboard data...');
 
-    // Get credentials from environment
-    const credentials = getIPOSCredentials();
+    // Check if we have cached data that's still valid
+    const now = Date.now();
+    if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
+      console.log('[iPOS API] Returning cached data');
+      return NextResponse.json({
+        success: true,
+        data: cachedData,
+        timestamp: new Date().toISOString(),
+        cached: true
+      });
+    }
 
-    if (!credentials) {
-      console.error('[iPOS Playwright] No credentials configured');
+    // Check if access token is configured
+    if (!process.env.IPOS_ACCESS_TOKEN) {
+      console.error('[iPOS API] No access token configured');
+      console.log('[iPOS API] Please run: node scripts/get-ipos-access-token.js');
       return NextResponse.json({
         success: false,
-        error: 'iPOS credentials not configured',
+        error: 'iPOS access token not configured. Run: node scripts/get-ipos-access-token.js',
         data: {
           unpaidAmount: 0,
           paidAmount: 0,
@@ -28,12 +44,12 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    // Fetch data using Playwright HTML scraping
-    const dashboardData = await fetchIPOSDashboardData(credentials);
+    // Fetch data using direct API calls
+    const dashboardData = await getCurrentDashboardData();
 
-    // Check if we got valid data (at least one field should be > 0 or we have a lastUpdated)
+    // Check if we got valid data
     if (!dashboardData.lastUpdated) {
-      console.error('[iPOS Playwright] Invalid response - no lastUpdated field');
+      console.error('[iPOS API] Invalid response - no lastUpdated field');
       return NextResponse.json({
         success: false,
         error: 'Invalid response from iPOS API',
@@ -47,16 +63,33 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    console.log('[iPOS Playwright] Successfully fetched dashboard data:', dashboardData);
+    // Cache the successful result
+    cachedData = dashboardData;
+    cacheTimestamp = now;
+
+    console.log('[iPOS API] Successfully fetched dashboard data:', dashboardData);
 
     return NextResponse.json({
       success: true,
       data: dashboardData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      cached: false
     });
 
   } catch (error) {
-    console.error('[iPOS Playwright] Error in /api/pos/dashboard:', error);
+    console.error('[iPOS API] Error in /api/pos/dashboard:', error);
+
+    // Return cached data if available, even if stale
+    if (cachedData) {
+      console.log('[iPOS API] Returning stale cached data due to error');
+      return NextResponse.json({
+        success: true,
+        data: cachedData,
+        timestamp: new Date().toISOString(),
+        cached: true,
+        stale: true
+      });
+    }
 
     return NextResponse.json({
       success: false,

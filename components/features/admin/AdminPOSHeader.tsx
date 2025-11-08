@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { formatVND } from '@/lib/services/ipos-service';
+import { formatVND } from '@/lib/services/ipos-api-service';
 
 interface POSDashboardData {
   unpaidAmount: number;

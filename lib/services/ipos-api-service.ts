@@ -1,9 +1,10 @@
 // lib/services/ipos-api-service.ts
 // iPOS API Service using the CORRECT API endpoint (posapi.ipos.vn)
-// Based on research from earlier attempts - this API DOES work!
+// IMPORTANT: Requires BOTH access_token (hex) AND authorization (JWT) headers
 
 const IPOS_BASE_URL = process.env.IPOS_API_BASE_URL || 'https://posapi.ipos.vn';
-const IPOS_ACCESS_TOKEN = process.env.IPOS_ACCESS_TOKEN; // Hex token, not JWT
+const IPOS_ACCESS_TOKEN = process.env.IPOS_ACCESS_TOKEN; // 32-char hex token
+const IPOS_AUTH_TOKEN = process.env.IPOS_AUTH_TOKEN; // JWT bearer token
 const IPOS_BRAND_UID = process.env.IPOS_BRAND_UID || '32774afe-fd5c-4028-b837-f91837c0307c';
 const IPOS_COMPANY_UID = process.env.IPOS_COMPANY_UID || '8a508e04-440f-4145-9429-22b7696c6193';
 const IPOS_STORE_UID = process.env.IPOS_STORE_UID || '72a800a6-1719-4b4b-9065-31ab2e0c07e5';
@@ -41,8 +42,10 @@ export interface POSDashboardData {
  * - Total revenue yesterday: data.revenue_net (with yesterday's date range)
  */
 async function getSaleSummaryOverview(startDate: number, endDate: number): Promise<IPOSApiResponse | null> {
-  if (!IPOS_ACCESS_TOKEN) {
-    console.warn('[iPOS API] Access token not configured in environment');
+  if (!IPOS_ACCESS_TOKEN || !IPOS_AUTH_TOKEN) {
+    console.warn('[iPOS API] Both access_token and auth_token are required');
+    console.warn('[iPOS API] Access token:', IPOS_ACCESS_TOKEN ? 'configured' : 'missing');
+    console.warn('[iPOS API] Auth token:', IPOS_AUTH_TOKEN ? 'configured' : 'missing');
     return null;
   }
 
@@ -60,11 +63,13 @@ async function getSaleSummaryOverview(startDate: number, endDate: number): Promi
     const response = await fetch(url.toString(), {
       headers: {
         'access_token': IPOS_ACCESS_TOKEN,
+        'authorization': IPOS_AUTH_TOKEN, // JWT bearer token
         'fabi_type': 'pos-cms',
         'x-client-timezone': CLIENT_TIMEZONE.toString(),
         'accept-language': 'vi',
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'referer': 'https://fabi.ipos.vn/'
       },
       next: { revalidate: 60 } // Cache for 1 minute
     });

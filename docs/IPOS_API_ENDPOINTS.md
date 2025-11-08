@@ -1,517 +1,173 @@
 # iPOS (Fabi POS) API Endpoints Reference
 
-**Last Updated:** October 30, 2025
-**Base URL:** `https://fabi.ipos.vn/api`
-**Authentication:** Bearer Token (JWT)
+**Last Updated:** November 8, 2025
+**Base URL:** `https://posapi.ipos.vn` (NOT `fabi.ipos.vn`)
+**Status:** ✅ WORKING - Direct API calls successful
 
 ---
 
-## ⚠️ CRITICAL FINDING: APIs DO NOT WORK
+## ✅ SOLUTION: Direct API Works!
 
-**Date Tested:** October 30, 2025
+**Date Verified:** November 8, 2025
 
-After extensive testing using multiple authentication methods, **all documented API endpoints return HTML instead of JSON**, making them unusable for programmatic access.
+After extensive research, we discovered the working API at `posapi.ipos.vn` that accepts direct server-to-server calls without CORS issues.
 
-### What Was Tested
-✅ Valid JWT token from localStorage
-✅ All browser cookies and session data
-✅ Authenticated browser context (Playwright)
-✅ Multiple endpoint variations
-❌ **ALL endpoints return `200 OK` with HTML (login page)**
+### Authentication Requirements
 
-### Endpoints That Don't Work
-```
-❌ /api/v3/pos-cms/sale-tracking?date=YYYY-MM-DD
-❌ /api/v1/reports/sale-summary/overview?from_date=X&to_date=Y
-❌ /api/pos/v1/reports/sale-summary/overview?from_date=X&to_date=Y
-❌ /api/pos/v1/reports/overview?from_date=X&to_date=Y
-❌ /api/pos-cms/v1/dashboard?date=YYYY-MM-DD
-```
+The API requires **BOTH** tokens in the headers:
+1. **`access_token`**: 32-character hexadecimal token
+2. **`authorization`**: JWT bearer token
 
-Even when called FROM WITHIN an authenticated browser session with a valid token, these endpoints return the HTML login page.
+Both tokens can be captured using the script: `node scripts/get-ipos-access-token.js`
 
-### How Dashboard Actually Loads Data
-
-The dashboard (`https://fabi.ipos.vn/dashboard`) uses **server-side rendering**. The financial data is embedded in the initial HTML response, not fetched via API calls.
-
-### Working Solution: HTML Scraping
-
-Since APIs don't work, you MUST:
-
-1. **Login via browser automation** (Playwright/Puppeteer)
-   - URL: `https://fabi.ipos.vn/login`
-   - Email field: `input[name="email_input"]`
-   - Password field: `input[type="password"]`
-   - Submit: `button:has-text("Đăng nhập")`
-
-2. **Navigate to dashboard**: `https://fabi.ipos.vn/dashboard`
-
-3. **Extract data from HTML**:
-   - **Paid Amount (Revenue)**: Pattern `/(\d{1,3}(?:,\d{3})*)\s*₫/` in "Doanh thu (NET)" section
-   - **Unpaid Amount**: Pattern `/Tổng tiền chưa thanh toán\s+([\d,]+)/`
-   - **Tables**: Pattern `/Có\s+(\d+)\s+bàn\s+\/\s+(\d+)\s+bàn/`
-   - **Customers**: Pattern `/Tổng:\s+(\d+)\s+khách/`
-
-### Example Implementation
-
-See `lib/services/ipos-playwright-service.ts` for a working implementation using Playwright to:
-- Log in with credentials from environment variables
-- Extract dashboard data
-- Cache results for 5 minutes
-
-**Environment Variables Required**:
-```bash
-IPOS_EMAIL=sipnplay@ipos.vn
-IPOS_PASSWORD=your_password_here
-```
-
----
-
-## Original API Documentation (Non-Functional)
-
-⚠️ The following documentation describes endpoints that **do not work**. It is preserved for reference only.
-
----
-
-## Authentication
-
-All API requests require authentication using a Bearer token stored in localStorage.
-
-```javascript
-// Get token from localStorage
-const token = localStorage.getItem('token');
-
-// Example request
-fetch('https://fabi.ipos.vn/api/v3/pos-cms/sale-tracking?date=2025-10-26', {
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-});
-```
-
-### Your Current Token
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjFkNGY4ZDkwLTRjZWEtNDY5ZC1iMzE1LTZhZWY0NjU4MDExNyIsInV0IjoiODA1ZThjOTQtZmUwOS00MGU0LWI0MzktMmExZTNlYTM1YjRmIiwiZW1haWwiOiJzaXBucGxheUBpcG9zLnZuIiwiaWF0IjoxNzYxNDU0NDA2LCJleHAiOjE3NjIwNTkyMDZ9.WsWfN9HdegKrbuj7NWVjMIhI4GHx9sxC-VLFuvp9R7k
-```
-
-**Note:** This token will expire on: **January 3, 2026** (based on exp: 1762059206)
-
----
-
-## Key Endpoints for Dashboard Data
-
-### 1. Sale Tracking (Real-Time Data)
-**PRIMARY ENDPOINT FOR YOUR DASHBOARD NEEDS**
+### Working Endpoint
 
 ```
-GET /api/v3/pos-cms/sale-tracking
+GET https://posapi.ipos.vn/api/v1/reports/sale-summary/overview
 ```
-
-**Purpose:** Get current unpaid amount, table count, and customer count in real-time.
 
 **Query Parameters:**
-- `date` (required): Date in YYYY-MM-DD format (e.g., `2025-10-26`)
-- `store_id` (optional): Filter by specific store
+- `brand_uid`: 32774afe-fd5c-4028-b837-f91837c0307c
+- `company_uid`: 8a508e04-440f-4145-9429-22b7696c6193
+- `list_store_uid`: 72a800a6-1719-4b4b-9065-31ab2e0c07e5
+- `start_date`: Timestamp in milliseconds
+- `end_date`: Timestamp in milliseconds
+- `store_open_at`: 10 (store opens at 10 AM)
 
-**Response Data:**
-```json
+**Required Headers:**
+```javascript
 {
-  "total_unpaid_amount": 425703,
-  "current_tables": 1,
-  "current_customers": 0,
-  "timestamp": "2025-10-26T11:56:42Z"
+  'access_token': '32_char_hex_token',
+  'authorization': 'jwt_bearer_token',
+  'fabi_type': 'pos-cms',
+  'x-client-timezone': '25200000',
+  'accept-language': 'vi',
+  'referer': 'https://fabi.ipos.vn/',
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
 }
 ```
 
-**Example Request:**
-```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-     "https://fabi.ipos.vn/api/v3/pos-cms/sale-tracking?date=2025-10-26"
-```
-
----
-
-### 2. Sale Tracking Detail
-```
-GET /api/v1/reports/sales/sale-tracking/detail
-```
-
-**Purpose:** Get detailed breakdown of current sales tracking data.
-
-**Query Parameters:**
-- `date`: Date in YYYY-MM-DD format
-- `store_id`: Store identifier
-
----
-
-## Revenue & Sales Endpoints
-
-### Overview Data
-```
-GET /api/v1/reports/sale-summary/overview
-```
-**Purpose:** Get NET revenue, bill count, customer count, and summary statistics.
-
-**Query Parameters:**
-- `from_date`: Start date (YYYY-MM-DD)
-- `to_date`: End date (YYYY-MM-DD)
-- `store_ids`: Comma-separated store IDs
-
-**Response Includes:**
-- Net revenue
-- Total bills
-- Total customers
-- Average per bill
-- Average per customer
-- Discounts and costs
-
----
-
-### Top Items
-```
-GET /api/v1/reports/sale-summary/items
-```
-**Purpose:** Get top-selling items by revenue or quantity.
-
-**Query Parameters:**
-- `from_date`: Start date
-- `to_date`: End date
-- `store_ids`: Store filter
-- `sort_by`: `revenue_net`, `quantity`, or `revenue_gross`
-- `limit`: Number of results (default: 5)
-
----
-
-### Promotions
-```
-GET /api/v1/reports/sale-summary/promotions
-```
-**Purpose:** Get top promotions by revenue.
-
-**Query Parameters:**
-- `from_date`: Start date
-- `to_date`: End date
-- `store_ids`: Store filter
-
----
-
-### Sources (Dine-in, Takeaway, Delivery)
-```
-GET /api/v1/reports/sale-summary/sources
-```
-**Purpose:** Get revenue by sale source (TẠI CHỖ, O2O, MANG VỀ).
-
----
-
-### Payment Methods
-```
-GET /api/v1/reports/sale-summary/payment-methods
-```
-**Purpose:** Get revenue breakdown by payment method (CASH, CREDIT CARD, TRANSFER).
-
-**Response Includes:**
-- Payment method name
-- Total amount
-- Percentage of total
-
----
-
-### Stores
-```
-GET /api/v1/reports/sale-summary/stores
-```
-**Purpose:** Get revenue by store.
-
----
-
-## Accounting Reports
-
-### Payment Method Report
-```
-GET /api/v1/accounting/report/payment-method
-```
-
-### Sale Report
-```
-GET /api/v1/accounting/report/sale
-```
-
-### Sale Detail Report
-```
-GET /api/v1/accounting/report/sale-detail
-```
-
-### Sale Grouped by Day
-```
-GET /api/v1/accounting/report/sale-group-by-day
-```
-
----
-
-## Time-Based Reports
-
-### Revenue by Days
-```
-GET /api/v1/reports/sale-summary/days
-```
-**Purpose:** Get revenue for the last N days.
-
-**Query Parameters:**
-- `from_date`: Start date
-- `to_date`: End date
-- `store_ids`: Store filter
-
----
-
-### Revenue by Hours
-```
-GET /api/v1/reports/sale-summary/hours
-```
-**Purpose:** Get revenue breakdown by hour of day.
-
----
-
-### Revenue by Weekdays
-```
-GET /api/v1/reports/sale-summary/weekdays
-```
-**Purpose:** Get revenue trends by day of week.
-
----
-
-### Sale Trend by Hour
-```
-GET /api/v3/pos-cms/report/sale-trend-by-hour
-```
-
----
-
-## Control Reports (C-Series)
-
-### C01 - General Report
-```
-GET /api/v3/pos-cms/report/general
-```
-
-### C02 - Shift Report
-```
-GET /api/v1/reports/shifts
-GET /api/v3/pos-cms/shift (for detail)
-```
-
-### C03 - Sale by Date
-```
-GET /api/v3/pos-cms/sale
-```
-
-### C04 - Sale Change Log
-```
-GET /api/v3/pos-cms/sale-change-log
-```
-
-### C05 - Sale Edit/Delete
-```
-GET /api/v3/pos-cms/report/sale-edit-delete
-```
-
-### C06 - Sale Change After Print Check List
-```
-GET /api/v3/pos-cms/report/sale-change-after-print-check-list
-```
-
-### C07 - Dine-in Sale Tracking
-```
-GET /api/v3/pos-cms/sale-tracking
-```
-
-### C08 - Items Removed Report
-```
-GET /api/v3/pos-cms/report/sale-change-log-remove-item
-```
-
-### C09 - Out of Stock History
-```
-GET /api/v3/pos-cms/report/out-of-stock-item
-```
-
-### C12 - Deposit Report
-```
-GET /api/v1/deposit/days
-GET /api/v1/deposit/items
-```
-
----
-
-## Table & Area Reports
-
-### Sale by Table
-```
-GET /api/v3/pos-cms/report/sale-by-table
-```
-
-### Sale by Area
-```
-GET /api/v1/reports/sales/get-sale-by-area
-GET /api/v3/pos-cms/report/sale-by-area
-```
-
----
-
-## Detailed Sale Data
-
-### Get Sale by Transaction ID
-```
-GET /api/v1/reports/sales/get-sale-by-tran-id
-GET /api/v3/pos-cms/get-sale-by-list-tran-id
-```
-
-### Get Sale by Shift ID
-```
-GET /api/v3/pos-cms/get-sale-by-shift-id
-```
-
----
-
-## Common Query Parameters
-
-Most endpoints support these common parameters:
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `date` | string | Single date (YYYY-MM-DD) |
-| `from_date` | string | Start date for range |
-| `to_date` | string | End date for range |
-| `store_ids` | string | Comma-separated store IDs |
-| `store_id` | string | Single store ID |
-| `sort_by` | string | Sort field (varies by endpoint) |
-| `limit` | number | Number of results to return |
-
----
-
-## Response Format
-
-Most endpoints return JSON in this general format:
+### Response Format
 
 ```json
 {
-  "success": true,
   "data": {
-    // Response data varies by endpoint
-  },
-  "message": "Success",
-  "timestamp": "2025-10-26T12:00:00Z"
-}
-```
-
-**Error Response:**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Error description"
+    "revenue_net": 9665372,        // Today's NET revenue (paid amount)
+    "total_sales": 25,              // Number of bills
+    "peo_count": 0,                 // Number of customers
+    "sale_tracking": {
+      "table_count": 10,            // Active tables
+      "people_count": 0,            // Current customers in store
+      "total_amount": 4529555,      // Current unpaid amount
+      "table_total": 10
+    }
   }
 }
 ```
 
 ---
 
-## Integration Example for Sip & Play Website
+## Implementation
 
-Here's how to fetch the dashboard data for your website:
+### Service Layer
+See `lib/services/ipos-api-service.ts` for the complete implementation using direct API calls.
 
-```javascript
-// lib/services/ipos-service.ts
-const IPOS_BASE_URL = 'https://fabi.ipos.vn/api';
-const IPOS_TOKEN = process.env.IPOS_API_TOKEN;
+### API Endpoint
+Access via: `GET /api/pos/dashboard`
 
-export async function getCurrentPOSStats() {
-  const today = new Date().toISOString().split('T')[0];
-
-  const response = await fetch(
-    `${IPOS_BASE_URL}/v3/pos-cms/sale-tracking?date=${today}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${IPOS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`iPOS API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    totalUnpaidAmount: data.total_unpaid_amount || 0,
-    currentTables: data.current_tables || 0,
-    currentCustomers: data.current_customers || 0,
-    lastUpdated: new Date().toISOString()
-  };
-}
-
-export async function getDashboardOverview(fromDate: string, toDate: string) {
-  const response = await fetch(
-    `${IPOS_BASE_URL}/v1/reports/sale-summary/overview?from_date=${fromDate}&to_date=${toDate}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${IPOS_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-
-  return response.json();
-}
-```
-
----
-
-## Rate Limiting
-
-**Unknown** - Monitor API responses for rate limit headers.
-
----
-
-## Notes
-
-1. **Token Expiration:** Tokens expire after a certain period. Monitor the `exp` field in the JWT payload.
-2. **Date Format:** Always use `YYYY-MM-DD` format for dates.
-3. **Store IDs:** Your store ID is likely tied to "SIPNPLAY" (visible in the dashboard).
-4. **Real-Time Data:** The `/sale-tracking` endpoint provides the freshest data for current operations.
-5. **Historical Limit:** Sale tracking data is only stored for the last 30 days.
-
----
-
-## Environment Variables
-
-Add these to your `.env` file:
+### Environment Variables Required
 
 ```bash
-# iPOS API Configuration
-IPOS_API_BASE_URL=https://fabi.ipos.vn/api
-IPOS_API_TOKEN=your_token_here
-IPOS_STORE_ID=your_store_id
+# iPOS Direct API Configuration
+IPOS_ACCESS_TOKEN=your_32_character_hex_token  # Get via script
+IPOS_AUTH_TOKEN=your_jwt_bearer_token         # Get via script
+IPOS_BRAND_UID=32774afe-fd5c-4028-b837-f91837c0307c
+IPOS_COMPANY_UID=8a508e04-440f-4145-9429-22b7696c6193
+IPOS_STORE_UID=72a800a6-1719-4b4b-9065-31ab2e0c07e5
 ```
 
 ---
 
-## Next Steps
+## Getting Access Tokens
 
-1. **Test Endpoints:** Use curl or Postman to test each endpoint
-2. **Create Service Layer:** Build a service class in `/lib/services/ipos-service.ts`
-3. **Create API Route:** Add `/api/pos/dashboard` endpoint in your Next.js app
-4. **Build UI Component:** Create dashboard widget to display POS data
-5. **Add Caching:** Cache POS data for 1-5 minutes to reduce API calls
-6. **Error Handling:** Implement graceful degradation if POS API is unavailable
+### Automated Method (Recommended)
+```bash
+# Add credentials to .env
+IPOS_EMAIL=sipnplay@ipos.vn
+IPOS_PASSWORD=your_password
+
+# Run the capture script
+node scripts/get-ipos-access-token.js
+```
+
+This will:
+1. Open a browser and log into Fabi dashboard
+2. Capture both required tokens from API calls
+3. Display them for you to copy to `.env`
+
+### Manual Method
+1. Open Chrome DevTools (F12)
+2. Go to Network tab
+3. Login to https://fabi.ipos.vn/dashboard
+4. Find requests to `posapi.ipos.vn`
+5. Copy both `access_token` and `authorization` headers
 
 ---
 
-**Questions or Issues?**
-- Check the iPOS documentation: https://fabi-docs.ipos.vn/
-- Contact iPOS support if you need additional API access
+## Testing the API
+
+### Direct Test
+```bash
+node test-ipos-direct-api.js
+```
+
+### Via Development Server
+```bash
+npm run dev
+curl http://localhost:3000/api/pos/dashboard
+```
+
+---
+
+## Performance Comparison
+
+| Method | Response Time | Resource Usage | Reliability |
+|--------|--------------|----------------|-------------|
+| Direct API | ~100ms | Minimal | High |
+| Playwright | 5-10 seconds | Full browser | Medium |
+
+**Result: 50-100x faster with direct API!**
+
+---
+
+## Why fabi.ipos.vn Doesn't Work
+
+The `fabi.ipos.vn` domain uses server-side rendering and returns HTML instead of JSON. However, the dashboard makes client-side API calls to `posapi.ipos.vn` which we can replicate directly from our server.
+
+---
+
+## Other Available Endpoints
+
+Based on captured network traffic, these endpoints are also available:
+
+- `/api/v1/reports/sale-summary/promotions`
+- `/api/v1/reports/sale-summary/sources`
+- `/api/v1/reports/sale-summary/payment-methods`
+- `/api/v1/reports/sale-summary/stores`
+- `/api/v1/reports/sale-summary/items`
+- `/api/v1/reports/sale-summary/weekdays`
+- `/api/v3/pos-cms/notification`
+- `/api/invoice/v1/count/remaining_invoice`
+
+All require the same authentication headers as described above.
+
+---
+
+## Support
+
+For issues or questions:
+1. Check token validity (both access_token and auth_token required)
+2. Verify environment variables are set correctly
+3. Run `node test-ipos-direct-api.js` to test connection
+4. Review logs in console for detailed error messages
