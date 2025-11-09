@@ -31,6 +31,9 @@ require('dotenv').config();
   client.on('Network.requestWillBeSent', (params) => {
     if (params.request.url.includes('posapi.ipos.vn')) {
       const url = new URL(params.request.url);
+      console.log(`\n📡 API Call: ${params.request.method} ${url.pathname}`);
+      console.log(`   Headers: access_token=${!!params.request.headers.access_token}, authorization=${!!params.request.headers.authorization}`);
+
       apiCalls.push({
         path: url.pathname,
         method: params.request.method,
@@ -70,10 +73,29 @@ require('dotenv').config();
   ]);
 
   console.log('Step 4: Waiting for dashboard to load...');
-  await page.waitForSelector('text=Doanh thu (NET)', { timeout: 15000 });
+  try {
+    await page.waitForSelector('text=Doanh thu (NET)', { timeout: 30000 });
+    console.log('  ✓ Dashboard loaded successfully');
+  } catch (e) {
+    console.log('  ⚠ Dashboard selector not found, waiting anyway...');
+    await page.waitForTimeout(10000);
+  }
 
   console.log('Step 5: Waiting for API calls to complete...');
-  await page.waitForTimeout(5000);
+  console.log('  Waiting 10 seconds for all API calls...');
+  await page.waitForTimeout(10000);
+
+  // Get the JWT token from localStorage
+  console.log('Step 6: Extracting JWT from localStorage...');
+  const jwtFromStorage = await page.evaluate(() => {
+    return window.localStorage.getItem('token');
+  });
+
+  if (jwtFromStorage && !capturedAuthToken) {
+    capturedAuthToken = `Bearer ${jwtFromStorage}`;
+    console.log('✅ JWT TOKEN EXTRACTED FROM LOCALSTORAGE!');
+    console.log('JWT Token:', capturedAuthToken.substring(0, 60) + '...');
+  }
 
   console.log('\n=== RESULTS ===\n');
 

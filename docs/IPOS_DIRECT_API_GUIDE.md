@@ -68,15 +68,24 @@ IPOS_STORE_UID=72a800a6-1719-4b4b-9065-31ab2e0c07e5
 
 ### Step 3: Test the API
 
-Test that everything works:
+Test that the tokens work with the direct API:
 
 ```bash
-# Test the direct API endpoint
+# Test the captured tokens with direct API call
+node scripts/test-ipos-api.js
+
+# Test the Next.js API endpoint (requires dev server running)
 curl http://localhost:3000/api/pos/test
 
 # Get dashboard data
 curl http://localhost:3000/api/pos/dashboard
 ```
+
+The `test-ipos-api.js` script will:
+- Verify both tokens are in environment
+- Make a direct API call to posapi.ipos.vn
+- Display response time and dashboard data
+- Show helpful error messages if tokens are expired
 
 ## API Endpoints
 
@@ -321,11 +330,13 @@ Given these constraints, the manual capture approach is the **recommended produc
 ### Investigation Scripts
 
 Created during investigation (for reference):
-- ✅ `scripts/get-ipos-access-token.js` - **Working solution** - captures tokens via Playwright
+- ✅ `scripts/get-ipos-access-token.js` - **Token capture script** - captures both tokens via Playwright
+- ✅ `scripts/test-ipos-api.js` - **API testing script** - verifies tokens work with direct API
 - ❌ `scripts/test-ipos-login-approaches.js` - Tests programmatic login methods (all failed)
 - ❌ `scripts/trace-ipos-auth-flow.js` - Comprehensive network trace (inconclusive)
 - ❌ `scripts/find-auth-token-source.js` - Token source investigation (no automation path found)
 - 📋 `scripts/inspect-login-page.js` - Page structure analysis (revealed correct selectors)
+- 📋 `scripts/capture-login-response.js` - Login response analysis (revealed localStorage storage)
 
 ## Troubleshooting
 
@@ -373,11 +384,14 @@ The following investigation scripts were created during research and can be kept
 ## Next Steps for Production
 
 1. ✅ Capture authorization token: Run `node scripts/get-ipos-access-token.js`
-2. ✅ Add token to Railway environment: Set `IPOS_AUTH_TOKEN` in Railway dashboard
-3. ✅ Deploy to staging: Test the /api/pos/dashboard endpoint
-4. ⏳ **Waiting for user confirmation to deploy to production**
-5. ⏳ Monitor production for token expiration
-6. ⏳ Re-run capture script if/when token expires
+2. ✅ Tokens successfully captured and tested (November 9, 2025)
+3. ✅ API tested and working: ~400ms response time, HTTP 200 OK
+4. ✅ Test script created: `scripts/test-ipos-api.js`
+5. ⏳ Add token to Railway environment: Set `IPOS_AUTH_TOKEN` in Railway dashboard
+6. ⏳ Deploy to staging: Test the /api/pos/dashboard endpoint
+7. ⏳ **Waiting for user confirmation to deploy to production**
+8. ⏳ Monitor production for token expiration
+9. ⏳ Re-run capture script if/when token expires
 
 ## Support
 
