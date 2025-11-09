@@ -49,6 +49,10 @@ USER root
 RUN apt-get update && apt-get install -y gosu && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Playwright browsers (Chromium) with system dependencies
+# This installs to /ms-playwright which is accessible by all users
+RUN npx playwright@1.48.0 install --with-deps chromium
+
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
