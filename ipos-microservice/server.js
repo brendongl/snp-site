@@ -153,8 +153,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[iPOS Microservice] Running on port ${PORT}`);
+  console.log(`[iPOS Microservice] Listening on 0.0.0.0:${PORT}`);
   console.log(`[iPOS Microservice] Email: ${IPOS_EMAIL}`);
   console.log(`[iPOS Microservice] Password: ${IPOS_PASSWORD ? '***configured***' : 'NOT SET'}`);
 });
