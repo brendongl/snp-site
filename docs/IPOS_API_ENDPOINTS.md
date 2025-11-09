@@ -89,15 +89,36 @@ IPOS_STORE_UID=72a800a6-1719-4b4b-9065-31ab2e0c07e5
 
 ---
 
-## Getting Access Tokens
+## Authentication Options
 
-### Automated Method (Recommended)
+### Option 1: Automatic Authentication (NEW - Recommended)
+The application now handles authentication automatically. Just set your credentials:
+
 ```bash
-# Add credentials to .env
+# Add to .env - tokens will be fetched automatically
 IPOS_EMAIL=sipnplay@ipos.vn
-IPOS_PASSWORD=your_password
+IPOS_PASSWORD=123123A
+```
 
-# Run the capture script
+The system will:
+- Automatically login when needed
+- Cache tokens for reuse (in `/tmp/ipos-tokens.json`)
+- Refresh tokens before they expire
+- Retry failed requests with fresh tokens
+
+### Option 2: Manual Token Configuration
+You can still manually provide tokens if preferred:
+
+```bash
+# Manual tokens in .env
+IPOS_ACCESS_TOKEN=c3f4a5b6d7e8f9a0b1c2d3e4f5a6b7c8
+IPOS_AUTH_TOKEN=eyJ0eXAiOiJKV1QiLCJhb...
+```
+
+### Option 3: Capture Tokens from Browser
+Use the capture script to get tokens from browser session:
+
+```bash
 node scripts/get-ipos-access-token.js
 ```
 
@@ -105,13 +126,6 @@ This will:
 1. Open a browser and log into Fabi dashboard
 2. Capture both required tokens from API calls
 3. Display them for you to copy to `.env`
-
-### Manual Method
-1. Open Chrome DevTools (F12)
-2. Go to Network tab
-3. Login to https://fabi.ipos.vn/dashboard
-4. Find requests to `posapi.ipos.vn`
-5. Copy both `access_token` and `authorization` headers
 
 ---
 

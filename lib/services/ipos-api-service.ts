@@ -1,10 +1,10 @@
 // lib/services/ipos-api-service.ts
 // iPOS API Service using the CORRECT API endpoint (posapi.ipos.vn)
-// IMPORTANT: Requires BOTH access_token (hex) AND authorization (JWT) headers
+// IMPORTANT: Automatically handles authentication and token refresh
+
+import { iposAuth } from './ipos-auth-service';
 
 const IPOS_BASE_URL = process.env.IPOS_API_BASE_URL || 'https://posapi.ipos.vn';
-const IPOS_ACCESS_TOKEN = process.env.IPOS_ACCESS_TOKEN; // 32-char hex token
-const IPOS_AUTH_TOKEN = process.env.IPOS_AUTH_TOKEN; // JWT bearer token
 const IPOS_BRAND_UID = process.env.IPOS_BRAND_UID || '32774afe-fd5c-4028-b837-f91837c0307c';
 const IPOS_COMPANY_UID = process.env.IPOS_COMPANY_UID || '8a508e04-440f-4145-9429-22b7696c6193';
 const IPOS_STORE_UID = process.env.IPOS_STORE_UID || '72a800a6-1719-4b4b-9065-31ab2e0c07e5';
@@ -42,10 +42,12 @@ export interface POSDashboardData {
  * - Total revenue yesterday: data.revenue_net (with yesterday's date range)
  */
 async function getSaleSummaryOverview(startDate: number, endDate: number): Promise<IPOSApiResponse | null> {
-  if (!IPOS_ACCESS_TOKEN || !IPOS_AUTH_TOKEN) {
-    console.warn('[iPOS API] Both access_token and auth_token are required');
-    console.warn('[iPOS API] Access token:', IPOS_ACCESS_TOKEN ? 'configured' : 'missing');
-    console.warn('[iPOS API] Auth token:', IPOS_AUTH_TOKEN ? 'configured' : 'missing');
+  // Get tokens from auth service (will auto-refresh if needed)
+  const tokens = await iposAuth.getTokens();
+
+  if (!tokens) {
+    console.warn('[iPOS API] Failed to obtain authentication tokens');
+    console.warn('[iPOS API] Please ensure IPOS_EMAIL and IPOS_PASSWORD are configured');
     return null;
   }
 
@@ -62,8 +64,8 @@ async function getSaleSummaryOverview(startDate: number, endDate: number): Promi
 
     const response = await fetch(url.toString(), {
       headers: {
-        'access_token': IPOS_ACCESS_TOKEN,
-        'authorization': IPOS_AUTH_TOKEN, // JWT bearer token
+        'access_token': tokens.accessToken,
+        'authorization': tokens.authToken,
         'fabi_type': 'pos-cms',
         'x-client-timezone': CLIENT_TIMEZONE.toString(),
         'accept-language': 'vi',
@@ -78,6 +80,35 @@ async function getSaleSummaryOverview(startDate: number, endDate: number): Promi
       console.error(`[iPOS API] HTTP ${response.status}: ${response.statusText}`);
       const text = await response.text();
       console.error(`[iPOS API] Response body:`, text.substring(0, 500));
+
+      // If we get a 401, try to refresh tokens and retry once
+      if (response.status === 401) {
+        console.log('[iPOS API] Got 401, attempting to refresh tokens...');
+        const freshTokens = await iposAuth.forceRefresh();
+
+        if (freshTokens) {
+          console.log('[iPOS API] Retrying with fresh tokens...');
+          const retryResponse = await fetch(url.toString(), {
+            headers: {
+              'access_token': freshTokens.accessToken,
+              'authorization': freshTokens.authToken,
+              'fabi_type': 'pos-cms',
+              'x-client-timezone': CLIENT_TIMEZONE.toString(),
+              'accept-language': 'vi',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'referer': 'https://fabi.ipos.vn/'
+            }
+          });
+
+          if (retryResponse.ok) {
+            const data = await retryResponse.json();
+            console.log('[iPOS API] Retry successful! Received data:', JSON.stringify(data, null, 2));
+            return data;
+          }
+        }
+      }
+
       return null;
     }
 
