@@ -33,35 +33,29 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
 
 RUN npm run build
 
-# Production image with Playwright support
-# Use Microsoft's official Playwright image which includes Chromium + all dependencies
-FROM mcr.microsoft.com/playwright:v1.48.0-noble AS runner
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Playwright image already has pwuser (UID 1000), use it for Next.js
-# This avoids permission issues and follows security best practices
-USER root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Install gosu for proper user switching (if needed by entrypoint)
+# Install gosu for proper user switching
 RUN apt-get update && apt-get install -y gosu && \
     rm -rf /var/lib/apt/lists/*
-
-# Install Playwright browsers (Chromium) with system dependencies
-# This installs to /ms-playwright which is accessible by all users
-RUN npx playwright@1.48.0 install --with-deps chromium
 
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 # Copy the entire standalone directory which includes the correct .next structure
-COPY --from=builder --chown=pwuser:pwuser /app/.next/standalone ./
-COPY --from=builder --chown=pwuser:pwuser /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Create data directory (will be mounted at runtime from persistent volume)
-RUN mkdir -p data && chown -R pwuser:pwuser data
+RUN mkdir -p data && chown -R nextjs:nodejs data
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

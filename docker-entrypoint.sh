@@ -57,15 +57,15 @@ if [ -n "$RAILWAY_VOLUME_MOUNT_PATH" ]; then
 
   # Create standard directories on volume
   mkdir -p "$DATA_PATH/images" "$DATA_PATH/video-game-images" "$DATA_PATH/logs"
-  chown -R pwuser:pwuser "$DATA_PATH"
+  chown -R nextjs:nodejs "$DATA_PATH"
 else
   echo "📁 No volume mount, using local /app/data"
   mkdir -p /app/data/images /app/data/video-game-images /app/data/logs
-  chown -R pwuser:pwuser /app/data
+  chown -R nextjs:nodejs /app/data
   echo "ℹ️  Images will be fetched and cached in /app/data on-demand"
 fi
 
-echo "✅ Volume setup complete, starting application as pwuser..."
+echo "✅ Volume setup complete, starting application as nextjs user..."
 
-# Switch to pwuser (from Playwright image) and start the application
-exec gosu pwuser node server.js
+# Switch to nextjs user and start the application
+exec gosu nextjs node server.js

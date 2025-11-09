@@ -1,8 +1,8 @@
 // app/api/pos/dashboard/route.ts
-// iPOS Dashboard API - Uses Playwright to scrape iPOS dashboard
-// Why: iPOS tokens are session-bound and don't work with direct API calls
+// iPOS Dashboard API - Calls Railway Playwright microservice
+// Why: iPOS tokens are session-bound, requires browser automation via Playwright
 import { NextResponse } from 'next/server';
-import { fetchIPOSDashboardData, getIPOSCredentials } from '@/lib/services/ipos-playwright-service';
+import { iposRemote } from '@/lib/services/ipos-remote-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Revalidate every 60 seconds
@@ -16,23 +16,6 @@ export async function GET() {
   try {
     console.log('[iPOS API] Fetching dashboard data...');
 
-    // Check credentials
-    const credentials = getIPOSCredentials();
-    if (!credentials) {
-      console.error('[iPOS API] Missing IPOS_EMAIL or IPOS_PASSWORD environment variables');
-      return NextResponse.json({
-        success: false,
-        error: 'iPOS credentials not configured',
-        data: {
-          unpaidAmount: 0,
-          paidAmount: 0,
-          currentTables: 0,
-          currentCustomers: 0,
-          lastUpdated: new Date().toISOString()
-        }
-      }, { status: 500 });
-    }
-
     // Check if we have cached data that's still valid
     const now = Date.now();
     if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
@@ -45,8 +28,8 @@ export async function GET() {
       });
     }
 
-    // Fetch data using Playwright (scrapes iPOS dashboard)
-    const dashboardData = await fetchIPOSDashboardData(credentials);
+    // Fetch data from Railway Playwright microservice
+    const dashboardData = await iposRemote.getDashboardData();
 
     // Check if we got valid data
     if (!dashboardData.lastUpdated) {
