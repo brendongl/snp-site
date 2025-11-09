@@ -27,24 +27,7 @@ export async function GET() {
       });
     }
 
-    // Check if access token is configured
-    if (!process.env.IPOS_ACCESS_TOKEN) {
-      console.error('[iPOS API] No access token configured');
-      console.log('[iPOS API] Please run: node scripts/get-ipos-access-token.js');
-      return NextResponse.json({
-        success: false,
-        error: 'iPOS access token not configured. Run: node scripts/get-ipos-access-token.js',
-        data: {
-          unpaidAmount: 0,
-          paidAmount: 0,
-          currentTables: 0,
-          currentCustomers: 0,
-          lastUpdated: new Date().toISOString()
-        }
-      }, { status: 500 });
-    }
-
-    // Fetch data using direct API calls
+    // Fetch data using direct API calls (auth service handles tokens automatically)
     const dashboardData = await getCurrentDashboardData();
 
     // Check if we got valid data
