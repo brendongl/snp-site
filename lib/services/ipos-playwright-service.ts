@@ -41,8 +41,14 @@ export async function fetchIPOSDashboardData(
   let page: Page | null = null;
 
   try {
-    // Launch headless browser
-    browser = await chromium.launch({ headless: true });
+    // Launch headless browser with Railway/Docker-optimized flags
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',           // Required for Docker environments
+        '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm for shared memory
+      ]
+    });
     page = await browser.newPage();
 
     // Navigate to login page

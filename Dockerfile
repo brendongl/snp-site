@@ -31,21 +31,21 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
     DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/dummy \
     DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 
-# No Playwright needed - iPOS handled by separate microservice on Render
-
 RUN npm run build
 
-# Production image, copy all the files and run next
-FROM base AS runner
+# Production image with Playwright support
+# Use Microsoft's official Playwright image which includes Chromium + all dependencies
+FROM mcr.microsoft.com/playwright:v1.48.0-noble AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Playwright image already has pwuser (UID 1000), use it for Next.js
+# This avoids permission issues and follows security best practices
+USER root
 
-# Install gosu for proper user switching
+# Install gosu for proper user switching (if needed by entrypoint)
 RUN apt-get update && apt-get install -y gosu && \
     rm -rf /var/lib/apt/lists/*
 
@@ -53,11 +53,11 @@ COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 # Copy the entire standalone directory which includes the correct .next structure
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=pwuser:pwuser /app/.next/standalone ./
+COPY --from=builder --chown=pwuser:pwuser /app/.next/static ./.next/static
 
 # Create data directory (will be mounted at runtime from persistent volume)
-RUN mkdir -p data && chown -R nextjs:nodejs data
+RUN mkdir -p data && chown -R pwuser:pwuser data
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

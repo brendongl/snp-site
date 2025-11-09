@@ -402,32 +402,36 @@ VIKUNJA_API_TOKEN=tk_e396533971cba5f0873c21900a49ecd136602c77  # Must be set in 
 - Task completion notifications
 - Weekly/monthly reports
 
-### iPOS Direct API Integration (v1.7.0)
-**IMPORTANT UPDATE**: Successfully replaced Playwright with direct API calls to posapi.ipos.vn
+### iPOS Integration with Playwright (v1.7.7)
+**IMPORTANT UPDATE**: Successfully integrated Playwright directly into Railway for iPOS data scraping
 
-**Key Discovery**: The working API is at `posapi.ipos.vn` (NOT `fabi.ipos.vn`) and uses:
-- **Authentication**: 32-character hexadecimal access token (NOT JWT)
-- **No CORS issues**: Server-to-server calls work perfectly
-- **Performance**: ~100ms response time vs 5-10 seconds with Playwright
+**Key Discovery**: iPOS authentication tokens are session-bound and cannot be extracted:
+- Direct API calls fail with 401 Unauthorized (even with full cookies + headers)
+- Tokens only work within the browser session that created them
+- **Solution**: Use Playwright browser automation to maintain session
 
-**Setup Process**:
-1. Run `node scripts/get-ipos-access-token.js` to capture token from browser
-2. Add `IPOS_ACCESS_TOKEN=<your_hex_token>` to `.env` file
-3. Test with `node test-ipos-direct-api.js`
-4. Use `/api/pos/dashboard` endpoint for POS data
+**Architecture**:
+- Railway now uses Microsoft's official Playwright Docker image
+- Headless Chromium browser automation for iPOS login and scraping
+- 5-minute caching to minimize browser launches
+- No separate microservice needed - everything runs on Railway
 
-**Service**: [lib/services/ipos-api-service.ts](lib/services/ipos-api-service.ts)
-**API Route**: [app/api/pos/dashboard/route.ts](app/api/pos/dashboard/route.ts)
-**Documentation**: [docs/IPOS_DIRECT_API_GUIDE.md](docs/IPOS_DIRECT_API_GUIDE.md)
+**Setup**:
+- **Dockerfile**: Uses `mcr.microsoft.com/playwright:v1.48.0-noble` as runner base
+- **Launch flags**: `--no-sandbox`, `--disable-dev-shm-usage` for Docker compatibility
+- **Service**: [lib/services/ipos-playwright-service.ts](lib/services/ipos-playwright-service.ts)
+- **API Route**: [app/api/pos/dashboard/route.ts](app/api/pos/dashboard/route.ts)
 
 **Environment Variables Required**:
 ```bash
-IPOS_API_BASE_URL=https://posapi.ipos.vn
-IPOS_ACCESS_TOKEN=<32_char_hex_token>  # Get via script
-IPOS_BRAND_UID=32774afe-fd5c-4028-b837-f91837c0307c
-IPOS_COMPANY_UID=8a508e04-440f-4145-9429-22b7696c6193
-IPOS_STORE_UID=72a800a6-1719-4b4b-9065-31ab2e0c07e5
+IPOS_EMAIL=sipnplay@ipos.vn
+IPOS_PASSWORD=<your_password>
 ```
+
+**Performance**:
+- First request: ~10-15 seconds (browser launch + login)
+- Cached requests: <100ms (5-minute cache)
+- Automatic fallback to stale cache on errors
 
 ### Staff UUID Migration (v1.19.0)
 **IMPORTANT ARCHITECTURAL CHANGE**: Migrated from dual-ID system to single UUID primary key.
