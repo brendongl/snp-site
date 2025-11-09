@@ -31,7 +31,7 @@ ENV AIRTABLE_API_KEY=dummy_key_for_build \
     DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/dummy \
     DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 
-# No longer need Playwright - using direct iPOS API calls instead
+# No Playwright needed - iPOS handled by separate microservice on Render
 
 RUN npm run build
 

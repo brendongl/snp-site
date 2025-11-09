@@ -1,7 +1,8 @@
 // app/api/pos/dashboard/route.ts
-// iPOS Dashboard API - Using direct API calls to posapi.ipos.vn
+// iPOS Dashboard API - Calls remote microservice (deployed on Render/fly.io)
+// Why: Railway doesn't support Playwright, so we use a separate service that does
 import { NextResponse } from 'next/server';
-import { getCurrentDashboardData } from '@/lib/services/ipos-api-service';
+import { iposRemote } from '@/lib/services/ipos-remote-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Revalidate every 60 seconds
@@ -27,8 +28,8 @@ export async function GET() {
       });
     }
 
-    // Fetch data using direct API calls (auth service handles tokens automatically)
-    const dashboardData = await getCurrentDashboardData();
+    // Fetch data from remote microservice (deployed on Render/fly.io)
+    const dashboardData = await iposRemote.getDashboardData();
 
     // Check if we got valid data
     if (!dashboardData.lastUpdated) {
