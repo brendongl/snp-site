@@ -1,51 +1,35 @@
-// iPOS Microservice - Tiny Express server that provides iPOS data
-// Deploy this to Render.com or fly.io (both support Playwright well)
-// Railway calls this service's API to get iPOS data
+// Railway Playwright Template - iPOS Server
+// Add this to the deployed Playwright template service
 
 const express = require('express');
 const { chromium } = require('playwright');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
-// Credentials from environment
 const IPOS_EMAIL = process.env.IPOS_EMAIL || 'sipnplay@ipos.vn';
 const IPOS_PASSWORD = process.env.IPOS_PASSWORD;
 
-if (!IPOS_PASSWORD) {
-  console.error('ERROR: IPOS_PASSWORD environment variable is required');
-  process.exit(1);
-}
-
-// Cache to reduce Playwright overhead
 let cachedData = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function fetchIPOSData() {
-  console.log('[iPOS Microservice] Fetching fresh data via Playwright...');
+  console.log('[iPOS Microservice] Fetching data via Playwright');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage']
+  });
+
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  let apiData = null;
-
-  // Set up response listener
-  page.on('response', async (response) => {
-    if (response.url().includes('sale-summary/overview') && response.status() === 200) {
-      try {
-        apiData = await response.json();
-        console.log('[iPOS Microservice] ✅ Captured API data');
-      } catch (error) {
-        console.error('[iPOS Microservice] Error parsing API response:', error);
-      }
-    }
-  });
-
   try {
-    // Login
+    // Navigate to login
     await page.goto('https://fabi.ipos.vn/login', { waitUntil: 'networkidle' });
+
+    // Login
     await page.fill('input[name="email_input"]', IPOS_EMAIL);
     await page.fill('input[type="password"]', IPOS_PASSWORD);
     await Promise.all([
@@ -53,60 +37,92 @@ async function fetchIPOSData() {
       page.click('button:has-text("Đăng nhập")')
     ]);
 
-    // Wait for dashboard and API call
+    // Wait for dashboard
     await page.waitForSelector('text=Doanh thu (NET)', { timeout: 15000 });
-    await page.waitForTimeout(5000); // Wait for API calls to complete
+    await page.waitForTimeout(3000);
 
-    if (!apiData) {
-      throw new Error('Failed to capture API data from dashboard');
-    }
+    // Extract data
+    const data = await page.evaluate(() => {
+      const textContent = document.body.innerText;
+      const lines = textContent.split('\n');
 
-    // Extract the relevant fields
-    const data = apiData.data || {};
-    const saleTracking = data.sale_tracking || {};
+      let unpaidAmount = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Hiện tại ở quán')) {
+          if (i + 1 < lines.length) {
+            const match = lines[i + 1].match(/([\d,]+)\s*₫?/);
+            if (match) unpaidAmount = parseFloat(match[1].replace(/,/g, ''));
+          }
+          break;
+        }
+      }
 
-    const result = {
-      unpaidAmount: saleTracking.total_amount || 0,
-      paidAmount: data.revenue_net || 0,
-      currentTables: saleTracking.table_count || 0,
-      currentCustomers: saleTracking.people_count || 0,
+      let paidAmount = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Doanh thu (NET)')) {
+          if (i + 1 < lines.length) {
+            const match = lines[i + 1].match(/([\d,]+)\s*₫?/);
+            if (match) paidAmount = parseFloat(match[1].replace(/,/g, ''));
+          }
+          break;
+        }
+      }
+
+      const tableText = document.body.innerText.match(/Có\s+(\d+)\s+bàn\s+\/\s+(\d+)\s+bàn/);
+      const currentTables = tableText ? parseInt(tableText[1]) : 0;
+
+      const customerText = document.body.innerText.match(/Tổng:\s+(\d+)\s+khách/);
+      const currentCustomers = customerText ? parseInt(customerText[1]) : 0;
+
+      return { unpaidAmount, paidAmount, currentTables, currentCustomers };
+    });
+
+    return {
+      ...data,
       lastUpdated: new Date().toISOString()
     };
 
-    return result;
   } finally {
     await browser.close();
   }
 }
 
-// Single API endpoint
 app.get('/ipos-dashboard', async (req, res) => {
   try {
-    // Return cached data if still valid
     const now = Date.now();
-    if (cachedData && now - cacheTimestamp < CACHE_DURATION) {
+
+    // Return cached if valid
+    if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
       console.log('[iPOS Microservice] Returning cached data');
       return res.json({
         success: true,
         data: cachedData,
         cached: true,
-        timestamp: new Date().toISOString()
+        cacheAge: Math.round((now - cacheTimestamp) / 1000)
+      });
+    }
+
+    // Check credentials
+    if (!IPOS_PASSWORD) {
+      return res.status(500).json({
+        success: false,
+        error: 'IPOS_PASSWORD not configured'
       });
     }
 
     // Fetch fresh data
     const data = await fetchIPOSData();
-
-    // Update cache
     cachedData = data;
     cacheTimestamp = now;
 
+    console.log('[iPOS Microservice] Fresh data fetched:', data);
+
     res.json({
       success: true,
-      data: data,
-      cached: false,
-      timestamp: new Date().toISOString()
+      data,
+      cached: false
     });
+
   } catch (error) {
     console.error('[iPOS Microservice] Error:', error);
 
@@ -117,7 +133,7 @@ app.get('/ipos-dashboard', async (req, res) => {
         data: cachedData,
         cached: true,
         stale: true,
-        timestamp: new Date().toISOString()
+        error: error.message
       });
     }
 
@@ -128,19 +144,17 @@ app.get('/ipos-dashboard', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'iPOS Microservice',
-    timestamp: new Date().toISOString(),
-    cacheValid: cachedData && Date.now() - cacheTimestamp < CACHE_DURATION
+    service: 'iPOS Microservice (Railway)',
+    uptime: process.uptime(),
+    cacheAge: cachedData ? Math.round((Date.now() - cacheTimestamp) / 1000) : null
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`[iPOS Microservice] Server running on port ${PORT}`);
-  console.log(`[iPOS Microservice] Endpoints:`);
-  console.log(`  - GET /ipos-dashboard - Get iPOS dashboard data`);
-  console.log(`  - GET /health - Health check`);
+  console.log(`[iPOS Microservice] Running on port ${PORT}`);
+  console.log(`[iPOS Microservice] Email: ${IPOS_EMAIL}`);
+  console.log(`[iPOS Microservice] Password: ${IPOS_PASSWORD ? '***configured***' : 'NOT SET'}`);
 });

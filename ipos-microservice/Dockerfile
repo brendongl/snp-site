@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/playwright:v1.48.0-noble
 
 WORKDIR /app
 
+# Install Playwright browsers (must be done before copying package.json)
+RUN npx playwright@1.48.0 install chromium
+
 # Copy package files
 COPY package*.json ./
 
@@ -12,8 +15,8 @@ RUN npm ci --omit=dev
 # Copy application code
 COPY . .
 
-# Expose port (Render will set PORT env var, default to 3001)
-EXPOSE 3001
+# Expose port (Railway will set PORT env var, default to 3000)
+EXPOSE 3000
 
 # Start the server
 CMD ["npm", "start"]
