@@ -81,32 +81,13 @@ async function getSaleSummaryOverview(startDate: number, endDate: number): Promi
       const text = await response.text();
       console.error(`[iPOS API] Response body:`, text.substring(0, 500));
 
-      // If we get a 401, try to refresh tokens and retry once
+      // If we get a 401, the authorization token has likely expired
       if (response.status === 401) {
-        console.log('[iPOS API] Got 401, attempting to refresh tokens...');
-        const freshTokens = await iposAuth.forceRefresh();
-
-        if (freshTokens) {
-          console.log('[iPOS API] Retrying with fresh tokens...');
-          const retryResponse = await fetch(url.toString(), {
-            headers: {
-              'access_token': freshTokens.accessToken,
-              'authorization': freshTokens.authToken,
-              'fabi_type': 'pos-cms',
-              'x-client-timezone': CLIENT_TIMEZONE.toString(),
-              'accept-language': 'vi',
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'referer': 'https://fabi.ipos.vn/'
-            }
-          });
-
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            console.log('[iPOS API] Retry successful! Received data:', JSON.stringify(data, null, 2));
-            return data;
-          }
-        }
+        console.error('[iPOS API] ❌ Got 401 Unauthorized - authorization token may have expired');
+        console.error('[iPOS API] 📋 To fix:');
+        console.error('[iPOS API]    1. Run: node scripts/get-ipos-access-token.js');
+        console.error('[iPOS API]    2. Update IPOS_AUTH_TOKEN in environment variables');
+        console.error('[iPOS API]    3. Restart the application');
       }
 
       return null;
