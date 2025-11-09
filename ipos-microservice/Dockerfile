@@ -1,10 +1,11 @@
 # Use official Microsoft Playwright image (includes Chromium + all dependencies)
-FROM mcr.microsoft.com/playwright:v1.48.0-noble
+# Same version as Railway's official Playwright template
+FROM mcr.microsoft.com/playwright:v1.50.0-noble
 
 WORKDIR /app
 
 # Install Playwright browsers (must be done before copying package.json)
-RUN npx playwright@1.48.0 install chromium
+RUN npx playwright@1.50.0 install chromium
 
 # Copy package files
 COPY package*.json ./
