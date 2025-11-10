@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -101,6 +101,25 @@ export function IssueReportDialog({
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issueReportPoints, setIssueReportPoints] = useState<number>(100); // Default fallback
+
+  // Fetch dynamic point values on mount
+  useEffect(() => {
+    const fetchPointValues = async () => {
+      try {
+        const response = await fetch('/api/points-display');
+        const data = await response.json();
+        if (data.success && data.points?.issue_report) {
+          setIssueReportPoints(data.points.issue_report);
+        }
+      } catch (error) {
+        console.error('Failed to fetch point values:', error);
+        // Keep fallback value
+      }
+    };
+
+    fetchPointValues();
+  }, []);
 
   const handleSubmit = async () => {
     if (!selectedCategory || !description.trim()) {
@@ -247,7 +266,7 @@ export function IssueReportDialog({
                     </p>
                     <div className="flex items-center gap-1 text-green-700 dark:text-green-300 mt-1">
                       <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-600" />
-                      <span className="text-sm font-medium">+100</span>
+                      <span className="text-sm font-medium">+{issueReportPoints}</span>
                     </div>
                   </>
                 ) : (
@@ -257,7 +276,7 @@ export function IssueReportDialog({
                     </p>
                     <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300 mt-1">
                       <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-600" />
-                      <span className="text-sm font-medium">+100</span>
+                      <span className="text-sm font-medium">+{issueReportPoints}</span>
                     </div>
                   </>
                 )}

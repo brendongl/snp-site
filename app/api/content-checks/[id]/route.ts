@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
 import { logger } from '@/lib/logger';
+import { calculatePoints } from '@/lib/services/points-service';
 
 export async function GET(
   request: NextRequest,
@@ -132,12 +133,23 @@ export async function DELETE(
     }
 
     const check = checkResult.rows[0];
-    const pointsToRefund = -(1000 * (check.complexity || 1)); // Negative points for refund
+
+    // v1.6.7: Calculate points to refund dynamically (same as award logic)
+    const pointsAwarded = await calculatePoints({
+      staffId: check.inspector_id,
+      actionType: 'content_check',
+      metadata: {
+        gameId: check.game_id,
+        gameName: check.game_name,
+        gameComplexity: check.complexity || 1
+      }
+    });
+    const pointsToRefund = -pointsAwarded;
 
     // Log deletion to changelog with negative points
     try {
-      const maxIdResult = await db.pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
-      const changelogId = maxIdResult.rows[0].next_id;
+      const seqResult = await db.pool.query("SELECT nextval('changelog_id_seq') as next_id");
+      const changelogId = seqResult.rows[0].next_id;
 
       await db.pool.query(`
         INSERT INTO changelog (

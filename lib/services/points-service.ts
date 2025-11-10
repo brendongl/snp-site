@@ -158,10 +158,9 @@ export async function calculatePoints(params: PointAwardParams): Promise<number>
     }
 
     case 'teaching': {
-      const students = metadata?.studentCount || 1;
       const cfg = config['teaching'];
       const basePoints = cfg ? cfg.base_points : 1000;
-      return basePoints * complexity * students;
+      return basePoints * complexity;
     }
 
     case 'photo_upload': {
@@ -254,9 +253,9 @@ async function logPointAward(
   params: PointAwardParams,
   points: number
 ): Promise<string> {
-  // Get next available ID (max + 1)
-  const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
-  const changelogId = maxIdResult.rows[0].next_id;
+  // Get next ID from sequence (atomic, prevents race conditions)
+  const seqResult = await pool.query("SELECT nextval('changelog_id_seq') as next_id");
+  const changelogId = seqResult.rows[0].next_id;
 
   const description = params.context || `Points awarded for ${params.actionType.replace(/_/g, ' ')}`;
 

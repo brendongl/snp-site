@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
         adjustedStaff.push(updateResult.rows[0]);
 
         // Get next changelog ID
-        const maxIdResult = await client.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
-        const changelogId = maxIdResult.rows[0].next_id;
+        const seqResult = await client.query("SELECT nextval('changelog_id_seq') as next_id");
+        const changelogId = seqResult.rows[0].next_id;
 
         // Calculate point change
         const pointChange = newPoints - oldPoints;

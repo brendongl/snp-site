@@ -174,6 +174,23 @@ class StaffKnowledgeDbService {
         }).catch(err => {
           console.error('Failed to award knowledge upgrade points:', err);
         });
+
+        // Award teaching points if taught_by is provided (async, non-blocking)
+        if (knowledge.taughtBy) {
+          console.log(`🎓 Awarding teaching points (upgrade): teacher=${knowledge.taughtBy}, game=${gameName}, complexity=${gameComplexity}`);
+          awardPoints({
+            staffId: knowledge.taughtBy,
+            actionType: 'teaching',
+            metadata: {
+              gameId: knowledge.gameId,
+              gameName: gameName,
+              gameComplexity: gameComplexity
+            },
+            context: `Teaching ${gameName} to another staff member`
+          }).catch(err => {
+            console.error('❌ Failed to award teaching points:', err);
+          });
+        }
       } else {
         result = await this.pool.query(
           `INSERT INTO staff_knowledge (
@@ -214,6 +231,23 @@ class StaffKnowledgeDbService {
         }).catch(err => {
           console.error('Failed to award knowledge add points:', err);
         });
+
+        // Award teaching points if taught_by is provided (async, non-blocking)
+        if (knowledge.taughtBy) {
+          console.log(`🎓 Awarding teaching points: teacher=${knowledge.taughtBy}, game=${gameName}, complexity=${gameComplexity}`);
+          awardPoints({
+            staffId: knowledge.taughtBy,
+            actionType: 'teaching',
+            metadata: {
+              gameId: knowledge.gameId,
+              gameName: gameName,
+              gameComplexity: gameComplexity
+            },
+            context: `Teaching ${gameName} to another staff member`
+          }).catch(err => {
+            console.error('❌ Failed to award teaching points:', err);
+          });
+        }
       }
 
       return this.mapRowToKnowledge(result.rows[0]);

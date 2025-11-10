@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import DatabaseService from '@/lib/services/db-service';
 import { logPlayLogCreated, logPlayLogDeleted } from '@/lib/services/changelog-service';
-import { awardPoints } from '@/lib/services/points-service';
+import { awardPoints, calculatePoints } from '@/lib/services/points-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
         const gameName = gameResult.rows[0].name;
         const staffName = staffResult.rows[0].staff_name;
 
-        // v1.5.22: Award points for play log with game name
+        // v1.6.6: Award points for play log (this also creates changelog entry)
         await awardPoints({
           staffId: staffListId,
           actionType: 'play_log',
@@ -104,13 +104,7 @@ export async function POST(request: Request) {
           context: `Play log for ${gameName}`
         });
 
-        await logPlayLogCreated(
-          playLog.id,
-          gameName,
-          staffName,
-          staffListId,
-          durationHours
-        );
+        // Note: Removed logPlayLogCreated() call - awardPoints() already creates changelog entry
       }
     } catch (changelogError) {
       console.error('Failed to log play log creation to changelog or award points:', changelogError);
@@ -176,13 +170,18 @@ export async function DELETE(request: Request) {
     const staffId = log.staff_id || '';
     const gameId = log.game_id || '';
 
-    // Play logs award 100 points flat (no complexity multiplier)
-    const pointsToRefund = -100;
+    // v1.6.7: Calculate points to refund dynamically (same as award logic)
+    const pointsAwarded = await calculatePoints({
+      staffId,
+      actionType: 'play_log',
+      metadata: { gameId, gameName }
+    });
+    const pointsToRefund = -pointsAwarded;
 
     // Log deletion to changelog with negative points
     try {
-      const maxIdResult = await db.pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM changelog');
-      const changelogId = maxIdResult.rows[0].next_id;
+      const seqResult = await db.pool.query("SELECT nextval('changelog_id_seq') as next_id");
+      const changelogId = seqResult.rows[0].next_id;
 
       await db.pool.query(`
         INSERT INTO changelog (
