@@ -42,7 +42,7 @@ export default function PlayLogsPage() {
 
   // Filter state
   const [dateFilter, setDateFilter] = useState<string>('');
-  const [showAllLogs, setShowAllLogs] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Check authentication
   useEffect(() => {
@@ -96,32 +96,66 @@ export default function PlayLogsPage() {
     return normalizeName(log.staffName) === normalizeName(staffName);
   };
 
+  // Calculate pagination info
+  const paginationInfo = useMemo(() => {
+    if (playLogs.length === 0) {
+      return { totalPages: 1, startDate: null, endDate: null };
+    }
+
+    // Sort all logs by date to find date range
+    const sortedLogs = [...playLogs].sort((a, b) =>
+      new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()
+    );
+
+    const newestDate = new Date(sortedLogs[0].sessionDate);
+    const oldestDate = new Date(sortedLogs[sortedLogs.length - 1].sessionDate);
+
+    // Calculate total days span
+    const daysDifference = Math.floor((newestDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalPages = Math.ceil(daysDifference / 7);
+
+    // Calculate date range for current page
+    const pageStartOffset = (currentPage - 1) * 7;
+    const pageEndOffset = pageStartOffset + 6;
+
+    const endDate = new Date(newestDate);
+    endDate.setDate(endDate.getDate() - pageStartOffset);
+
+    const startDate = new Date(newestDate);
+    startDate.setDate(startDate.getDate() - pageEndOffset);
+
+    return { totalPages, startDate, endDate };
+  }, [playLogs, currentPage]);
+
   // Filter logs
   const filteredLogs = useMemo(() => {
     let filtered = playLogs;
 
-    // If not showing all logs and no date filter, show only last 7 days
-    if (!showAllLogs && !dateFilter) {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      filtered = playLogs.filter(log => {
-        if (!log.sessionDate) return false;
-        const logDate = new Date(log.sessionDate);
-        return logDate >= sevenDaysAgo;
-      });
-    }
-
-    // Date filter (overrides 7-day filter)
+    // Date filter (overrides pagination)
     if (dateFilter) {
       filtered = playLogs.filter(log => {
         const logDate = new Date(log.sessionDate).toISOString().split('T')[0];
         return logDate === dateFilter;
       });
+    } else if (paginationInfo.startDate && paginationInfo.endDate) {
+      // Apply 7-day pagination
+      filtered = playLogs.filter(log => {
+        if (!log.sessionDate) return false;
+        const logDate = new Date(log.sessionDate);
+
+        // Set times to compare only dates
+        const startOfDay = new Date(paginationInfo.startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(paginationInfo.endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        return logDate >= startOfDay && logDate <= endOfDay;
+      });
     }
 
     return filtered;
-  }, [playLogs, dateFilter, showAllLogs]);
+  }, [playLogs, dateFilter, paginationInfo, currentPage]);
 
   // Group logs by date
   const groupedLogs = useMemo(() => {
@@ -298,6 +332,7 @@ export default function PlayLogsPage() {
             <button
               onClick={() => {
                 setDateFilter('');
+                setCurrentPage(1);
               }}
               className="px-3 py-2 rounded-lg text-sm bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
             >
@@ -306,20 +341,78 @@ export default function PlayLogsPage() {
           )}
         </div>
 
-        {/* Results count */}
-        <div className="mb-6 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {groupedLogs.length} day{groupedLogs.length !== 1 ? 's' : ''} • {filteredLogs.length} play log{filteredLogs.length !== 1 ? 's' : ''}
-            {!showAllLogs && !dateFilter && ` (last 7 days)`}
-            {dateFilter && ` (filtered from ${playLogs.length} total)`}
-          </p>
-          {!dateFilter && (
-            <button
-              onClick={() => setShowAllLogs(!showAllLogs)}
-              className="px-3 py-1 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              {showAllLogs ? 'Show Last 7 Days' : 'Show All Logs'}
-            </button>
+        {/* Results count and Pagination */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              {groupedLogs.length} day{groupedLogs.length !== 1 ? 's' : ''} • {filteredLogs.length} play log{filteredLogs.length !== 1 ? 's' : ''}
+              {!dateFilter && paginationInfo.startDate && paginationInfo.endDate && (
+                <>
+                  {' '}
+                  ({paginationInfo.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' - '}
+                  {paginationInfo.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                </>
+              )}
+              {dateFilter && ` (filtered from ${playLogs.length} total)`}
+            </p>
+          </div>
+
+          {/* Pagination Controls */}
+          {!dateFilter && paginationInfo.totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-lg text-sm bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: paginationInfo.totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    page === 1 ||
+                    page === paginationInfo.totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          page === currentPage
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (
+                    (page === currentPage - 2 && page > 1) ||
+                    (page === currentPage + 2 && page < paginationInfo.totalPages)
+                  ) {
+                    return (
+                      <span key={page} className="px-1 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(Math.min(paginationInfo.totalPages, currentPage + 1))}
+                disabled={currentPage === paginationInfo.totalPages}
+                className="px-3 py-1 rounded-lg text-sm bg-muted text-foreground hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           )}
         </div>
 
