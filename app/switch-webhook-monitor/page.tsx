@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, Download, Copy, CheckCircle2 } from 'lucide-react';
 
 interface WebhookPayload {
@@ -232,7 +231,7 @@ export default function SwitchWebhookMonitor() {
           <h2 className="font-semibold">Incoming Webhooks</h2>
         </div>
 
-        <ScrollArea className="h-[600px]" ref={scrollRef}>
+        <div className="h-[600px] overflow-y-auto" ref={scrollRef}>
           {webhooks.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p className="mb-4">No webhooks received yet</p>
@@ -292,7 +291,7 @@ export default function SwitchWebhookMonitor() {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </Card>
     </div>
   );
