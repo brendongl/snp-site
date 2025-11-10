@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard Redesign - Sip n Play</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #FAFAF9;
+            overscroll-behavior-y: contain;
+        }
+
+        h1, h2, h3 {
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* Custom scrollbar for horizontal scroll areas */
+        .scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* Smooth animations */
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+
+        .animate-pulse-slow {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Progress ring styles */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform-origin: 50% 50%;
+        }
+
+        /* Swipeable container */
+        .swipe-container {
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .swipe-card {
+            scroll-snap-align: start;
+        }
+
+        /* Glass morphism for status bar */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Touch-friendly buttons */
+        .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+
+        /* Gradient backgrounds */
+        .gradient-blue {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+        }
+
+        .gradient-green {
+            background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+        }
+
+        .gradient-purple {
+            background: linear-gradient(135deg, #FAF5FF 0%, #EDE9FE 100%);
+        }
+
+        .gradient-orange {
+            background: linear-gradient(135deg, #FFF7ED 0%, #FED7AA 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Status Bar (Mobile Optimized) -->
+    <div class="fixed top-0 left-0 right-0 z-50 p-2 md:p-4">
+        <div class="glass rounded-2xl shadow-lg px-4 py-3 flex items-center justify-between max-w-6xl mx-auto">
+            <!-- User Info -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold">
+                    JD
+                </div>
+                <div>
+                    <div class="font-semibold text-gray-900 text-sm md:text-base">John Doe</div>
+                    <div class="text-xs text-gray-600 md:hidden">Shift: 2-10pm</div>
+                </div>
+            </div>
+
+            <!-- Points Badge (Animated) -->
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-purple-100 rounded-full">
+                    <span class="text-xs text-purple-600">Shift Progress</span>
+                    <div class="w-20 h-2 bg-purple-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full" style="width: 65%;"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-full animate-pulse-slow">
+                    <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                    <span class="font-bold text-gray-900">2,450</span>
+                </div>
+
+                <!-- Menu Button -->
+                <button class="touch-target flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors md:hidden">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="pt-20 pb-20 md:pt-24 px-2 md:px-4 max-w-6xl mx-auto">
+
+        <!-- Daily Focus Section -->
+        <div class="mb-6 animate-slide-up">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-900 mb-3 px-2">My Daily Focus</h2>
+
+            <!-- Primary Task Card -->
+            <div class="gradient-blue rounded-2xl p-6 mb-4 shadow-sm border border-blue-200">
+                <div class="flex items-start justify-between mb-3">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Urgent - Due in 30 mins
+                    </span>
+                    <span class="text-sm text-gray-600">Table 12</span>
+                </div>
+                <h3 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">Check Wingspan for missing pieces</h3>
+                <p class="text-sm md:text-base text-gray-600 mb-4">Customer reported possible missing bird cards. Please verify against component list.</p>
+                <div class="flex gap-2">
+                    <button class="touch-target flex-1 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors">
+                        Start Check
+                    </button>
+                    <button class="touch-target px-4 bg-white text-blue-600 rounded-xl font-medium border border-blue-300 hover:bg-blue-50 transition-colors">
+                        View Details
+                    </button>
+                </div>
+            </div>
+
+            <!-- Secondary Tasks (Swipeable on Mobile) -->
+            <div class="flex gap-3 overflow-x-auto scroll-container swipe-container pb-2">
+                <div class="swipe-card min-w-[280px] md:min-w-0 md:flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-orange-600">Next Priority</span>
+                        <span class="text-xs text-gray-500">+200 pts</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Teach Azul to new customer</h4>
+                    <p class="text-xs text-gray-600">Family of 4 at table 8</p>
+                </div>
+
+                <div class="swipe-card min-w-[280px] md:min-w-0 md:flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-green-600">Learning</span>
+                        <span class="text-xs text-gray-500">+100 pts</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-1">Learn Root gameplay</h4>
+                    <p class="text-xs text-gray-600">Watch tutorial & practice</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Progress Section -->
+        <div class="mb-6 animate-slide-up" style="animation-delay: 0.1s;">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-900 mb-3 px-2">Today's Progress</h2>
+
+            <div class="grid grid-cols-3 gap-3 md:gap-4">
+                <!-- Progress Ring 1 -->
+                <div class="bg-white rounded-xl p-4 md:p-6 text-center shadow-sm border border-gray-200">
+                    <svg class="progress-ring mx-auto mb-2" width="80" height="80">
+                        <circle class="text-gray-200" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"/>
+                        <circle class="progress-ring__circle text-blue-500" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"
+                                stroke-dasharray="201" stroke-dashoffset="70"/>
+                    </svg>
+                    <div class="text-lg md:text-xl font-bold text-gray-900">8/12</div>
+                    <div class="text-xs text-gray-600">Game Checks</div>
+                </div>
+
+                <!-- Progress Ring 2 -->
+                <div class="bg-white rounded-xl p-4 md:p-6 text-center shadow-sm border border-gray-200">
+                    <svg class="progress-ring mx-auto mb-2" width="80" height="80">
+                        <circle class="text-gray-200" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"/>
+                        <circle class="progress-ring__circle text-green-500" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"
+                                stroke-dasharray="201" stroke-dashoffset="40"/>
+                    </svg>
+                    <div class="text-lg md:text-xl font-bold text-gray-900">15/20</div>
+                    <div class="text-xs text-gray-600">Customers</div>
+                </div>
+
+                <!-- Progress Ring 3 -->
+                <div class="bg-white rounded-xl p-4 md:p-6 text-center shadow-sm border border-gray-200">
+                    <svg class="progress-ring mx-auto mb-2" width="80" height="80">
+                        <circle class="text-gray-200" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"/>
+                        <circle class="progress-ring__circle text-purple-500" stroke="currentColor" stroke-width="8" fill="transparent" r="32" cx="40" cy="40"
+                                stroke-dasharray="201" stroke-dashoffset="100"/>
+                    </svg>
+                    <div class="text-lg md:text-xl font-bold text-gray-900">1,250</div>
+                    <div class="text-xs text-gray-600">Points Today</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Grid -->
+        <div class="mb-6 animate-slide-up" style="animation-delay: 0.2s;">
+            <h2 class="text-lg md:text-xl font-semibold text-gray-900 mb-3 px-2">Quick Actions</h2>
+
+            <div class="grid grid-cols-4 gap-2 md:gap-3">
+                <button class="touch-target bg-white rounded-xl p-3 md:p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-xs font-medium">Check</span>
+                </button>
+
+                <button class="touch-target bg-white rounded-xl p-3 md:p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-xs font-medium">Log Play</span>
+                </button>
+
+                <button class="touch-target bg-white rounded-xl p-3 md:p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <span class="text-xs font-medium">Report</span>
+                </button>
+
+                <button class="touch-target bg-white rounded-xl p-3 md:p-4 flex flex-col items-center gap-2 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <span class="text-xs font-medium">Learn</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Smart Activity Feed -->
+        <div class="mb-6 animate-slide-up" style="animation-delay: 0.3s;">
+            <div class="flex items-center justify-between mb-3 px-2">
+                <h2 class="text-lg md:text-xl font-semibold text-gray-900">Team Activity</h2>
+                <button class="text-sm text-blue-600 font-medium hover:text-blue-700">View All</button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <!-- Urgent Items -->
+                <div class="p-4 border-b border-gray-100">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs font-semibold text-red-600 uppercase">Urgent</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900">Missing pieces in Ticket to Ride</p>
+                                <p class="text-xs text-gray-600 mt-0.5">Reported by Sarah • Table 5 • 5 mins ago</p>
+                            </div>
+                            <button class="touch-target px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors">
+                                Handle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="p-4">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-xs font-semibold text-gray-600 uppercase">Recent</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-900"><span class="font-medium">Mike</span> completed check on Catan</p>
+                                <p class="text-xs text-gray-600 mt-0.5">All pieces accounted for • 10 mins ago</p>
+                            </div>
+                            <span class="text-xs font-semibold text-yellow-600">+100</span>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-900"><span class="font-medium">Lisa</span> taught Splendor to customers</p>
+                                <p class="text-xs text-gray-600 mt-0.5">Table 3 • 15 mins ago</p>
+                            </div>
+                            <span class="text-xs font-semibold text-yellow-600">+200</span>
+                        </div>
+
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1a1 1 0 100-2 2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-900"><span class="font-medium">Tom</span> logged play session</p>
+                                <p class="text-xs text-gray-600 mt-0.5">Wingspan • 4 players • 90 mins • 22 mins ago</p>
+                            </div>
+                            <span class="text-xs font-semibold text-yellow-600">+50</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Needing Attention -->
+        <div class="mb-6 animate-slide-up" style="animation-delay: 0.4s;">
+            <div class="flex items-center justify-between mb-3 px-2">
+                <h2 class="text-lg md:text-xl font-semibold text-gray-900">Games to Check</h2>
+                <span class="text-sm text-gray-600">Next check in 45 mins</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="gradient-orange rounded-xl p-4 border border-orange-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-semibold text-gray-900">Gloomhaven</h3>
+                        <span class="text-xs bg-orange-600 text-white px-2 py-1 rounded-full">Overdue</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Last checked 8 days ago • High traffic game</p>
+                    <button class="w-full touch-target bg-white text-orange-600 font-medium rounded-lg border border-orange-300 hover:bg-orange-50 transition-colors">
+                        Check Now
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl p-4 border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-semibold text-gray-900">King of Tokyo</h3>
+                        <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">Due Tomorrow</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Last checked 6 days ago • Medium priority</p>
+                    <button class="w-full touch-target bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                        Schedule Check
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Bottom Navigation (Mobile Only) -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 md:hidden z-40">
+        <div class="grid grid-cols-5 gap-1">
+            <button class="touch-target flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                </svg>
+                <span class="text-xs font-medium text-blue-600">Home</span>
+            </button>
+
+            <button class="touch-target flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs font-medium text-gray-600">Games</span>
+            </button>
+
+            <button class="touch-target bg-blue-600 rounded-xl flex items-center justify-center shadow-lg transform scale-110">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+            </button>
+
+            <button class="touch-target flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1a1 1 0 100-2 2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs font-medium text-gray-600">Tasks</span>
+            </button>
+
+            <button class="touch-target flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-gray-50 transition-colors">
+                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0118 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs font-medium text-gray-600">Profile</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pull to Refresh Indicator (Hidden by default) -->
+    <div id="refreshIndicator" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hidden z-40">
+        <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm font-medium">Refreshing...</span>
+        </div>
+    </div>
+
+    <script>
+        // Simulate pull-to-refresh
+        let startY = 0;
+        let pulling = false;
+
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0) {
+                startY = e.touches[0].pageY;
+                pulling = true;
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!pulling) return;
+
+            const y = e.touches[0].pageY;
+            const diff = y - startY;
+
+            if (diff > 100 && window.scrollY === 0) {
+                document.getElementById('refreshIndicator').classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            if (pulling && !document.getElementById('refreshIndicator').classList.contains('hidden')) {
+                // Simulate refresh
+                setTimeout(() => {
+                    document.getElementById('refreshIndicator').classList.add('hidden');
+                    // Animate new data loading
+                    document.querySelectorAll('.animate-slide-up').forEach((el, index) => {
+                        el.style.animation = 'none';
+                        setTimeout(() => {
+                            el.style.animation = `slideUp 0.5s ease-out forwards`;
+                            el.style.animationDelay = `${index * 0.1}s`;
+                        }, 10);
+                    });
+                }, 1500);
+            }
+            pulling = false;
+        });
+
+        // Quick action handlers
+        document.querySelectorAll('.touch-target').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Add ripple effect
+                const ripple = document.createElement('span');
+                ripple.classList.add('absolute', 'bg-gray-400', 'rounded-full', 'opacity-30');
+                ripple.style.width = ripple.style.height = '40px';
+                ripple.style.left = (e.offsetX - 20) + 'px';
+                ripple.style.top = (e.offsetY - 20) + 'px';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.transition = 'transform 0.5s, opacity 0.5s';
+
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    ripple.style.transform = 'scale(4)';
+                    ripple.style.opacity = '0';
+                }, 10);
+
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Simulate real-time points update
+        let points = 2450;
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                points += Math.floor(Math.random() * 50) + 50;
+                const pointsDisplay = document.querySelector('.bg-yellow-50 span.font-bold');
+                if (pointsDisplay) {
+                    pointsDisplay.textContent = points.toLocaleString();
+                    pointsDisplay.parentElement.classList.add('animate-pulse-slow');
+                    setTimeout(() => {
+                        pointsDisplay.parentElement.classList.remove('animate-pulse-slow');
+                    }, 2000);
+                }
+            }
+        }, 10000);
+
+        // Handle task completion
+        document.querySelectorAll('button').forEach(button => {
+            if (button.textContent.includes('Start Check') || button.textContent.includes('Handle')) {
+                button.addEventListener('click', function() {
+                    this.innerHTML = '<svg class="w-4 h-4 animate-spin mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                    setTimeout(() => {
+                        this.innerHTML = '✓ Complete';
+                        this.classList.add('bg-green-600', 'border-green-600');
+                        this.classList.remove('bg-blue-600', 'bg-red-600');
+                    }, 1500);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

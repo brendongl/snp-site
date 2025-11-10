@@ -8,6 +8,7 @@ import { ToastProvider } from "@/lib/context/toast-context";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { AdminStaffPOSHeader } from "@/components/features/admin/AdminStaffPOSHeader";
 import { PersistentStaffHeader } from "@/components/features/staff/PersistentStaffHeader";
+import { SwitchGameToast } from "@/components/features/switch/SwitchGameToast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,7 @@ export default function RootLayout({
           </div>
 
           <ToastContainer />
+          <SwitchGameToast />
         </ToastProvider>
       </body>
     </html>

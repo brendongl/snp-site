@@ -150,6 +150,18 @@ export function StaffMenu() {
               </Link>
             )}
 
+            {/* Admin-only Switch Webhook Config */}
+            {isAdmin && (
+              <Link
+                href="/switch-webhook-config"
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-gray-100"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="text-lg">🎮</span>
+                <span>Switch Webhook Config</span>
+              </Link>
+            )}
+
             {/* Divider */}
             <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
 
