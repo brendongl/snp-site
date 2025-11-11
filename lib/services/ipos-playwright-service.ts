@@ -228,42 +228,106 @@ export async function fetchIPOSDashboardData(
     // STEP 3: Scrape sale tracking page for UNPAID customers
     // ===================================================
     console.log('[iPOS] Navigating to sale tracking page...');
-    await page.goto('https://fabi.ipos.vn/sale-tracking', { waitUntil: 'networkidle' });
+    await page.goto('https://fabi.ipos.vn/report/revenue/sale/track-sale', { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
 
-    const unpaidCustomers = await page.evaluate((entryTicketIds) => {
-      let totalCustomers = 0;
+    // Click on "Các bàn đang phục vụ" (Tables are open) to see table list
+    const tabButton = page.locator('text=Các bàn đang phục vụ');
+    const tabExists = await tabButton.count();
+    if (tabExists > 0) {
+      console.log('[iPOS] Clicking "Các bàn đang phục vụ" tab...');
+      await tabButton.click();
+      await page.waitForTimeout(2000);
+    }
 
-      // Find all table cards or rows
-      const bodyText = document.body.innerText;
-      const lines = bodyText.split('\n');
+    // Find all "Xem nhật ký order" (View order log) links
+    const orderLogLinks = await page.locator('text=Xem nhật ký order').all();
+    console.log(`[iPOS] Found ${orderLogLinks.length} table(s) with order logs`);
 
-      // Look for entry ticket names in the sale tracking page
-      // This counts how many entry tickets are on unpaid bills
-      for (const line of lines) {
-        // Check if line contains entry ticket names
-        if (line.includes('Entry Combo') ||
-            line.includes('Entry Only') ||
-            line.includes('DND ENTRY') ||
-            line.includes('PR Entry') ||
-            line.includes('6-Day Pass') ||
-            line.includes('Friday Promo 2pax')) {
+    let unpaidCustomers = 0;
 
-          // Try to extract quantity
-          const qtyMatch = line.match(/x\s*(\d+)/i) || line.match(/(\d+)\s*x/i);
-          const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+    // Click on each order log link to view table items
+    for (let i = 0; i < orderLogLinks.length; i++) {
+      try {
+        const link = orderLogLinks[i];
 
-          // Check if it's the Friday 2pax promo (counts as 2)
-          if (line.includes('Friday Promo 2pax')) {
-            totalCustomers += quantity * 2;
-          } else {
-            totalCustomers += quantity;
+        // Get the table name from the nearby <p> element
+        const listItem = await link.locator('xpath=ancestor::li').first();
+        const tableName = await listItem.locator('p.mb-0').first().innerText();
+        console.log(`[iPOS] Checking table: ${tableName}`);
+
+        // Click the link to open order log modal
+        await link.click();
+        await page.waitForTimeout(1500);
+
+        // Parse the table rows in the modal
+        const tableRows = await page.locator('.modal.show table tbody tr').all();
+        console.log(`[iPOS]   Found ${tableRows.length} items in order log`);
+
+        // Look for entry tickets in table rows
+        for (const row of tableRows) {
+          try {
+            // Get all cells in this row
+            const cells = await row.locator('td').all();
+            if (cells.length === 0) continue;
+
+            // Get text from all cells
+            const cellTexts = [];
+            for (const cell of cells) {
+              const text = await cell.innerText();
+              cellTexts.push(text.trim());
+            }
+
+            // Join all cells to search for entry ticket names
+            const rowText = cellTexts.join(' ');
+
+            // Check if this row contains an entry ticket
+            if (rowText.includes('Entry Combo') ||
+                rowText.includes('Entry Only') ||
+                rowText.includes('DND ENTRY') ||
+                rowText.includes('PR Entry') ||
+                rowText.includes('6-Day Pass') ||
+                rowText.includes('Friday Promo 2pax')) {
+
+              // The last cell usually contains the quantity
+              const lastCell = cellTexts[cellTexts.length - 1];
+              const qtyMatch = lastCell.match(/^-?(\d+)$/);  // Match positive or negative numbers
+              const quantity = qtyMatch ? Math.abs(parseInt(qtyMatch[1])) : 1;
+
+              // Check if item is cancelled (strikethrough text or negative quantity)
+              const isCancelled = lastCell.startsWith('-') || await row.locator('del, s, strike, [style*="text-decoration: line-through"]').count() > 0;
+
+              if (!isCancelled) {
+                console.log(`[iPOS]   Found entry ticket: ${rowText.substring(0, 50)} (qty: ${quantity})`);
+
+                // Friday Promo 2pax counts as 2 people
+                if (rowText.includes('Friday Promo 2pax')) {
+                  unpaidCustomers += quantity * 2;
+                } else {
+                  unpaidCustomers += quantity;
+                }
+              } else {
+                console.log(`[iPOS]   Skipping cancelled entry: ${rowText.substring(0, 50)}`);
+              }
+            }
+          } catch (error) {
+            // Skip this row if there's an error
+            continue;
           }
         }
-      }
 
-      return totalCustomers;
-    }, ENTRY_TICKET_IDS);
+        // Close the modal (press Escape)
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+
+      } catch (error) {
+        console.log(`[iPOS] Error checking table ${i + 1}:`, error instanceof Error ? error.message : String(error));
+        // Try to close any open modals
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+        continue;
+      }
+    }
 
     console.log('[iPOS] Unpaid customers from sale tracking:', unpaidCustomers);
 
