@@ -460,6 +460,38 @@ IPOS_PASSWORD=<your_password>
 - [docs/AIRTABLE_SCHEMA.md](docs/AIRTABLE_SCHEMA.md) - Marked dual-ID flow as deprecated
 - [docs/POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) - Updated table references
 
+### Nintendo Switch Webhook Notifications (v1.7.12)
+**Status**: ✅ Production Ready with HTTP Bridge
+
+Real-time toast notifications when someone launches or exits a game on their Nintendo Switch. Uses Server-Sent Events (SSE) to broadcast to all connected website visitors.
+
+**HTTP Bridge Solution (Recommended)**:
+- **Cloudflare Worker**: `http://switch-webhook.brendonganle.workers.dev/`
+- Solves SSL certificate issues common with Switch homebrew
+- Free, permanent URL with global edge network
+- Automatically forwards HTTP webhooks to HTTPS production endpoint
+
+**Architecture**:
+- **Webhook Endpoint**: [/api/switch-webhook](app/api/switch-webhook/route.ts) - Receives POST from Switch
+- **SSE Endpoint**: [/api/switch-notifications](app/api/switch-notifications/route.ts) - Broadcasts to clients
+- **Service**: [lib/services/switch-notifier.ts](lib/services/switch-notifier.ts) - Notification broadcaster
+- **Component**: [components/features/switch/SwitchGameToast.tsx](components/features/switch/SwitchGameToast.tsx) - Toast UI
+- **Config Page**: [/switch-webhook-config](app/switch-webhook-config/page.tsx) - Admin configuration & testing
+
+**Features**:
+- 🎮 Launch/Exit notifications with game thumbnails
+- 📡 Real-time broadcast to all connected users
+- 🔗 Permanent webhook URLs (HTTP & HTTPS)
+- 🎨 5-second toast in bottom-left corner
+- 🌐 Cloudflare Worker HTTP bridge for Switch compatibility
+
+**Switch Configuration**:
+```
+http://switch-webhook.brendonganle.workers.dev/
+```
+
+**Documentation**: [docs/SWITCH_WEBHOOK_NOTIFICATIONS.md](docs/SWITCH_WEBHOOK_NOTIFICATIONS.md)
+
 ---
 
 ## Environment Variables

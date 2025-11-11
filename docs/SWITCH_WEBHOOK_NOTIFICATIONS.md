@@ -23,11 +23,20 @@ Real-time toast notifications that appear when someone launches or exits a game 
 - Automatic reconnection if connection drops
 - No polling - efficient push-based updates
 
-### 🔗 Static Webhook URL
+### 🔗 Webhook URLs
+
+**For Nintendo Switch (Recommended - HTTP Bridge):**
+```
+http://switch-webhook.brendonganle.workers.dev/
+```
+Use this HTTP endpoint to avoid SSL certificate issues common with Switch homebrew.
+
+**Direct HTTPS Endpoint (If SSL Supported):**
 ```
 https://sipnplay.cafe/api/switch-webhook
 ```
-This URL is permanent and will never change as long as the domain remains the same.
+
+Both URLs are permanent and will never change.
 
 ## Technical Architecture
 
@@ -90,16 +99,27 @@ The Nintendo Switch homebrew should send a POST request with this JSON structure
 
 ### For Switch Homebrew Developers
 
+**Recommended: Use HTTP Bridge (No SSL Issues)**
+
 1. Configure your homebrew to send POST requests to:
    ```
-   https://sipnplay.cafe/api/switch-webhook
+   http://switch-webhook.brendonganle.workers.dev/
    ```
+   This HTTP endpoint automatically forwards to the production HTTPS site.
 
 2. Set Content-Type header to `application/json`
 
 3. Send the webhook payload when:
    - Game launches (action: "Launch")
    - Game exits (action: "Exit")
+
+**Alternative: Direct HTTPS (May Have SSL Certificate Issues)**
+
+If your homebrew supports modern SSL/TLS:
+```
+https://sipnplay.cafe/api/switch-webhook
+```
+⚠️ Note: Many Switch homebrew apps have SSL certificate validation issues. Use the HTTP bridge above if you encounter SSL errors.
 
 ### For Local Testing
 
@@ -239,9 +259,127 @@ curl -X POST https://sipnplay.cafe/api/switch-webhook \
 
 Since Nintendo Switch homebrew has problems with HTTPS/SSL certificates, we've created an HTTP-to-HTTPS bridge that solves this issue.
 
-### Quick Solutions
+### Production Solution: Cloudflare Worker (Recommended) ✅
 
-#### Option 1: Free Cloudflare Tunnel (Recommended for Testing)
+**Current Production Bridge:** `http://switch-webhook.brendonganle.workers.dev/`
+
+This is the **permanent HTTP endpoint** for Nintendo Switch webhooks. It automatically forwards all webhooks to the production HTTPS endpoint.
+
+#### Why Cloudflare Workers?
+- ✅ **Free** - Up to 100,000 requests/day at no cost
+- ✅ **Permanent URL** - Never changes, no need to update Switch config
+- ✅ **Global Edge Network** - Fast from anywhere in the world
+- ✅ **Zero Maintenance** - No server management required
+- ✅ **Automatic HTTPS Forwarding** - Handles all SSL/TLS complexity
+- ✅ **Real-time Logging** - Monitor webhook activity in Cloudflare dashboard
+
+#### Setup Instructions
+
+1. **Create Cloudflare Account** (if needed)
+   - Go to https://dash.cloudflare.com/sign-up
+   - Sign up for free account
+
+2. **Create a New Worker:**
+   - Go to **Workers & Pages** in left sidebar
+   - Click **Create Application** → **Create Worker**
+   - Name it `switch-webhook-bridge`
+   - Click **Deploy**
+
+3. **Replace Worker Code:**
+   Click **Edit Code** and replace with:
+   ```javascript
+   export default {
+     async fetch(request, env, ctx) {
+       // Only allow POST requests
+       if (request.method !== 'POST') {
+         return new Response('Method not allowed. Use POST.', {
+           status: 405,
+           headers: { 'Content-Type': 'text/plain' }
+         });
+       }
+
+       try {
+         // Get the webhook payload from Switch
+         const payload = await request.json();
+
+         // Log incoming request (visible in Worker logs)
+         console.log('Received webhook from Switch:', payload);
+
+         // Forward to production HTTPS endpoint
+         const response = await fetch('https://sipnplay.cafe/api/switch-webhook', {
+           method: 'POST',
+           headers: {
+             'Content-Type': 'application/json',
+             'User-Agent': 'Cloudflare-Worker-Bridge',
+             'X-Forwarded-For': request.headers.get('CF-Connecting-IP') || 'unknown'
+           },
+           body: JSON.stringify(payload)
+         });
+
+         // Get response from production
+         const responseData = await response.json();
+         console.log('Production response:', responseData);
+
+         // Return success response to Switch
+         return new Response(JSON.stringify({
+           status: 'success',
+           message: 'Webhook forwarded',
+           production_response: responseData
+         }), {
+           status: 200,
+           headers: {
+             'Content-Type': 'application/json',
+             'Access-Control-Allow-Origin': '*'
+           }
+         });
+
+       } catch (error) {
+         console.error('Bridge error:', error);
+
+         return new Response(JSON.stringify({
+           status: 'error',
+           message: error.message
+         }), {
+           status: 500,
+           headers: { 'Content-Type': 'application/json' }
+         });
+       }
+     }
+   };
+   ```
+
+4. **Deploy the Worker:**
+   - Click **Save and Deploy**
+   - Your worker will be available at: `https://your-worker-name.your-account.workers.dev`
+
+5. **Configure Your Switch:**
+   Use this URL in your Switch homebrew:
+   ```
+   http://switch-webhook.brendonganle.workers.dev/
+   ```
+
+6. **Test the Bridge:**
+   ```bash
+   curl -X POST http://switch-webhook.brendonganle.workers.dev/ \
+     -H "Content-Type: application/json" \
+     -d '{
+       "action": "Launch",
+       "title_name": "Test Game",
+       "title_id": "0100000000000000",
+       "controller_count": 1
+     }'
+   ```
+
+#### Monitoring Your Worker
+
+To view real-time logs:
+1. Go to your Worker in Cloudflare dashboard
+2. Click **Logs** tab (real-time logs)
+3. Or use Wrangler CLI: `wrangler tail switch-webhook-bridge`
+
+### Alternative Solutions
+
+#### Option 1: Cloudflare Tunnel (For Local Testing)
 
 1. **Download cloudflared:**
    - Windows: https://github.com/cloudflare/cloudflared/releases

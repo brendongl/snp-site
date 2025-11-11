@@ -48,18 +48,27 @@ export default function SwitchWebhookMonitor() {
           const data = JSON.parse(event.data);
           console.log('[Monitor] Received webhook:', data);
 
-          // Add unique ID and store raw data
-          const webhook: WebhookPayload = {
-            ...data,
-            id: `${Date.now()}-${Math.random()}`,
-            raw: data
-          };
+          // Ignore connection messages
+          if (data.type === 'connected') {
+            console.log('[Monitor]', data.message);
+            return;
+          }
 
-          setWebhooks(prev => [webhook, ...prev].slice(0, 100)); // Keep last 100
+          // Only process actual game webhooks
+          if (data.type === 'switch_game' && data.game && data.game.name) {
+            // Add unique ID and store raw data
+            const webhook: WebhookPayload = {
+              ...data,
+              id: `${Date.now()}-${Math.random()}`,
+              raw: data
+            };
 
-          // Auto-scroll to top if enabled
-          if (autoScroll && scrollRef.current) {
-            scrollRef.current.scrollTop = 0;
+            setWebhooks(prev => [webhook, ...prev].slice(0, 100)); // Keep last 100
+
+            // Auto-scroll to top if enabled
+            if (autoScroll && scrollRef.current) {
+              scrollRef.current.scrollTop = 0;
+            }
           }
         } catch (error) {
           console.error('[Monitor] Error parsing SSE data:', error);
@@ -208,18 +217,30 @@ export default function SwitchWebhookMonitor() {
         </div>
       </Card>
 
-      {/* Production Webhook URL */}
-      <Card className="p-4 mb-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <div className="flex items-start gap-3">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
-              Production Webhook URL (Configure your Switch to use this):
+      {/* Production Webhook URLs */}
+      <Card className="p-4 mb-6 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-500">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-green-800 dark:text-green-300 mb-2">
+              ✅ HTTP Bridge (Recommended for Switch):
             </p>
-            <code className="text-xs bg-white dark:bg-gray-900 px-2 py-1 rounded border">
+            <code className="text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded border border-green-300 block">
+              http://switch-webhook.brendonganle.workers.dev/
+            </code>
+            <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+              Uses HTTP to avoid SSL issues, automatically forwards to HTTPS production endpoint
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+              Direct HTTPS Endpoint (Alternative):
+            </p>
+            <code className="text-xs bg-white dark:bg-gray-900 px-3 py-2 rounded border border-gray-300 block">
               https://sipnplay.cafe/api/switch-webhook
             </code>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              Note: Switch needs HTTP, use Cloudflare Tunnel or HTTP bridge for SSL bypass
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              Only if your Switch homebrew supports modern SSL/TLS certificates
             </p>
           </div>
         </div>

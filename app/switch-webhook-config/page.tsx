@@ -5,9 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function SwitchWebhookConfig() {
-  // Static production webhook URL - this never changes
+  // Static production webhook URLs
+  const HTTP_BRIDGE_URL = 'http://switch-webhook.brendonganle.workers.dev/';
   const PRODUCTION_WEBHOOK_URL = 'https://sipnplay.cafe/api/switch-webhook';
   const [copied, setCopied] = useState(false);
+  const [copiedBridge, setCopiedBridge] = useState(false);
   const [testStatus, setTestStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [localIp, setLocalIp] = useState<string>('192.168.x.x');
@@ -25,6 +27,12 @@ export default function SwitchWebhookConfig() {
     navigator.clipboard.writeText(PRODUCTION_WEBHOOK_URL);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyBridgeUrl = () => {
+    navigator.clipboard.writeText(HTTP_BRIDGE_URL);
+    setCopiedBridge(true);
+    setTimeout(() => setCopiedBridge(false), 2000);
   };
 
   const testWebhook = async () => {
@@ -76,29 +84,89 @@ export default function SwitchWebhookConfig() {
       <h1 className="text-3xl font-bold mb-8">Nintendo Switch Webhook Configuration</h1>
 
       <div className="grid gap-6 max-w-4xl">
-        {/* Webhook URL Card */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">🎮 Production Webhook URL (Use This!)</h2>
+        {/* HTTP Bridge Card - RECOMMENDED */}
+        <Card className="p-6 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-2 border-green-500">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">🎮</span>
+            <h2 className="text-xl font-semibold">HTTP Bridge (Recommended for Switch)</h2>
+            <span className="ml-auto px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">RECOMMENDED</span>
+          </div>
 
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg mb-4">
-            <p className="text-sm text-green-700 dark:text-green-400 mb-2 font-semibold">✅ Configure your Switch homebrew to send webhooks to:</p>
+          <div className="bg-white dark:bg-gray-900 border-2 border-green-500 p-4 rounded-lg mb-4">
+            <p className="text-sm text-green-700 dark:text-green-400 mb-2 font-semibold">
+              ✅ Configure your Nintendo Switch homebrew to use this HTTP endpoint:
+            </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 bg-white dark:bg-gray-900 p-3 rounded font-mono text-sm break-all border-2 border-green-500">
+              <code className="flex-1 bg-green-50 dark:bg-green-900/30 p-3 rounded font-mono text-sm break-all border border-green-300">
+                {HTTP_BRIDGE_URL}
+              </code>
+              <Button
+                onClick={copyBridgeUrl}
+                variant="outline"
+                className="shrink-0 border-green-500 text-green-700 hover:bg-green-50"
+              >
+                {copiedBridge ? '✓ Copied!' : 'Copy'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 font-bold">✓</span>
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">No SSL Certificate Issues</p>
+                <p className="text-gray-600 dark:text-gray-400">Uses HTTP to avoid common Switch homebrew SSL/TLS problems</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 font-bold">✓</span>
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">Automatic HTTPS Forwarding</p>
+                <p className="text-gray-600 dark:text-gray-400">Cloudflare Worker automatically forwards to production endpoint</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 font-bold">✓</span>
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">Free & Fast</p>
+                <p className="text-gray-600 dark:text-gray-400">Global edge network, 100k requests/day free</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 font-bold">✓</span>
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">Permanent URL</p>
+                <p className="text-gray-600 dark:text-gray-400">This URL will never change</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* HTTPS Webhook URL Card - Alternative */}
+        <Card className="p-6 border border-gray-300">
+          <h2 className="text-xl font-semibold mb-4">🔒 Direct HTTPS Endpoint (Alternative)</h2>
+
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 p-4 rounded-lg mb-4">
+            <p className="text-sm text-yellow-800 dark:text-yellow-400 mb-2">
+              ⚠️ Only use this if your Switch homebrew supports modern SSL/TLS certificates
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-white dark:bg-gray-900 p-3 rounded font-mono text-sm break-all border border-gray-300">
                 {PRODUCTION_WEBHOOK_URL}
               </code>
               <Button
                 onClick={copyToClipboard}
                 variant="outline"
-                className="shrink-0 border-green-500 text-green-700 hover:bg-green-50"
+                className="shrink-0"
               >
                 {copied ? '✓ Copied!' : 'Copy'}
               </Button>
             </div>
           </div>
 
-          <div className="space-y-2 text-sm">
-            <p className="font-semibold">📍 This URL is permanent and will never change</p>
-            <p className="text-gray-600 dark:text-gray-400">It works from anywhere in the world as long as your Switch has internet access</p>
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            <p>Most Nintendo Switch homebrew apps have issues with SSL certificate validation.</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200">If you get SSL errors, use the HTTP Bridge above instead.</p>
           </div>
         </Card>
 
