@@ -7,7 +7,8 @@ interface POSDashboardData {
   unpaidAmount: number;
   paidAmount: number;
   currentTables: number;
-  currentCustomers: number;
+  paidCustomers: number;    // Customers who have paid (left)
+  unpaidCustomers: number;  // Customers currently in store
   lastUpdated: string;
 }
 
@@ -79,9 +80,16 @@ export function AdminPOSHeader() {
           <span className="font-bold">{data.currentTables}</span>
         </div>
 
+        <div className="h-4 w-px bg-white/30"></div>
+
         <div className="flex items-center gap-2">
-          <span className="opacity-90">👥 <span className="hidden sm:inline">Customers:</span></span>
-          <span className="font-bold">{data.currentCustomers}</span>
+          <span className="opacity-90">✅ <span className="hidden sm:inline">Paid:</span></span>
+          <span className="font-bold text-green-300">{data.paidCustomers}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="opacity-90">⏱️ <span className="hidden sm:inline">In Store:</span></span>
+          <span className="font-bold text-yellow-300">{data.unpaidCustomers}</span>
         </div>
       </div>
     </div>
