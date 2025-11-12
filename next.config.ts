@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
 
   // Experimental optimizations for faster builds
   experimental: {
+    // Note: instrumentation.ts runs automatically in Next.js 15.5+ (no config needed)
     // Optimize package imports for tree-shaking
     optimizePackageImports: [
       'lucide-react',

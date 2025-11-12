@@ -1,5 +1,3 @@
-'use server';
-
 import { Pool } from 'pg';
 
 // Create a connection pool with optimized settings
@@ -221,3 +219,6 @@ export async function syncStaffListFromAirtable(staffData: Array<{ name: string;
 export async function closePool(): Promise<void> {
   await pool.end();
 }
+
+// Export pool for direct database access
+export default pool;

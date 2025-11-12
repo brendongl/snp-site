@@ -1,8 +1,8 @@
 // app/api/pos/dashboard/route.ts
-// iPOS Dashboard API - Calls Railway Playwright microservice
+// iPOS Dashboard API - Uses local Playwright service for browser automation
 // Why: iPOS tokens are session-bound, requires browser automation via Playwright
 import { NextResponse } from 'next/server';
-import { iposRemote } from '@/lib/services/ipos-remote-service';
+import { fetchIPOSDashboardData, getIPOSCredentials } from '@/lib/services/ipos-playwright-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60; // Revalidate every 60 seconds
@@ -28,8 +28,13 @@ export async function GET() {
       });
     }
 
-    // Fetch data from Railway Playwright microservice
-    const dashboardData = await iposRemote.getDashboardData();
+    // Get credentials and fetch data using local Playwright service
+    const credentials = getIPOSCredentials();
+    if (!credentials) {
+      throw new Error('iPOS credentials not configured');
+    }
+
+    const dashboardData = await fetchIPOSDashboardData(credentials);
 
     // Check if we got valid data
     if (!dashboardData.lastUpdated) {
@@ -41,7 +46,8 @@ export async function GET() {
           unpaidAmount: 0,
           paidAmount: 0,
           currentTables: 0,
-          currentCustomers: 0,
+          paidCustomers: 0,
+          unpaidCustomers: 0,
           lastUpdated: new Date().toISOString()
         }
       }, { status: 500 });
@@ -82,7 +88,8 @@ export async function GET() {
         unpaidAmount: 0,
         paidAmount: 0,
         currentTables: 0,
-        currentCustomers: 0,
+        paidCustomers: 0,
+        unpaidCustomers: 0,
         lastUpdated: new Date().toISOString()
       }
     }, { status: 500 });
