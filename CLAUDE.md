@@ -530,6 +530,10 @@ N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/xxx
 N8N_API_KEY=xxxxxxxxxxxxx
 GOOGLE_MAPS_API_KEY=xxxxxxxxxxxxx
 
+# OpenRouter API (AI-powered rostering - natural language rule parsing)
+# Get your API key from: https://openrouter.ai/keys
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxx
+
 # iPOS/Fabi POS Integration (See docs/IPOS_API_ENDPOINTS.md)
 IPOS_API_BASE_URL=https://fabi.ipos.vn/api
 IPOS_API_TOKEN=your_jwt_token_here

@@ -1,10 +1,10 @@
 /**
- * Service: Rule Parser with Claude API
- * Version: 2.0.0
+ * Service: Rule Parser with Claude API via OpenRouter
+ * Version: 2.1.0
  * Phase 2: Natural Language Rule Parsing
  *
  * Converts natural language scheduling rules into structured constraints
- * using Claude API (Anthropic).
+ * using Claude API through OpenRouter.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -45,15 +45,18 @@ export default class RuleParserService {
   private static anthropic: Anthropic | null = null;
 
   /**
-   * Initialize Anthropic client
+   * Initialize Anthropic client with OpenRouter
    */
   private static getClient(): Anthropic {
     if (!this.anthropic) {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
-        throw new Error('ANTHROPIC_API_KEY not configured in environment');
+        throw new Error('OPENROUTER_API_KEY not configured in environment');
       }
-      this.anthropic = new Anthropic({ apiKey });
+      this.anthropic = new Anthropic({
+        apiKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+      });
     }
     return this.anthropic;
   }
@@ -117,7 +120,7 @@ Return JSON format:
 }`;
 
       const response = await client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'anthropic/claude-3.5-sonnet',
         max_tokens: 1024,
         temperature: 0.3,
         system: systemPrompt,

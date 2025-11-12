@@ -1,0 +1,236 @@
+'use client';
+
+import { RosterWeeklyStaffView } from '@/components/features/roster/RosterWeeklyStaffView';
+import { RosterDailyGanttView } from '@/components/features/roster/RosterDailyGanttView';
+import { ShiftEditDialog } from '@/components/features/roster/ShiftEditDialog';
+import { WeekSelector } from '@/components/features/roster/WeekSelector';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { format, startOfWeek } from 'date-fns';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ShiftAssignment } from '@/components/features/roster/ShiftCard';
+
+type ViewMode = 'week' | 'day';
+
+export default function RosterCalendarPage() {
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    // Default to current week (Monday)
+    const today = new Date();
+    const monday = startOfWeek(today, { weekStartsOn: 1 });
+    return format(monday, 'yyyy-MM-dd');
+  });
+
+  const [shifts, setShifts] = useState<ShiftAssignment[]>([]);
+  const [staffMembers, setStaffMembers] = useState<Array<{ id: string; name: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // View mode and selected shift for editing
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [editingShift, setEditingShift] = useState<ShiftAssignment | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Fetch shifts for the selected week
+  const fetchShifts = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/roster/shifts?week_start=${selectedWeek}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch shifts: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setShifts(data.shifts || []);
+
+      // Extract unique staff members from shifts
+      const uniqueStaff = Array.from(
+        new Set(data.shifts.map((s: ShiftAssignment) => s.staff_id))
+      ).map((id) => {
+        const shift = data.shifts.find((s: ShiftAssignment) => s.staff_id === id);
+        return {
+          id: id as string,
+          name: shift?.staff_name || 'Unknown',
+        };
+      });
+      setStaffMembers(uniqueStaff);
+    } catch (err) {
+      console.error('Error fetching shifts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load roster');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch shifts when week changes
+  useEffect(() => {
+    fetchShifts();
+  }, [selectedWeek]);
+
+  // Handle shift click - open edit dialog
+  const handleShiftClick = (shift: ShiftAssignment) => {
+    setEditingShift(shift);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle day click - switch to Gantt view
+  const handleDayClick = (staffId: string, date: string) => {
+    setSelectedDate(date);
+    setViewMode('day');
+  };
+
+  // Handle shift save
+  const handleShiftSave = async (updatedShift: Partial<ShiftAssignment>) => {
+    console.log('Saving shift:', updatedShift);
+    // TODO: Implement PUT /api/roster/shifts/[id]
+    // For now, just close the dialog
+    setIsEditDialogOpen(false);
+    setEditingShift(null);
+    // Refresh shifts after save
+    await fetchShifts();
+  };
+
+  // Filter shifts for selected date in day view
+  const dayShifts = viewMode === 'day'
+    ? shifts.filter((s) => {
+        const shiftDate = new Date(selectedDate);
+        const dayOfWeek = format(shiftDate, 'EEEE');
+        return s.day_of_week === dayOfWeek;
+      })
+    : shifts;
+
+  return (
+    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Roster Calendar</h1>
+          <p className="text-muted-foreground">
+            View and manage weekly staff schedules
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={fetchShifts}
+          disabled={loading}
+        >
+          {loading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
+          Refresh
+        </Button>
+      </div>
+
+      {/* Week Selector */}
+      {viewMode === 'week' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Week</CardTitle>
+            <CardDescription>
+              Choose a week to view the roster. Click on any day to see detailed timeline.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WeekSelector
+              selectedWeek={selectedWeek}
+              onChange={setSelectedWeek}
+              minWeek="2025-01-01"
+              maxWeek="2025-12-31"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <Card className="border-red-500 bg-red-50 dark:bg-red-950/20">
+          <CardContent className="pt-6">
+            <p className="text-red-700 dark:text-red-300">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main View */}
+      {!loading && (
+        <>
+          {viewMode === 'week' ? (
+            <RosterWeeklyStaffView
+              weekStart={selectedWeek}
+              shifts={shifts}
+              staffMembers={staffMembers}
+              onShiftClick={handleShiftClick}
+              onDayClick={handleDayClick}
+            />
+          ) : (
+            <RosterDailyGanttView
+              date={selectedDate}
+              shifts={dayShifts}
+              staffMembers={staffMembers}
+              onShiftClick={handleShiftClick}
+              onBack={() => setViewMode('week')}
+            />
+          )}
+        </>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Summary Card (Week View Only) */}
+      {viewMode === 'week' && !loading && shifts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Week Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-2xl font-bold">{shifts.length}</div>
+              <div className="text-sm text-muted-foreground">Total Shifts</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold">
+                {new Set(shifts.map(s => s.staff_id)).size}
+              </div>
+              <div className="text-sm text-muted-foreground">Staff Members</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold">
+                {shifts.filter(s => s.shift_type === 'opening').length}
+              </div>
+              <div className="text-sm text-muted-foreground">Opening Shifts</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold">
+                {shifts.filter(s => s.has_violation).length}
+              </div>
+              <div className="text-sm text-muted-foreground">Violations</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Dialog */}
+      <ShiftEditDialog
+        shift={editingShift}
+        open={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingShift(null);
+        }}
+        onSave={handleShiftSave}
+        staffMembers={staffMembers}
+      />
+    </div>
+  );
+}
