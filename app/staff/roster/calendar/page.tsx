@@ -54,7 +54,7 @@ export default function RosterCalendarPage() {
       const staffData = await staffResponse.json();
 
       // Map to simple format with nickname
-      const allStaff = staffData.map((s: any) => ({
+      const allStaff = (staffData.staff || []).map((s: any) => ({
         id: s.id,
         name: s.nickname || s.name,
         fullName: s.name,
