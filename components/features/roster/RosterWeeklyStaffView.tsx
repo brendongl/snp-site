@@ -58,6 +58,7 @@ interface SortableStaffRowProps {
   days: string[];
   startDate: Date;
   shiftsByStaffAndDay: Record<string, ShiftAssignment[]>;
+  totalHours: number;
   onShiftClick?: (shift: ShiftAssignment) => void;
   onDayClick?: (staffId: string, date: string) => void;
 }
@@ -67,6 +68,7 @@ function SortableStaffRow({
   days,
   startDate,
   shiftsByStaffAndDay,
+  totalHours,
   onShiftClick,
   onDayClick,
 }: SortableStaffRowProps) {
@@ -104,15 +106,29 @@ function SortableStaffRow({
     return { left: `${left}%`, width: `${width}%` };
   };
 
+  // Format time for display (convert 24h to 12h with am/pm)
+  const formatTime = (time: string): string => {
+    const [hours, minutes] = time.split(':').map(Number);
+    if (hours === 0) return `12:${minutes.toString().padStart(2, '0')}am`;
+    if (hours === 12) return `12:${minutes.toString().padStart(2, '0')}pm`;
+    if (hours < 12) return `${hours}:${minutes.toString().padStart(2, '0')}am`;
+    return `${hours - 12}:${minutes.toString().padStart(2, '0')}pm`;
+  };
+
   return (
     <Card ref={setNodeRef} style={style} className="overflow-hidden">
-      <div className="grid grid-cols-8 gap-2">
+      <div className="grid grid-cols-8 gap-1">
         {/* Staff Name Cell (Draggable) */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-r">
+        <div className="flex items-center gap-1 px-2 py-2 bg-muted/50 border-r">
           <div {...attributes} {...listeners} className="cursor-move">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <GripVertical className="h-3 w-3 text-muted-foreground" />
           </div>
-          <span className="font-medium text-sm truncate">{staff.name}</span>
+          <div className="flex flex-col">
+            <span className="font-medium text-xs truncate">{staff.name}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {totalHours.toFixed(2)} hrs
+            </span>
+          </div>
         </div>
 
         {/* Day Cells */}
@@ -124,7 +140,7 @@ function SortableStaffRow({
           return (
             <div
               key={day}
-              className="relative h-16 border-r last:border-r-0 hover:bg-accent/50 cursor-pointer transition-colors"
+              className="relative h-14 border-r last:border-r-0 hover:bg-accent/50 cursor-pointer transition-colors"
               onClick={() => onDayClick?.(staff.id, dayDate)}
             >
               {/* Shift Blocks */}
@@ -141,9 +157,9 @@ function SortableStaffRow({
                   <div
                     key={shiftIndex}
                     className={cn(
-                      'absolute top-2 h-12 rounded-md flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity',
+                      'absolute top-1 h-12 rounded flex items-center justify-center text-white text-[10px] font-medium cursor-pointer hover:opacity-80 transition-opacity',
                       roleColor,
-                      shift.has_violation && 'ring-2 ring-red-500'
+                      shift.has_violation && 'ring-1 ring-red-500'
                     )}
                     style={style}
                     onClick={(e) => {
@@ -151,9 +167,8 @@ function SortableStaffRow({
                       onShiftClick?.(shift);
                     }}
                   >
-                    <span className="truncate px-1">
-                      {shift.scheduled_start.substring(0, 5)} -{' '}
-                      {shift.scheduled_end.substring(0, 5)}
+                    <span className="truncate px-0.5">
+                      {formatTime(shift.scheduled_start)}-{formatTime(shift.scheduled_end)}
                     </span>
                   </div>
                 );
@@ -162,7 +177,7 @@ function SortableStaffRow({
               {/* Empty state - show chevron on hover */}
               {dayShifts.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -216,6 +231,18 @@ export function RosterWeeklyStaffView({
     return acc;
   }, {} as Record<string, ShiftAssignment[]>);
 
+  // Calculate total hours per staff member
+  const calculateStaffHours = (staffId: string): number => {
+    const staffShifts = shifts.filter((s) => s.staff_id === staffId);
+    return staffShifts.reduce((total, shift) => {
+      const [startHour, startMin] = shift.scheduled_start.split(':').map(Number);
+      const [endHour, endMin] = shift.scheduled_end.split(':').map(Number);
+      const start = startHour + startMin / 60;
+      const end = endHour + endMin / 60;
+      return total + (end - start);
+    }, 0);
+  };
+
   return (
     <div className={cn('overflow-x-auto', className)}>
       <div className="min-w-[1200px]">
@@ -250,7 +277,7 @@ export function RosterWeeklyStaffView({
             items={staffOrder.map((s) => s.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {staffOrder.map((staff) => (
                 <SortableStaffRow
                   key={staff.id}
@@ -258,6 +285,7 @@ export function RosterWeeklyStaffView({
                   days={DAYS_OF_WEEK}
                   startDate={startDate}
                   shiftsByStaffAndDay={shiftsByStaffAndDay}
+                  totalHours={calculateStaffHours(staff.id)}
                   onShiftClick={onShiftClick}
                   onDayClick={onDayClick}
                 />

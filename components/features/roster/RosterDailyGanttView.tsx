@@ -12,6 +12,7 @@ interface RosterDailyGanttViewProps {
   shifts: ShiftAssignment[];
   staffMembers: Array<{ id: string; name: string }>;
   onShiftClick?: (shift: ShiftAssignment) => void;
+  onCreateShift?: (staffId: string, date: string) => void;
   onBack?: () => void;
   className?: string;
 }
@@ -24,14 +25,16 @@ const ROLE_COLORS = {
   closing: 'bg-red-500 border-red-600',
 };
 
-// Generate hour markers (store hours typically 9am-midnight)
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+// Generate hour markers (8am to 2am = hours 8-26)
+// Hours 24, 25, 26 represent midnight, 1am, 2am
+const HOURS = Array.from({ length: 19 }, (_, i) => i + 8); // 8-26
 
 export function RosterDailyGanttView({
   date,
   shifts,
   staffMembers,
   onShiftClick,
+  onCreateShift,
   onBack,
   className,
 }: RosterDailyGanttViewProps) {
@@ -49,25 +52,29 @@ export function RosterDailyGanttView({
     return hours + minutes / 60;
   };
 
-  // Calculate shift block position and width
+  // Calculate shift block position and width (relative to 8am-2am range)
   const getShiftStyle = (start: string, end: string) => {
     const startHour = timeToHours(start);
     const endHour = timeToHours(end);
     const duration = endHour - startHour;
 
-    // Position as percentage of 24-hour day
-    const left = (startHour / 24) * 100;
-    const width = (duration / 24) * 100;
+    // Convert to position relative to 8am-2am (18 hour range)
+    // 8am = 0%, 2am (26) = 100%
+    const left = ((startHour - 8) / 18) * 100;
+    const width = (duration / 18) * 100;
 
     return { left: `${left}%`, width: `${width}%` };
   };
 
-  // Format hour label (e.g., "9am", "12pm", "6pm")
+  // Format hour label (e.g., "8am", "12pm", "12am", "2am")
   const formatHour = (hour: number): string => {
-    if (hour === 0) return '12am';
+    if (hour === 0 || hour === 24) return '12am';
     if (hour === 12) return '12pm';
+    if (hour === 25) return '1am';
+    if (hour === 26) return '2am';
     if (hour < 12) return `${hour}am`;
-    return `${hour - 12}pm`;
+    if (hour > 12 && hour < 24) return `${hour - 12}pm`;
+    return `${hour}am`;
   };
 
   return (
@@ -113,34 +120,35 @@ export function RosterDailyGanttView({
               </div>
 
               {/* Staff Rows */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {staffMembers.map((staff) => {
                   const staffShifts = shiftsByStaff[staff.id] || [];
 
                   return (
                     <div
                       key={staff.id}
-                      className="relative h-16 border rounded-lg hover:bg-accent/50 transition-colors"
+                      className="relative h-12 border rounded hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => onCreateShift?.(staff.id, date)}
                     >
                       {/* Staff Name */}
-                      <div className="absolute left-0 top-0 bottom-0 w-32 flex items-center px-3 bg-muted/50 border-r z-10">
-                        <span className="font-medium text-sm truncate">
+                      <div className="absolute left-0 top-0 bottom-0 w-28 flex items-center px-2 bg-muted/50 border-r z-10">
+                        <span className="font-medium text-xs truncate">
                           {staff.name}
                         </span>
                       </div>
 
                       {/* Hour Grid Lines */}
-                      <div className="absolute inset-0 flex pl-32">
+                      <div className="absolute inset-0 flex pl-28">
                         {HOURS.map((hour) => (
                           <div
                             key={hour}
-                            className="flex-1 border-r last:border-r-0 border-dashed border-muted-foreground/20"
+                            className="flex-1 border-r last:border-r-0 border-dashed border-muted-foreground/10"
                           />
                         ))}
                       </div>
 
                       {/* Shift Blocks */}
-                      <div className="absolute inset-0 pl-32">
+                      <div className="absolute inset-0 pl-28">
                         {staffShifts.map((shift, index) => {
                           const style = getShiftStyle(
                             shift.scheduled_start,
@@ -155,18 +163,21 @@ export function RosterDailyGanttView({
                             <div
                               key={index}
                               className={cn(
-                                'absolute top-2 h-12 rounded-lg border-2 flex flex-col items-center justify-center text-white text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity shadow-md',
+                                'absolute top-1 h-10 rounded border flex flex-col items-center justify-center text-white text-[10px] font-medium cursor-pointer hover:opacity-80 transition-opacity shadow',
                                 roleColor,
-                                shift.has_violation && 'ring-2 ring-red-500'
+                                shift.has_violation && 'ring-1 ring-red-500'
                               )}
                               style={style}
-                              onClick={() => onShiftClick?.(shift)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onShiftClick?.(shift);
+                              }}
                             >
                               <span className="font-semibold">
-                                {shift.scheduled_start.substring(0, 5)} -{' '}
+                                {shift.scheduled_start.substring(0, 5)}-
                                 {shift.scheduled_end.substring(0, 5)}
                               </span>
-                              <span className="text-[10px] opacity-90 capitalize">
+                              <span className="text-[9px] opacity-90 capitalize">
                                 {shift.role_required}
                               </span>
                             </div>

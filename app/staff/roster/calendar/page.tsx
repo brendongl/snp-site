@@ -38,28 +38,30 @@ export default function RosterCalendarPage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/roster/shifts?week_start=${selectedWeek}`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch shifts: ${response.statusText}`);
+      // Fetch shifts
+      const shiftsResponse = await fetch(`/api/roster/shifts?week_start=${selectedWeek}`);
+      if (!shiftsResponse.ok) {
+        throw new Error(`Failed to fetch shifts: ${shiftsResponse.statusText}`);
       }
+      const shiftsData = await shiftsResponse.json();
+      setShifts(shiftsData.shifts || []);
 
-      const data = await response.json();
-      setShifts(data.shifts || []);
+      // Fetch ALL staff members (not just those with shifts)
+      const staffResponse = await fetch('/api/staff-list');
+      if (!staffResponse.ok) {
+        throw new Error(`Failed to fetch staff: ${staffResponse.statusText}`);
+      }
+      const staffData = await staffResponse.json();
 
-      // Extract unique staff members from shifts
-      const uniqueStaff = Array.from(
-        new Set(data.shifts.map((s: ShiftAssignment) => s.staff_id))
-      ).map((id) => {
-        const shift = data.shifts.find((s: ShiftAssignment) => s.staff_id === id);
-        return {
-          id: id as string,
-          name: shift?.staff_name || 'Unknown',
-        };
-      });
-      setStaffMembers(uniqueStaff);
+      // Map to simple format with nickname
+      const allStaff = staffData.map((s: any) => ({
+        id: s.id,
+        name: s.nickname || s.name,
+        fullName: s.name,
+      }));
+      setStaffMembers(allStaff);
     } catch (err) {
-      console.error('Error fetching shifts:', err);
+      console.error('Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load roster');
     } finally {
       setLoading(false);
@@ -92,6 +94,28 @@ export default function RosterCalendarPage() {
     setEditingShift(null);
     // Refresh shifts after save
     await fetchShifts();
+  };
+
+  // Handle create new shift
+  const handleCreateShift = (staffId: string, date: string) => {
+    // Create a blank shift for this staff member on this day
+    const dayOfWeek = format(new Date(date), 'EEEE');
+    const staffMember = staffMembers.find((s) => s.id === staffId);
+
+    const newShift: ShiftAssignment = {
+      id: '',
+      staff_id: staffId,
+      staff_name: staffMember?.name || 'Unknown',
+      day_of_week: dayOfWeek,
+      scheduled_start: '09:00',
+      scheduled_end: '17:00',
+      role_required: 'floor',
+      shift_type: 'day',
+      has_violation: false,
+    };
+
+    setEditingShift(newShift);
+    setIsEditDialogOpen(true);
   };
 
   // Filter shifts for selected date in day view
@@ -174,6 +198,7 @@ export default function RosterCalendarPage() {
               shifts={dayShifts}
               staffMembers={staffMembers}
               onShiftClick={handleShiftClick}
+              onCreateShift={handleCreateShift}
               onBack={() => setViewMode('week')}
             />
           )}
