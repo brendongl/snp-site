@@ -44,12 +44,17 @@ const DAYS_OF_WEEK = [
   'Sunday',
 ];
 
-// Role color mapping (simplified - no shift type labels)
+// Role color mapping matching Homebase
 const ROLE_COLORS = {
-  cafe: 'bg-blue-500',
-  floor: 'bg-purple-500',
-  opening: 'bg-green-500',
-  closing: 'bg-red-500',
+  supervisor: 'bg-[#ffa099]', // Coral/salmon (matches Homebase Supervisor)
+  dealer: 'bg-[#a855f7]',      // Purple (matches Homebase Dealer)
+  senior: 'bg-[#22c55e]',      // Green (matches Homebase Senior)
+  barista: 'bg-[#3b82f6]',     // Blue (matches Homebase Barista)
+  cafe: 'bg-[#3b82f6]',        // Blue
+  floor: 'bg-[#ffa099]',       // Coral
+  opening: 'bg-[#22c55e]',     // Green
+  closing: 'bg-[#a855f7]',     // Purple
+  'game master': 'bg-[#10b981]', // Teal green
 };
 
 // Sortable Staff Row Component
@@ -117,15 +122,15 @@ function SortableStaffRow({
 
   return (
     <Card ref={setNodeRef} style={style} className="overflow-hidden">
-      <div className="grid grid-cols-8 gap-1">
+      <div className="grid grid-cols-8 gap-0">
         {/* Staff Name Cell (Draggable) */}
-        <div className="flex items-center gap-1 px-2 py-2 bg-muted/50 border-r">
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/30 border-r">
           <div {...attributes} {...listeners} className="cursor-move">
-            <GripVertical className="h-3 w-3 text-muted-foreground" />
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="font-medium text-xs truncate">{staff.name}</span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="font-bold text-sm text-[#1e0b3a] truncate">{staff.name}</span>
+            <span className="text-xs font-medium text-[#605f56]">
               {totalHours.toFixed(2)} hrs
             </span>
           </div>
@@ -140,44 +145,46 @@ function SortableStaffRow({
           return (
             <div
               key={day}
-              className="relative h-14 border-r last:border-r-0 hover:bg-accent/50 cursor-pointer transition-colors"
+              className="relative min-h-[48px] border-r last:border-r-0 hover:bg-accent/30 cursor-pointer transition-colors p-1"
               onClick={() => onDayClick?.(staff.id, dayDate)}
             >
-              {/* Shift Blocks */}
-              {dayShifts.map((shift, shiftIndex) => {
-                const style = getShiftStyle(
-                  shift.scheduled_start,
-                  shift.scheduled_end
-                );
-                const roleColor =
-                  ROLE_COLORS[shift.role_required as keyof typeof ROLE_COLORS] ||
-                  'bg-gray-500';
+              {/* Shift Blocks - Homebase style */}
+              <div className="flex flex-col gap-1">
+                {dayShifts.map((shift, shiftIndex) => {
+                  const roleColor =
+                    ROLE_COLORS[shift.role_required.toLowerCase() as keyof typeof ROLE_COLORS] ||
+                    'bg-gray-400';
 
-                return (
-                  <div
-                    key={shiftIndex}
-                    className={cn(
-                      'absolute top-1 h-12 rounded flex items-center justify-center text-white text-[10px] font-medium cursor-pointer hover:opacity-80 transition-opacity',
-                      roleColor,
-                      shift.has_violation && 'ring-1 ring-red-500'
-                    )}
-                    style={style}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onShiftClick?.(shift);
-                    }}
-                  >
-                    <span className="truncate px-0.5">
-                      {formatTime(shift.scheduled_start)}-{formatTime(shift.scheduled_end)}
-                    </span>
-                  </div>
-                );
-              })}
+                  return (
+                    <div
+                      key={shiftIndex}
+                      className={cn(
+                        'rounded px-2 py-0.5 cursor-pointer hover:opacity-90 transition-opacity flex flex-col justify-center min-h-[36px]',
+                        roleColor,
+                        shift.has_violation && 'ring-2 ring-red-500'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShiftClick?.(shift);
+                      }}
+                    >
+                      {/* Time - bold, 12px */}
+                      <div className="text-xs font-bold text-[#1e0b3a] leading-tight">
+                        {formatTime(shift.scheduled_start)}-{formatTime(shift.scheduled_end)}
+                      </div>
+                      {/* Role - medium weight, 12px */}
+                      <div className="text-xs font-medium text-[#1e0b3a] leading-tight">
+                        {shift.role_required}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
               {/* Empty state - show chevron on hover */}
               {dayShifts.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -246,21 +253,24 @@ export function RosterWeeklyStaffView({
   return (
     <div className={cn('overflow-x-auto', className)}>
       <div className="min-w-[1200px]">
-        {/* Header Row */}
-        <div className="grid grid-cols-8 gap-2 mb-2">
+        {/* Header Row - Homebase style */}
+        <div className="grid grid-cols-8 gap-0 mb-1 border-b pb-2">
           {/* Staff Names Column Header */}
-          <div className="font-semibold text-sm text-muted-foreground px-4 py-2">
+          <div className="font-bold text-sm text-[#1e0b3a] px-4 py-2">
             Staff
           </div>
 
           {/* Day Headers */}
           {DAYS_OF_WEEK.map((day, index) => {
             const dayDate = addDays(startDate, index);
+            const isToday = format(dayDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
             return (
-              <div key={day} className="text-center">
-                <div className="font-semibold text-sm">{day}</div>
-                <div className="text-xs text-muted-foreground">
-                  {format(dayDate, 'MMM d')}
+              <div key={day} className="text-center px-2">
+                <div className={cn(
+                  "font-semibold text-sm",
+                  isToday && "text-purple-600"
+                )}>
+                  {day.substring(0, 3)}, {format(dayDate, 'd')}
                 </div>
               </div>
             );
@@ -277,7 +287,7 @@ export function RosterWeeklyStaffView({
             items={staffOrder.map((s) => s.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {staffOrder.map((staff) => (
                 <SortableStaffRow
                   key={staff.id}
@@ -294,24 +304,28 @@ export function RosterWeeklyStaffView({
           </SortableContext>
         </DndContext>
 
-        {/* Legend */}
-        <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="font-medium">Roles:</span>
+        {/* Legend - Homebase colors */}
+        <div className="mt-4 flex items-center gap-4 text-xs text-[#605f56]">
+          <span className="font-semibold text-[#1e0b3a]">Roles:</span>
           <div className="flex items-center gap-2">
-            <div className={cn('w-3 h-3 rounded', ROLE_COLORS.cafe)} />
-            <span>Cafe</span>
+            <div className={cn('w-4 h-4 rounded', ROLE_COLORS.supervisor)} />
+            <span>Supervisor</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={cn('w-3 h-3 rounded', ROLE_COLORS.floor)} />
-            <span>Floor</span>
+            <div className={cn('w-4 h-4 rounded', ROLE_COLORS.dealer)} />
+            <span>Dealer</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={cn('w-3 h-3 rounded', ROLE_COLORS.opening)} />
-            <span>Opening</span>
+            <div className={cn('w-4 h-4 rounded', ROLE_COLORS.senior)} />
+            <span>Senior</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={cn('w-3 h-3 rounded', ROLE_COLORS.closing)} />
-            <span>Closing</span>
+            <div className={cn('w-4 h-4 rounded', ROLE_COLORS.barista)} />
+            <span>Barista</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={cn('w-4 h-4 rounded', ROLE_COLORS['game master'])} />
+            <span>Game Master</span>
           </div>
         </div>
       </div>
