@@ -128,16 +128,17 @@ export async function getRecentPlayLogs(
  * Get all staff members from cache
  * Returns staff with UUID primary keys
  */
-export async function getStaffList(): Promise<Array<{ id: string; name: string; type: string; email: string }>> {
+export async function getStaffList(): Promise<Array<{ id: string; name: string; nickname: string | null; type: string; email: string }>> {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT id, staff_name, staff_email, staff_type FROM staff_list ORDER BY staff_name ASC`
+      `SELECT id, staff_name, nickname, staff_email, staff_type FROM staff_list ORDER BY staff_name ASC`
     );
 
     return result.rows.map(row => ({
       id: row.id, // UUID primary key
       name: row.staff_name,
+      nickname: row.nickname || null,
       email: row.staff_email,
       type: row.staff_type || 'Staff',
     }));

@@ -336,18 +336,13 @@ function GamesPageContent() {
         const minPlayers = parseInt(minPlayersStr);
         const maxPlayers = maxPlayersStr === 'No Limit' ? 999 : parseInt(maxPlayersStr);
 
-        // Filter to show games whose entire player range fits within the selected range
-        // If user selects min=6 max=6, show games where min=6 AND max=6
-        // If user selects min=5 max=10, show games where min>=5 AND max<=10
-        if (filters.playerCount?.min && minPlayers < filters.playerCount.min) {
-          return false;
-        }
+        // Show games that can be played with the selected player range (overlap logic)
+        // Game's max must be >= selected min (game supports at least the minimum)
+        // Game's min must be <= selected max (game doesn't require more than the maximum)
+        const selectedMin = filters.playerCount?.min || 1;
+        const selectedMax = filters.playerCount?.max || 999;
 
-        if (filters.playerCount?.max && maxPlayers > filters.playerCount.max) {
-          return false;
-        }
-
-        return true;
+        return maxPlayers >= selectedMin && minPlayers <= selectedMax;
       });
     }
 
@@ -396,7 +391,10 @@ function GamesPageContent() {
       filtered = filtered.filter(game => {
         const bestPlayerAmount = game.fields['Best Player Amount'];
         if (!bestPlayerAmount) return false;
-        return bestPlayerAmount === filters.bestPlayerCount!.toString();
+        // Convert both to strings for comparison, handling potential whitespace
+        const bestAmountStr = bestPlayerAmount.toString().trim();
+        const filterStr = filters.bestPlayerCount!.toString();
+        return bestAmountStr === filterStr;
       });
     }
 
@@ -831,11 +829,31 @@ function GamesPageContent() {
                     </span>
                   )}
                   {filters.quickFilter && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
-                      {filters.quickFilter === 'sixPlus' && '👥 6+'}
-                      {filters.quickFilter === 'couples' && '💑'}
-                      {filters.quickFilter === 'social' && '🎉'}
-                    </span>
+                    <>
+                      <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                        {filters.quickFilter === 'sixPlus' && '👥 6+ Players'}
+                        {filters.quickFilter === 'couples' && '💑 Couples'}
+                        {filters.quickFilter === 'social' && '🎉 Social'}
+                        {filters.quickFilter === 'noChecks' && '📋 No Checks'}
+                        {filters.quickFilter === 'hasIssues' && '⚠️ Has Issues'}
+                      </span>
+                      {/* Show what the special filter is actually doing */}
+                      {filters.quickFilter === 'sixPlus' && (
+                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                          Max≥6
+                        </span>
+                      )}
+                      {filters.quickFilter === 'couples' && (
+                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                          2p or Best@2
+                        </span>
+                      )}
+                      {filters.quickFilter === 'social' && (
+                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                          Party/Deduction/Social
+                        </span>
+                      )}
+                    </>
                   )}
                   {filters.categories && filters.categories.length > 0 && (
                     <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">

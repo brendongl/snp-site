@@ -119,29 +119,58 @@ export async function POST(request: NextRequest) {
       // Validate solution
       const validation = RosterSolverService.validateSolution(solution);
 
-      // Auto-save if requested and solution is valid
+      // Auto-save if requested (even with violations - that's what drafts are for!)
       let saved = false;
-      if (auto_save && solution.is_valid) {
-        console.log('   💾 Auto-saving roster...');
+      let roster_id = null;
+      if (auto_save) {
+        console.log('   💾 Auto-saving roster as draft...');
+        if (!solution.is_valid) {
+          console.log('   ⚠️  Roster has violations, saving as draft for manager review');
+        }
 
         // Delete existing shifts for this week
         await RosterDbService.deleteShiftsByWeek(week_start);
 
-        // Create new shifts
+        // Create or update roster_metadata
+        const metadataResult = await client.query(`
+          INSERT INTO roster_metadata (roster_week_start, status, violations)
+          VALUES ($1, 'draft', $2)
+          ON CONFLICT (roster_week_start)
+          DO UPDATE SET
+            status = 'draft',
+            violations = $2,
+            updated_at = NOW()
+          RETURNING id
+        `, [week_start, JSON.stringify(solution.violations)]);
+
+        roster_id = metadataResult.rows[0].id;
+
+        // Create new shifts (all unpublished initially)
         for (const assignment of solution.assignments) {
-          await RosterDbService.createShift({
-            roster_week_start: week_start,
-            day_of_week: assignment.shift_requirement.day_of_week as any,
-            shift_type: assignment.shift_requirement.shift_type as any,
-            staff_id: assignment.staff_id,
-            scheduled_start: assignment.shift_requirement.scheduled_start,
-            scheduled_end: assignment.shift_requirement.scheduled_end,
-            role_required: assignment.shift_requirement.role_required
-          });
+          await client.query(`
+            INSERT INTO roster_shifts (
+              roster_week_start,
+              day_of_week,
+              shift_type,
+              staff_id,
+              scheduled_start,
+              scheduled_end,
+              role_required,
+              is_published
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, false)
+          `, [
+            week_start,
+            assignment.shift_requirement.day_of_week,
+            assignment.shift_requirement.shift_type,
+            assignment.staff_id,
+            assignment.shift_requirement.scheduled_start,
+            assignment.shift_requirement.scheduled_end,
+            assignment.shift_requirement.role_required
+          ]);
         }
 
         saved = true;
-        console.log('   ✅ Roster saved to database');
+        console.log(`   ✅ Roster saved as DRAFT (roster_id: ${roster_id})`);
       }
 
       // Build response with staff names

@@ -25,10 +25,39 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+interface StaffAvailability {
+  staff_id: string;
+  staff_name: string;
+  weekly_availability: Array<{
+    day_of_week: string;
+    hour_start: number;
+    hour_end: number;
+    status: 'available' | 'unavailable';
+  }>;
+  time_off: Array<{
+    date: string;
+    time_start: string;
+    time_end: string;
+    reason?: string;
+  }>;
+}
+
+interface StaffPreferredTime {
+  id: number;
+  staff_id: string;
+  staff_name: string;
+  staff_nickname?: string;
+  day_of_week: string;
+  hour_start: number;
+  hour_end: number;
+}
+
 interface RosterWeeklyStaffViewProps {
   weekStart: string; // ISO date string (YYYY-MM-DD) of Monday
   shifts: ShiftAssignment[];
   staffMembers: Array<{ id: string; name: string }>;
+  availability?: StaffAvailability[];
+  preferredTimes?: StaffPreferredTime[];
   onShiftClick?: (shift: ShiftAssignment) => void;
   onDayClick?: (staffId: string, date: string) => void; // Click empty cell to create shift
   onDayHeaderClick?: (date: string) => void; // Click day header to open Gantt view
@@ -64,6 +93,8 @@ interface SortableStaffRowProps {
   days: string[];
   startDate: Date;
   shiftsByStaffAndDay: Record<string, ShiftAssignment[]>;
+  staffAvailability?: StaffAvailability;
+  staffPreferredTimes?: StaffPreferredTime[];
   totalHours: number;
   onShiftClick?: (shift: ShiftAssignment) => void;
   onDayClick?: (staffId: string, date: string) => void;
@@ -74,6 +105,8 @@ function SortableStaffRow({
   days,
   startDate,
   shiftsByStaffAndDay,
+  staffAvailability,
+  staffPreferredTimes,
   totalHours,
   onShiftClick,
   onDayClick,
@@ -103,7 +136,8 @@ function SortableStaffRow({
   const getShiftStyle = (start: string, end: string) => {
     const startHour = timeToHours(start);
     const endHour = timeToHours(end);
-    const duration = endHour - startHour;
+    // Handle overnight shifts: if end time is before start time, add 24 hours
+    const duration = endHour < startHour ? (endHour + 24) - startHour : endHour - startHour;
 
     // Position as percentage of 24-hour day
     const left = (startHour / 24) * 100;
@@ -119,6 +153,59 @@ function SortableStaffRow({
     if (hours === 12) return `12:${minutes.toString().padStart(2, '0')}pm`;
     if (hours < 12) return `${hours}:${minutes.toString().padStart(2, '0')}am`;
     return `${hours - 12}:${minutes.toString().padStart(2, '0')}pm`;
+  };
+
+  // Get unavailable blocks for a specific day (Homebase-style)
+  const getUnavailableBlocks = (dayOfWeek: string, dayDate: string) => {
+    if (!staffAvailability) return [];
+
+    const blocks: Array<{ start: number; end: number; reason?: string; isTimeOff?: boolean }> = [];
+
+    // Add weekly recurring unavailability
+    const weeklyUnavail = staffAvailability.weekly_availability.filter(
+      (a) => a.day_of_week === dayOfWeek && a.status === 'unavailable'
+    );
+    weeklyUnavail.forEach((a) => {
+      blocks.push({ start: a.hour_start, end: a.hour_end });
+    });
+
+    // Add one-time time-off for this specific date
+    const timeOff = staffAvailability.time_off.filter((t) => t.date === dayDate);
+    timeOff.forEach((t) => {
+      const [startHour] = t.time_start.split(':').map(Number);
+      const [endHour] = t.time_end.split(':').map(Number);
+      blocks.push({
+        start: startHour,
+        end: endHour === 0 ? 24 : endHour,
+        reason: t.reason,
+        isTimeOff: true
+      });
+    });
+
+    return blocks;
+  };
+
+  // Format hour to 12-hour format for display in blocks (e.g., "7pm-11:55pm")
+  const formatBlockTime = (startHour: number, endHour: number): string => {
+    const isFullDay = startHour === 0 && endHour === 24;
+    if (isFullDay) return 'all day';
+
+    const formatHour = (hour: number): string => {
+      if (hour === 0) return '12am';
+      if (hour === 12) return '12pm';
+      if (hour < 12) return `${hour}am`;
+      return `${hour - 12}pm`;
+    };
+
+    return `${formatHour(startHour)}-${formatHour(endHour)}`;
+  };
+
+  // Get preferred times for a specific day
+  const getPreferredTimesForDay = (dayOfWeek: string): StaffPreferredTime[] => {
+    if (!staffPreferredTimes) return [];
+    return staffPreferredTimes.filter(
+      (pref) => pref.day_of_week === dayOfWeek
+    );
   };
 
   return (
@@ -142,15 +229,60 @@ function SortableStaffRow({
           const key = `${staff.id}-${day}`;
           const dayShifts = shiftsByStaffAndDay[key] || [];
           const dayDate = format(addDays(startDate, dayIndex), 'yyyy-MM-dd');
+          const unavailableBlocks = getUnavailableBlocks(day, dayDate);
+          const preferredTimes = getPreferredTimesForDay(day);
+
+          // Build tooltip text for preferred times
+          const preferredTimesTooltip = preferredTimes.length > 0
+            ? `Preferred times:\n${preferredTimes.map(pref => formatBlockTime(pref.hour_start, pref.hour_end)).join('\n')}`
+            : '';
 
           return (
             <div
               key={day}
               className="relative min-h-[48px] border-r last:border-r-0 hover:bg-accent/30 cursor-pointer transition-colors p-1"
               onClick={() => onDayClick?.(staff.id, dayDate)}
+              title={preferredTimesTooltip}
             >
-              {/* Shift Blocks - Homebase style */}
-              <div className="flex flex-col gap-1">
+              {/* Unavailable/Time-off/Shift Blocks - Homebase exact styling */}
+              <div className="flex flex-col gap-1 relative z-10">
+                {/* Unavailable and Time-off blocks */}
+                {unavailableBlocks.map((block, blockIndex) => {
+                  const timeLabel = formatBlockTime(block.start, block.end);
+
+                  return (
+                    <div
+                      key={`unavail-${blockIndex}`}
+                      className={cn(
+                        "rounded px-2 py-0.5 cursor-pointer hover:opacity-90 transition-opacity flex flex-col justify-center min-h-[36px]",
+                        block.isTimeOff ? "bg-[#e6e4d6]" : "bg-[#f2f2ec]"
+                      )}
+                      title={block.isTimeOff ? `Time off: ${block.reason || 'Unavailable'}` : `Unavailable ${timeLabel}`}
+                      onClick={(e) => {
+                        // Allow click to create shift over unavailable time
+                        onDayClick?.(staff.id, dayDate);
+                      }}
+                    >
+                      {/* Label row with icon for time-off */}
+                      <div className="flex items-center gap-1">
+                        {block.isTimeOff && (
+                          <svg className="w-3 h-3 text-[#605f56]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12c0 6.628-5.372 12-12 12S0 18.628 0 12 5.372 0 12 0s12 5.372 12 12ZM4.664 6.787A8.94 8.94 0 0 0 3 12c0 4.969 3.99 9 9 9a8.923 8.923 0 0 0 5.212-1.664L4.664 6.788ZM21 12c0-5.01-4.031-9-9-9a8.94 8.94 0 0 0-5.213 1.664l12.549 12.549A8.923 8.923 0 0 0 21 12Z" />
+                          </svg>
+                        )}
+                        <div className="text-xs font-bold text-[#1e0b3a] leading-tight">
+                          {block.isTimeOff ? 'Time-off' : 'Unavailable'}
+                        </div>
+                      </div>
+                      {/* Time label */}
+                      <div className="text-xs font-medium text-[#1e0b3a] leading-tight capitalize">
+                        {timeLabel}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Shift Blocks - Homebase style */}
                 {dayShifts.map((shift, shiftIndex) => {
                   const roleColor =
                     ROLE_COLORS[shift.role_required.toLowerCase() as keyof typeof ROLE_COLORS] ||
@@ -158,7 +290,7 @@ function SortableStaffRow({
 
                   return (
                     <div
-                      key={shiftIndex}
+                      key={`shift-${shiftIndex}`}
                       className={cn(
                         'rounded px-2 py-0.5 cursor-pointer hover:opacity-90 transition-opacity flex flex-col justify-center min-h-[36px]',
                         roleColor,
@@ -183,7 +315,7 @@ function SortableStaffRow({
               </div>
 
               {/* Empty state - show chevron on hover */}
-              {dayShifts.length === 0 && (
+              {dayShifts.length === 0 && unavailableBlocks.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -200,6 +332,8 @@ export function RosterWeeklyStaffView({
   weekStart,
   shifts,
   staffMembers,
+  availability = [],
+  preferredTimes = [],
   onShiftClick,
   onDayClick,
   onDayHeaderClick,
@@ -207,6 +341,21 @@ export function RosterWeeklyStaffView({
 }: RosterWeeklyStaffViewProps) {
   const [staffOrder, setStaffOrder] = useState(staffMembers);
   const startDate = parse(weekStart, 'yyyy-MM-dd', new Date());
+
+  // Create availability lookup by staff_id
+  const availabilityByStaffId = availability.reduce((acc, avail) => {
+    acc[avail.staff_id] = avail;
+    return acc;
+  }, {} as Record<string, StaffAvailability>);
+
+  // Create preferred times lookup by staff_id
+  const preferredTimesByStaffId = preferredTimes.reduce((acc, pref) => {
+    if (!acc[pref.staff_id]) {
+      acc[pref.staff_id] = [];
+    }
+    acc[pref.staff_id].push(pref);
+    return acc;
+  }, {} as Record<string, StaffPreferredTime[]>);
 
   // Set up drag and drop sensors
   const sensors = useSensors(
@@ -248,7 +397,9 @@ export function RosterWeeklyStaffView({
       const [endHour, endMin] = shift.scheduled_end.split(':').map(Number);
       const start = startHour + startMin / 60;
       const end = endHour + endMin / 60;
-      return total + (end - start);
+      // Handle overnight shifts: if end time is before start time, add 24 hours
+      const duration = end < start ? (end + 24) - start : end - start;
+      return total + duration;
     }, 0);
   };
 
@@ -302,6 +453,8 @@ export function RosterWeeklyStaffView({
                   days={DAYS_OF_WEEK}
                   startDate={startDate}
                   shiftsByStaffAndDay={shiftsByStaffAndDay}
+                  staffAvailability={availabilityByStaffId[staff.id]}
+                  staffPreferredTimes={preferredTimesByStaffId[staff.id]}
                   totalHours={calculateStaffHours(staff.id)}
                   onShiftClick={onShiftClick}
                   onDayClick={onDayClick}

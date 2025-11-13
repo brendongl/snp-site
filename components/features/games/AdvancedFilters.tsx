@@ -81,16 +81,17 @@ export function AdvancedFilters({
           <div className="space-y-3">
             <Label>Best Player Count</Label>
             <Select
-              value={localFilters.bestPlayerCount?.toString()}
+              value={localFilters.bestPlayerCount?.toString() || "any"}
               onValueChange={(value) => setLocalFilters({
                 ...localFilters,
-                bestPlayerCount: value ? Number(value) : undefined
+                bestPlayerCount: value === "any" ? undefined : Number(value)
               })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="any">Any</SelectItem>
                 <SelectItem value="1">1 Player</SelectItem>
                 <SelectItem value="2">2 Players</SelectItem>
                 <SelectItem value="3">3 Players</SelectItem>

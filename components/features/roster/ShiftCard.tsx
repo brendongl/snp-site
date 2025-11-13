@@ -19,6 +19,8 @@ export interface ShiftAssignment {
   requires_keys?: boolean;
   has_violation?: boolean;
   violation_message?: string;
+  is_published?: boolean;
+  edited_after_publish?: boolean;
 }
 
 interface ShiftCardProps {
@@ -92,6 +94,9 @@ export function ShiftCard({
       .slice(0, 2);
   };
 
+  // Check if shift is unpublished or edited after publish
+  const isUnpublished = shift.edited_after_publish || shift.is_published === false;
+
   return (
     <Card
       className={cn(
@@ -99,6 +104,8 @@ export function ShiftCard({
         colors.border,
         colors.bg,
         shift.has_violation && 'ring-2 ring-yellow-400',
+        // Dotted border for unpublished edits (like Homebase)
+        isUnpublished && 'border-2 border-dashed !border-blue-500',
         className
       )}
     >
