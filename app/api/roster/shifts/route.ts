@@ -59,8 +59,12 @@ export async function GET(request: NextRequest) {
 
     const rosterData = await generateResponse.json();
 
-    // Extract shifts from generated roster
-    const shifts = rosterData.solution?.assignments || [];
+    // Extract shifts from generated roster and add temporary IDs
+    const shifts = (rosterData.solution?.assignments || []).map((shift: any) => ({
+      ...shift,
+      // Generate temporary ID from shift attributes for edit dialog detection
+      id: `temp_${shift.staff_id}_${shift.day_of_week}_${shift.scheduled_start}`.replace(/[:\s]/g, '_'),
+    }));
 
     return NextResponse.json({
       success: true,

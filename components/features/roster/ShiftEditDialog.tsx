@@ -38,6 +38,7 @@ export function ShiftEditDialog({
   staffMembers = [],
 }: ShiftEditDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [staffId, setStaffId] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -70,6 +71,35 @@ export function ShiftEditDialog({
       alert('Failed to save shift. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!shift?.id) return;
+
+    // Confirm deletion
+    if (!confirm(`Delete shift for ${shift.staff_name} on ${shift.day_of_week}?`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/roster/shifts/${shift.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete shift');
+      }
+
+      onClose();
+      // Trigger refresh by calling onSave with empty data (parent will refetch)
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete shift:', error);
+      alert('Failed to delete shift. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -154,14 +184,32 @@ export function ShiftEditDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
-          </Button>
+        <DialogFooter className="flex justify-between">
+          {/* Delete button - only show for existing shifts */}
+          {shift.id ? (
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+              className="mr-auto"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          {/* Cancel and Save buttons */}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={saving || deleting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving || deleting}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
