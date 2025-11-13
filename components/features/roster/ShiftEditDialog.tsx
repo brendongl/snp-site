@@ -79,9 +79,9 @@ export function ShiftEditDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Shift</DialogTitle>
+          <DialogTitle>{shift.id ? 'Edit Shift' : 'Add Shift'}</DialogTitle>
           <DialogDescription>
-            {shift.day_of_week} • {shift.shift_type}
+            {shift.day_of_week} • {shift.staff_name}
           </DialogDescription>
         </DialogHeader>
 
@@ -142,10 +142,13 @@ export function ShiftEditDialog({
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="supervisor">Supervisor</SelectItem>
+                <SelectItem value="dealer">Dealer</SelectItem>
+                <SelectItem value="senior">Senior</SelectItem>
+                <SelectItem value="barista">Barista</SelectItem>
+                <SelectItem value="game master">Game Master</SelectItem>
                 <SelectItem value="cafe">Cafe</SelectItem>
                 <SelectItem value="floor">Floor</SelectItem>
-                <SelectItem value="opening">Opening</SelectItem>
-                <SelectItem value="closing">Closing</SelectItem>
               </SelectContent>
             </Select>
           </div>

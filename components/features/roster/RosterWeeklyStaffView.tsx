@@ -30,7 +30,8 @@ interface RosterWeeklyStaffViewProps {
   shifts: ShiftAssignment[];
   staffMembers: Array<{ id: string; name: string }>;
   onShiftClick?: (shift: ShiftAssignment) => void;
-  onDayClick?: (staffId: string, date: string) => void;
+  onDayClick?: (staffId: string, date: string) => void; // Click empty cell to create shift
+  onDayHeaderClick?: (date: string) => void; // Click day header to open Gantt view
   className?: string;
 }
 
@@ -124,13 +125,13 @@ function SortableStaffRow({
     <Card ref={setNodeRef} style={style} className="overflow-hidden">
       <div className="grid grid-cols-8 gap-0">
         {/* Staff Name Cell (Draggable) */}
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/30 border-r">
-          <div {...attributes} {...listeners} className="cursor-move">
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/30 border-r min-w-0">
+          <div {...attributes} {...listeners} className="cursor-move shrink-0">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="font-bold text-sm text-[#1e0b3a] truncate">{staff.name}</span>
-            <span className="text-xs font-medium text-[#605f56]">
+            <span className="text-xs font-medium text-[#605f56] truncate">
               {totalHours.toFixed(2)} hrs
             </span>
           </div>
@@ -201,6 +202,7 @@ export function RosterWeeklyStaffView({
   staffMembers,
   onShiftClick,
   onDayClick,
+  onDayHeaderClick,
   className,
 }: RosterWeeklyStaffViewProps) {
   const [staffOrder, setStaffOrder] = useState(staffMembers);
@@ -260,14 +262,19 @@ export function RosterWeeklyStaffView({
             Staff
           </div>
 
-          {/* Day Headers */}
+          {/* Day Headers - Click to open Gantt view */}
           {DAYS_OF_WEEK.map((day, index) => {
             const dayDate = addDays(startDate, index);
-            const isToday = format(dayDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+            const dayDateStr = format(dayDate, 'yyyy-MM-dd');
+            const isToday = dayDateStr === format(new Date(), 'yyyy-MM-dd');
             return (
-              <div key={day} className="text-center px-2">
+              <div
+                key={day}
+                className="text-center px-2 cursor-pointer hover:bg-accent/50 transition-colors rounded"
+                onClick={() => onDayHeaderClick?.(dayDateStr)}
+              >
                 <div className={cn(
-                  "font-semibold text-sm",
+                  "font-semibold text-sm py-1",
                   isToday && "text-purple-600"
                 )}>
                   {day.substring(0, 3)}, {format(dayDate, 'd')}

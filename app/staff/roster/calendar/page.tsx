@@ -79,21 +79,56 @@ export default function RosterCalendarPage() {
     setIsEditDialogOpen(true);
   };
 
-  // Handle day click - switch to Gantt view
-  const handleDayClick = (staffId: string, date: string) => {
+  // Handle day header click - switch to Gantt view
+  const handleDayHeaderClick = (date: string) => {
     setSelectedDate(date);
     setViewMode('day');
   };
 
-  // Handle shift save
+  // Handle day cell click - create new shift
+  const handleDayCellClick = (staffId: string, date: string) => {
+    handleCreateShift(staffId, date);
+  };
+
+  // Handle shift save (both create and update)
   const handleShiftSave = async (updatedShift: Partial<ShiftAssignment>) => {
-    console.log('Saving shift:', updatedShift);
-    // TODO: Implement PUT /api/roster/shifts/[id]
-    // For now, just close the dialog
-    setIsEditDialogOpen(false);
-    setEditingShift(null);
-    // Refresh shifts after save
-    await fetchShifts();
+    try {
+      if (editingShift?.id) {
+        // Update existing shift
+        const response = await fetch(`/api/roster/shifts/${editingShift.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedShift),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update shift');
+        }
+      } else {
+        // Create new shift
+        const response = await fetch('/api/roster/shifts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...updatedShift,
+            week_start: selectedWeek,
+            day_of_week: editingShift?.day_of_week,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create shift');
+        }
+      }
+
+      // Close dialog and refresh
+      setIsEditDialogOpen(false);
+      setEditingShift(null);
+      await fetchShifts();
+    } catch (error) {
+      console.error('Error saving shift:', error);
+      throw error; // Re-throw so dialog can handle it
+    }
   };
 
   // Handle create new shift
@@ -190,7 +225,8 @@ export default function RosterCalendarPage() {
               shifts={shifts}
               staffMembers={staffMembers}
               onShiftClick={handleShiftClick}
-              onDayClick={handleDayClick}
+              onDayClick={handleDayCellClick}
+              onDayHeaderClick={handleDayHeaderClick}
             />
           ) : (
             <RosterDailyGanttView
