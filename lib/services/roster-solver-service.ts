@@ -965,7 +965,20 @@ export default class RosterSolverService {
     // Generate shift requirements from rules if not provided
     const shiftRequirements = params.shiftRequirements ||
       await this.generateShiftRequirementsFromRules(rules, params.weekStart);
-    console.log(`  Generated ${shiftRequirements.length} shift requirements`);
+    console.log(`  Generated ${shiftRequirements.length} shift requirements from rules`);
+
+    // ✅ NEW v1.10.7: Generate flexible shifts for constrained staff
+    const flexibleShifts = await this.generateFlexibleShiftsForConstrainedStaff(
+      shiftRequirements,
+      staffMembers,
+      params.weekStart
+    );
+
+    if (flexibleShifts.length > 0) {
+      shiftRequirements.push(...flexibleShifts);
+      console.log(`  ✅ Added ${flexibleShifts.length} flexible shifts for constrained staff`);
+    }
+    console.log(`  Total shift requirements: ${shiftRequirements.length}`);
 
     // Create solver with all data
     const solverParams = {
@@ -1179,6 +1192,168 @@ export default class RosterSolverService {
 
     console.log(`  Generated ${requirements.length} shift requirements from ${rules.length} rules`);
     return requirements;
+  }
+
+  /**
+   * ✅ NEW v1.10.7: Generate flexible shifts for constrained staff
+   *
+   * Problem: Fixed shift times from rules don't always match staff availability.
+   * Solution: For constrained staff (<40h available), if NO rule-generated shift fits,
+   *           create a custom shift in their largest available window.
+   *
+   * Example: Long has Friday 19:00-23:00 and Sunday 16:00-23:00 available.
+   *          Rules generate Friday 18:00-23:00 (doesn't fit).
+   *          → Create Sunday 18:00-23:00 specifically for Long.
+   */
+  static async generateFlexibleShiftsForConstrainedStaff(
+    existingShifts: ShiftRequirement[],
+    staffMembers: StaffMember[],
+    weekStart: string
+  ): Promise<ShiftRequirement[]> {
+    const flexibleShifts: ShiftRequirement[] = [];
+    const CONSTRAINT_THRESHOLD = 40; // Staff with < 40h available are considered "constrained"
+
+    console.log('  🔧 Checking for constrained staff needing flexible shifts...');
+
+    for (const staff of staffMembers) {
+      // Calculate total available hours
+      let totalAvailableHours = 0;
+      for (const pattern of staff.availability) {
+        if (pattern.availability_status === 'available') {
+          totalAvailableHours += pattern.hour_end - pattern.hour_start;
+        }
+      }
+
+      // Skip if not constrained (<40h)
+      if (totalAvailableHours >= CONSTRAINT_THRESHOLD) {
+        continue;
+      }
+
+      // Check if ANY existing shift fits this staff member's availability
+      let hasMatchingShift = false;
+
+      for (const shift of existingShifts) {
+        // Find availability for this day
+        const dayAvailability = staff.availability.find(
+          a => a.day_of_week === shift.day_of_week && a.availability_status === 'available'
+        );
+
+        if (!dayAvailability) continue;
+
+        // Check if shift fits within availability window
+        const shiftStart = this.timeToMinutes(shift.scheduled_start);
+        const shiftEnd = this.timeToMinutes(shift.scheduled_end);
+        const availStart = dayAvailability.hour_start * 60;
+        const availEnd = dayAvailability.hour_end * 60;
+
+        // Check role match
+        const hasRole = !staff.available_roles || staff.available_roles.includes(shift.role_required);
+
+        // Check keys requirement
+        const hasKeys = !shift.requires_keys || staff.has_keys;
+
+        if (shiftStart >= availStart && shiftEnd <= availEnd && hasRole && hasKeys) {
+          hasMatchingShift = true;
+          break;
+        }
+      }
+
+      // If no matching shift found, create a flexible shift in their largest available window
+      if (!hasMatchingShift) {
+        const largestWindow = this.findLargestAvailableWindow(staff);
+
+        if (largestWindow) {
+          const shiftDuration = Math.min(largestWindow.hours, 7); // Max 7 hour shift
+          const shiftDurationMinutes = shiftDuration * 60;
+
+          // Calculate shift start/end within the window
+          const windowStartMinutes = largestWindow.hour_start * 60;
+          const windowEndMinutes = largestWindow.hour_end * 60;
+
+          // Try to center the shift in the window, or start from beginning if window is small
+          let shiftStartMinutes = windowStartMinutes;
+          if (windowEndMinutes - windowStartMinutes > shiftDurationMinutes) {
+            // Center the shift
+            const margin = (windowEndMinutes - windowStartMinutes - shiftDurationMinutes) / 2;
+            shiftStartMinutes = windowStartMinutes + Math.floor(margin);
+          }
+
+          const shiftEndMinutes = shiftStartMinutes + shiftDurationMinutes;
+
+          // Determine role (prefer floor, fallback to cafe if no floor role)
+          const role = staff.available_roles?.includes('floor') ? 'floor' : 'cafe';
+
+          // Determine shift type based on time
+          const shiftStartHour = Math.floor(shiftStartMinutes / 60);
+          let shiftType: 'opening' | 'day' | 'evening' | 'closing';
+          if (shiftStartHour < 12) {
+            shiftType = staff.has_keys ? 'opening' : 'day';
+          } else if (shiftStartHour < 18) {
+            shiftType = 'day';
+          } else {
+            shiftType = 'evening';
+          }
+
+          const flexibleShift: ShiftRequirement = {
+            day_of_week: largestWindow.day_of_week,
+            shift_type: shiftType,
+            scheduled_start: this.minutesToTime(shiftStartMinutes),
+            scheduled_end: this.minutesToTime(shiftEndMinutes),
+            role_required: role,
+            requires_keys: shiftType === 'opening',
+            min_staff: 1
+          };
+
+          flexibleShifts.push(flexibleShift);
+
+          console.log(
+            `    ✅ Created flexible shift for ${staff.nickname || staff.name} (${totalAvailableHours}h available): ` +
+            `${flexibleShift.day_of_week} ${flexibleShift.scheduled_start}-${flexibleShift.scheduled_end}`
+          );
+        } else {
+          console.log(`    ⚠️  ${staff.nickname || staff.name}: No availability windows found`);
+        }
+      }
+    }
+
+    return flexibleShifts;
+  }
+
+  /**
+   * Find the largest available window for a staff member
+   */
+  private static findLargestAvailableWindow(staff: StaffMember): {
+    day_of_week: string;
+    hour_start: number;
+    hour_end: number;
+    hours: number;
+  } | null {
+    let largest: { day_of_week: string; hour_start: number; hour_end: number; hours: number } | null = null;
+
+    for (const pattern of staff.availability) {
+      if (pattern.availability_status === 'available') {
+        const hours = pattern.hour_end - pattern.hour_start;
+        if (!largest || hours > largest.hours) {
+          largest = {
+            day_of_week: pattern.day_of_week,
+            hour_start: pattern.hour_start,
+            hour_end: pattern.hour_end,
+            hours
+          };
+        }
+      }
+    }
+
+    return largest;
+  }
+
+  /**
+   * Convert minutes since midnight to HH:MM format
+   */
+  private static minutesToTime(minutes: number): string {
+    const hour = Math.floor(minutes / 60);
+    const min = minutes % 60;
+    return `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
   }
 
   /**
