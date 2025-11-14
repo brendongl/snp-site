@@ -203,6 +203,7 @@ export interface GameFilters {
   playtime?: number; // Filter by single playtime value (shows games that fit within this time)
   quickFilter?: 'sixPlus' | 'couples' | 'social' | 'noChecks' | 'hasIssues'; // v1.2.0: Added hasIssues
   bestPlayerCount?: number;
+  exactPlayerCount?: number; // v1.9.6: Exact player count filter (shows games playable with this exact number)
 }
 
 export type SortOption = 'alphabetical' | 'alphabeticalDesc' | 'year' | 'maxPlayers' | 'complexity' | 'dateAcquired' | 'lastChecked' | 'lastCheckedDesc' | 'totalChecks' | 'totalChecksDesc' | 'needsChecking';

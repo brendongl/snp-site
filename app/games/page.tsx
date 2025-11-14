@@ -336,13 +336,41 @@ function GamesPageContent() {
         const minPlayers = parseInt(minPlayersStr);
         const maxPlayers = maxPlayersStr === 'No Limit' ? 999 : parseInt(maxPlayersStr);
 
-        // Show games that can be played with the selected player range (overlap logic)
-        // Game's max must be >= selected min (game supports at least the minimum)
-        // Game's min must be <= selected max (game doesn't require more than the maximum)
-        const selectedMin = filters.playerCount?.min || 1;
-        const selectedMax = filters.playerCount?.max || 999;
+        const hasMin = filters.playerCount?.min !== undefined;
+        const hasMax = filters.playerCount?.max !== undefined;
 
-        return maxPlayers >= selectedMin && minPlayers <= selectedMax;
+        // v1.9.6: If only ONE is set (min OR max), treat as exact player count
+        if (hasMin && !hasMax) {
+          const exactCount = filters.playerCount!.min!;
+          return minPlayers <= exactCount && maxPlayers >= exactCount;
+        }
+        if (hasMax && !hasMin) {
+          const exactCount = filters.playerCount!.max!;
+          return minPlayers <= exactCount && maxPlayers >= exactCount;
+        }
+
+        // v1.9.6: If BOTH are set, use strict containment
+        // Only show games where the entire game range fits within the selected range
+        const selectedMin = filters.playerCount?.min!;
+        const selectedMax = filters.playerCount?.max!;
+
+        return minPlayers >= selectedMin && maxPlayers <= selectedMax;
+      });
+    }
+
+    // v1.9.6: Exact Player Count filter (takes priority over range filter)
+    if (filters.exactPlayerCount) {
+      filtered = filtered.filter(game => {
+        const minPlayersStr = game.fields['Min Players'];
+        const maxPlayersStr = game.fields['Max. Players'];
+
+        if (!minPlayersStr || !maxPlayersStr) return false;
+
+        const minPlayers = parseInt(minPlayersStr);
+        const maxPlayers = maxPlayersStr === 'No Limit' ? 999 : parseInt(maxPlayersStr);
+
+        // Show games where exactPlayerCount is within the game's range
+        return minPlayers <= filters.exactPlayerCount! && maxPlayers >= filters.exactPlayerCount!;
       });
     }
 
@@ -598,6 +626,7 @@ function GamesPageContent() {
     if (filters.complexity?.min || filters.complexity?.max) count++;
     if (filters.playtime) count++;
     if (filters.bestPlayerCount) count++;
+    if (filters.exactPlayerCount) count++; // v1.9.6
     return count;
   }, [filters]);
 
@@ -651,6 +680,7 @@ function GamesPageContent() {
       yearRange: undefined,
       complexity: undefined,
       bestPlayerCount: undefined,
+      exactPlayerCount: undefined, // v1.9.6
     });
   };
 
@@ -666,7 +696,8 @@ function GamesPageContent() {
       filters.yearRange?.max ||
       filters.complexity?.min ||
       filters.complexity?.max ||
-      filters.bestPlayerCount
+      filters.bestPlayerCount ||
+      filters.exactPlayerCount // v1.9.6
     );
   }, [filters]);
 
@@ -885,6 +916,11 @@ function GamesPageContent() {
                       ⭐ {filters.bestPlayerCount}
                     </span>
                   )}
+                  {filters.exactPlayerCount && (
+                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                      👥 {filters.exactPlayerCount}p
+                    </span>
+                  )}
                 </div>
               )}
               </div>
@@ -924,6 +960,32 @@ function GamesPageContent() {
                   hasAnyFilters={hasAnyFilters}
                   isStaff={isStaff}
                 />
+
+                {/* v1.9.6: Exact Player Count dropdown */}
+                <Select
+                  value={filters.exactPlayerCount?.toString() || 'any'}
+                  onValueChange={(value) => {
+                    setFilters(prev => ({
+                      ...prev,
+                      exactPlayerCount: value === 'any' ? undefined : Number(value)
+                    }));
+                  }}
+                >
+                  <SelectTrigger className={`w-[140px] sm:w-[180px] ${filters.exactPlayerCount ? 'border-primary bg-primary/5' : ''}`}>
+                    <SelectValue placeholder="Player Count" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any Players</SelectItem>
+                    <SelectItem value="1">1 Player</SelectItem>
+                    <SelectItem value="2">2 Players</SelectItem>
+                    <SelectItem value="3">3 Players</SelectItem>
+                    <SelectItem value="4">4 Players</SelectItem>
+                    <SelectItem value="5">5 Players</SelectItem>
+                    <SelectItem value="6">6 Players</SelectItem>
+                    <SelectItem value="7">7 Players</SelectItem>
+                    <SelectItem value="8">8+ Players</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 <Button
                   variant={picturesOnlyMode ? 'default' : 'outline'}
