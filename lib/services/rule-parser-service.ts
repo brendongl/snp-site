@@ -7,7 +7,7 @@
  * using Claude API through OpenRouter.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+// Using fetch directly for OpenRouter compatibility
 
 // ========================================
 // Types
@@ -42,23 +42,15 @@ export interface RuleParseResult {
 // ========================================
 
 export default class RuleParserService {
-  private static anthropic: Anthropic | null = null;
-
   /**
-   * Initialize Anthropic client with OpenRouter
+   * Get OpenRouter API key
    */
-  private static getClient(): Anthropic {
-    if (!this.anthropic) {
-      const apiKey = process.env.OPENROUTER_API_KEY;
-      if (!apiKey) {
-        throw new Error('OPENROUTER_API_KEY not configured in environment');
-      }
-      this.anthropic = new Anthropic({
-        apiKey,
-        baseURL: 'https://openrouter.ai/api/v1',
-      });
+  private static getApiKey(): string {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENROUTER_API_KEY not configured in environment');
     }
-    return this.anthropic;
+    return apiKey;
   }
 
   /**
@@ -66,7 +58,7 @@ export default class RuleParserService {
    */
   static async parseRule(ruleText: string, staffContext?: any[]): Promise<RuleParseResult> {
     try {
-      const client = this.getClient();
+      const apiKey = this.getApiKey();
 
       // Build context about staff members
       let staffContextText = '';
@@ -82,29 +74,64 @@ export default class RuleParserService {
 ${staffContextText}
 
 Constraint Types:
-1. max_hours: Maximum hours per week for a staff member
-   Format: { type: "max_hours", staff_id: "uuid", max_hours: number }
 
-2. min_hours: Minimum hours per week for a staff member
-   Format: { type: "min_hours", staff_id: "uuid", min_hours: number }
+COVERAGE CONSTRAINTS:
+1. min_coverage: Minimum staff count at all times or specific time ranges
+   Format: { type: "min_coverage", min_staff: number, time_range?: "all" | {start: "HH:MM", end: "HH:MM"}, days?: string[] }
+   Example: { type: "min_coverage", min_staff: 2, time_range: "all" }
 
-3. preferred_hours: Preferred hour range for a staff member
-   Format: { type: "preferred_hours", staff_id: "uuid", min_hours: number, max_hours: number }
+2. max_coverage: Maximum staff count for specific time ranges
+   Format: { type: "max_coverage", max_staff: number, time_range: {start: "HH:MM", end: "HH:MM"}, days?: string[] }
+   Example: { type: "max_coverage", max_staff: 2, time_range: {start: "12:00", end: "15:00"}, days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }
 
-4. max_consecutive_days: Maximum consecutive working days
-   Format: { type: "max_consecutive_days", staff_id: "uuid", max_days: number }
+SCHEDULE CONSTRAINTS:
+3. opening_time: Required opening time for specific days
+   Format: { type: "opening_time", time: "HH:MM", days: string[] }
+   Example: { type: "opening_time", time: "12:00", days: ["Monday", "Wednesday"] }
 
-5. day_off: Staff member unavailable on specific day
-   Format: { type: "day_off", staff_id: "uuid", day_of_week: "Monday"|"Tuesday"|etc }
+4. min_shift_length: Minimum shift duration
+   Format: { type: "min_shift_length", min_hours: number }
+   Example: { type: "min_shift_length", min_hours: 5 }
 
-6. no_back_to_back: No back-to-back shift types (e.g., closing then opening)
-   Format: { type: "no_back_to_back", shift_types: ["closing", "opening"] }
+5. no_day_and_night: Staff cannot work both day and night shifts on same day
+   Format: { type: "no_day_and_night", day_end_hour: number, night_start_hour: number }
+   Example: { type: "no_day_and_night", day_end_hour: 18, night_start_hour: 18 }
 
-7. requires_keys_for_opening: Opening shifts require staff with keys
-   Format: { type: "requires_keys_for_opening", requires_keys: true }
+INDIVIDUAL CONSTRAINTS:
+6. min_hours: Minimum hours per week for specific staff
+   Format: { type: "min_hours", staff_id: "uuid", staff_name: string, min_hours: number }
+   Example: { type: "min_hours", staff_name: "Tho", min_hours: 40 }
 
-8. fairness: Distribute hours evenly
+7. max_hours: Maximum hours per week for staff
+   Format: { type: "max_hours", staff_id: "uuid", staff_name: string, max_hours: number }
+
+8. day_off: Staff unavailable on specific day
+   Format: { type: "day_off", staff_id: "uuid", staff_name: string, day_of_week: string }
+
+9. max_consecutive_days: Maximum consecutive working days
+   Format: { type: "max_consecutive_days", staff_id: "uuid", staff_name: string, max_days: number }
+
+RELATIONSHIP CONSTRAINTS:
+10. staff_pairing: Staff should/shouldn't work together
+   Format: { type: "staff_pairing", staff1_name: string, staff2_name: string, constraint: "no_overlap" | "must_overlap" }
+   Example: { type: "staff_pairing", staff1_name: "Nhi", staff2_name: "Hieu", constraint: "no_overlap" }
+
+ROLE CONSTRAINTS:
+11. required_role: Specific role required at certain times
+   Format: { type: "required_role", role: string, time_range?: {start: "HH:MM", end: "HH:MM"}, days?: string[], count?: number }
+   Example: { type: "required_role", role: "game master", days: ["Friday", "Saturday", "Sunday"], time_range: {start: "18:00", end: "23:59"} }
+
+12. required_skill: Minimum skill level required at all times
+   Format: { type: "required_skill", skill: string, level: "expert" | "intermediate" | "beginner", min_count: number }
+   Example: { type: "required_skill", skill: "barista", level: "expert", min_count: 1 }
+
+OTHER CONSTRAINTS:
+13. fairness: Distribute hours evenly
    Format: { type: "fairness", max_hour_difference: number }
+
+14. weekly_frequency: Minimum times scheduled per week
+   Format: { type: "weekly_frequency", min_days_per_week: number }
+   Example: { type: "weekly_frequency", min_days_per_week: 1 }
 
 Weight Guidelines (0-100):
 - Hard constraints (must be satisfied): 90-100
@@ -119,26 +146,46 @@ Return JSON format:
   "explanation": "Brief explanation of what this rule does"
 }`;
 
-      const response = await client.messages.create({
-        model: 'anthropic/claude-3.5-sonnet',
-        max_tokens: 1024,
-        temperature: 0.3,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: `Parse this scheduling rule: "${ruleText}"`
-          }
-        ]
+      // Call OpenRouter API using Anthropic format
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://sipnplay.cafe',
+          'X-Title': 'Sip N Play Roster System',
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: `Parse this scheduling rule: "${ruleText}"`
+            }
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+        }),
       });
 
-      // Extract JSON from response
-      const content = response.content[0];
-      if (content.type !== 'text') {
-        throw new Error('Unexpected response format from Claude');
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenRouter API error (${response.status}): ${error}`);
       }
 
-      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No content in OpenRouter response');
+      }
+
+      // Extract JSON from response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in Claude response');
       }

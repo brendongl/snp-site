@@ -53,8 +53,8 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
 
   return (
     <div
-      className={`group cursor-pointer rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-lg ${
-        hasIssue ? 'ring-2 ring-red-500' : ''
+      className={`group cursor-pointer rounded-xl border border-border/50 bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/30 transition-all ${
+        hasIssue ? 'ring-2 ring-red-500 ring-offset-2' : ''
       }`}
       onClick={onClick}
     >
@@ -174,7 +174,7 @@ export function GameCard({ game, onClick, isStaff = false, picturesOnlyMode = fa
       {/* Game details - hidden in gallery mode */}
       {!picturesOnlyMode && (
         <div className={isStaff ? 'p-2' : 'p-3'}>
-          <h3 className={`font-semibold ${isStaff ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
+          <h3 className={`font-semibold ${isStaff ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1 text-primary`}>
             {game.fields['Game Name']}
           </h3>
 

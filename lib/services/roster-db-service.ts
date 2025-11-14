@@ -453,6 +453,202 @@ export class RosterDbService {
     return result.rows[0] || null;
   }
 
+  /**
+   * Create a new holiday
+   */
+  static async createHoliday(holiday: {
+    holiday_name: string;
+    start_date: string;
+    end_date: string;
+    pay_multiplier: number;
+    is_recurring: boolean;
+  }): Promise<RosterHoliday> {
+    const query = `
+      INSERT INTO roster_holidays (
+        holiday_name,
+        start_date,
+        end_date,
+        pay_multiplier,
+        is_recurring
+      ) VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+
+    const values = [
+      holiday.holiday_name,
+      holiday.start_date,
+      holiday.end_date,
+      holiday.pay_multiplier,
+      holiday.is_recurring
+    ];
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Update an existing holiday
+   */
+  static async updateHoliday(id: string, updates: Partial<{
+    holiday_name: string;
+    start_date: string;
+    end_date: string;
+    pay_multiplier: number;
+    is_recurring: boolean;
+  }>): Promise<RosterHoliday> {
+    const allowedFields = ['holiday_name', 'start_date', 'end_date', 'pay_multiplier', 'is_recurring'];
+
+    const setClause = Object.keys(updates)
+      .filter(key => allowedFields.includes(key))
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+
+    if (!setClause) {
+      throw new Error('No valid fields to update');
+    }
+
+    const query = `
+      UPDATE roster_holidays
+      SET ${setClause}, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const values = [id, ...Object.keys(updates).filter(key => allowedFields.includes(key)).map(key => (updates as any)[key])];
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Delete a holiday
+   */
+  static async deleteHoliday(id: string): Promise<void> {
+    await pool.query('DELETE FROM roster_holidays WHERE id = $1', [id]);
+  }
+
+  // ========================================
+  // Shift Swaps
+  // ========================================
+
+  /**
+   * Get all shift swap requests for a staff member
+   */
+  static async getShiftSwapsByStaffId(staffId: string): Promise<ShiftSwap[]> {
+    const query = `
+      SELECT *
+      FROM shift_swaps
+      WHERE requesting_staff_id = $1 OR target_staff_id = $1
+      ORDER BY requested_at DESC
+    `;
+
+    const result = await pool.query(query, [staffId]);
+    return result.rows;
+  }
+
+  /**
+   * Get pending shift swap requests (for admin approval)
+   */
+  static async getPendingShiftSwaps(): Promise<ShiftSwap[]> {
+    const query = `
+      SELECT *
+      FROM shift_swaps
+      WHERE status = 'pending'
+      ORDER BY requested_at ASC
+    `;
+
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  /**
+   * Create a new shift swap request
+   */
+  static async createShiftSwap(swap: {
+    shift_id: string;
+    requesting_staff_id: string;
+    target_staff_id: string;
+    reason?: string;
+  }): Promise<ShiftSwap> {
+    const query = `
+      INSERT INTO shift_swaps (
+        shift_id,
+        requesting_staff_id,
+        target_staff_id,
+        status,
+        reason
+      ) VALUES ($1, $2, $3, 'pending', $4)
+      RETURNING *
+    `;
+
+    const values = [
+      swap.shift_id,
+      swap.requesting_staff_id,
+      swap.target_staff_id,
+      swap.reason || null
+    ];
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Approve a shift swap (admin or auto)
+   */
+  static async approveShiftSwap(
+    swapId: string,
+    resolvedBy: string | null,
+    isAutoApproved: boolean,
+    notes?: string
+  ): Promise<ShiftSwap> {
+    const status = isAutoApproved ? 'auto_approved' : 'admin_approved';
+
+    const query = `
+      UPDATE shift_swaps
+      SET
+        status = $2,
+        resolved_at = NOW(),
+        resolved_by = $3,
+        notes = $4
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [swapId, status, resolvedBy, notes || null]);
+    return result.rows[0];
+  }
+
+  /**
+   * Veto a shift swap
+   */
+  static async vetoShiftSwap(
+    swapId: string,
+    resolvedBy: string,
+    notes?: string
+  ): Promise<ShiftSwap> {
+    const query = `
+      UPDATE shift_swaps
+      SET
+        status = 'vetoed',
+        resolved_at = NOW(),
+        resolved_by = $2,
+        notes = $3
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [swapId, resolvedBy, notes || null]);
+    return result.rows[0];
+  }
+
+  /**
+   * Get shift swap by ID
+   */
+  static async getShiftSwapById(id: string): Promise<ShiftSwap | null> {
+    const result = await pool.query('SELECT * FROM shift_swaps WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  }
+
   // ========================================
   // Staff Members (extended for rostering)
   // ========================================

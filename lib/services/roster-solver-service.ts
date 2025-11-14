@@ -119,6 +119,8 @@ export class RosterSolver {
 
   /**
    * Generate optimal roster for the week
+   * ✅ NEW v1.10.5: Staff-First Approach
+   * Prioritizes constrained staff (least availability) by assigning them FIRST
    */
   async solve(): Promise<RosterSolution> {
     const violations: ConstraintViolation[] = [];
@@ -130,8 +132,33 @@ export class RosterSolver {
       staffHours[staff.id] = 0;
     });
 
-    // For each shift requirement, find the best staff member
+    // Track which shifts have been assigned (to avoid double-assignment)
+    const assignedShifts = new Set<string>();
+
+    console.log('[Roster Solver] 🎯 Phase 1: Assigning constrained staff first...');
+
+    // ✅ PHASE 1: Constrained Staff First (Staff-First Approach)
+    // Identify staff with least availability and roster them FIRST
+    const constrainedAssignments = this.assignConstrainedStaffFirst(
+      staffHours,
+      assignments,
+      assignedShifts,
+      violations
+    );
+    console.log(`  Assigned ${constrainedAssignments.length} shifts to constrained staff`);
+
+    console.log('[Roster Solver] 📋 Phase 2: Filling remaining shifts with flexible staff...');
+
+    // ✅ PHASE 2: Flexible Staff Fill (Shift-First for Remaining Shifts)
+    // For remaining unassigned shifts, use existing greedy algorithm
     for (const shift of this.shiftRequirements) {
+      const shiftKey = `${shift.day_of_week}:${shift.scheduled_start}:${shift.scheduled_end}:${shift.role_required}`;
+
+      // Skip if already assigned in Phase 1
+      if (assignedShifts.has(shiftKey)) {
+        continue;
+      }
+
       const candidates = this.findCandidatesForShift(shift, staffHours, assignments, violations);
 
       if (candidates.length === 0) {
@@ -151,11 +178,14 @@ export class RosterSolver {
       // Assign best candidate
       const bestCandidate = candidates[0];
       assignments.push(bestCandidate);
+      assignedShifts.add(shiftKey);
 
       // Update hours
       const shiftHours = this.calculateShiftHours(shift.scheduled_start, shift.scheduled_end);
       staffHours[bestCandidate.staff_id] += shiftHours;
     }
+
+    console.log(`  Total assignments: ${assignments.length} shifts across ${Object.keys(staffHours).filter(id => staffHours[id] > 0).length} staff`);
 
     // Check for fairness violations
     if (this.preferFairness) {
@@ -163,7 +193,7 @@ export class RosterSolver {
       violations.push(...fairnessViolations);
     }
 
-    // ✅ NEW: Validate global constraints (Weekly Frequency, Min Hours, etc.)
+    // ✅ Validate global constraints (Weekly Frequency, Min Hours, etc.)
     const globalViolations = this.validateGlobalConstraints(assignments, staffHours);
     violations.push(...globalViolations);
 
@@ -179,6 +209,146 @@ export class RosterSolver {
       violations,
       is_valid: isValid
     };
+  }
+
+  /**
+   * ✅ NEW v1.10.5: Calculate total available hours per week for a staff member
+   * Used to identify constrained staff (those with limited availability)
+   */
+  private calculateAvailabilityScore(staff: StaffMember): number {
+    let totalAvailableHours = 0;
+
+    for (const pattern of staff.availability) {
+      // Only count 'available' slots, not 'preferred_not' or 'unavailable'
+      if (pattern.availability_status === 'available') {
+        const hours = pattern.hour_end - pattern.hour_start;
+        totalAvailableHours += hours;
+      }
+    }
+
+    return totalAvailableHours;
+  }
+
+  /**
+   * ✅ NEW v1.10.5: Assign constrained staff FIRST (Staff-First Approach)
+   *
+   * Algorithm:
+   * 1. Sort staff by availability (least → most constrained)
+   * 2. For each constrained staff member:
+   *    - Find shifts that match their available times
+   *    - Assign them to at least ONE shift (satisfies Weekly Frequency constraint)
+   * 3. Return list of assignments
+   */
+  private assignConstrainedStaffFirst(
+    staffHours: Record<string, number>,
+    assignments: ShiftAssignment[],
+    assignedShifts: Set<string>,
+    violations: ConstraintViolation[]
+  ): ShiftAssignment[] {
+    const constrainedAssignments: ShiftAssignment[] = [];
+
+    // Calculate availability score for each staff member
+    const staffWithScores = this.staffMembers.map(staff => ({
+      staff,
+      availableHours: this.calculateAvailabilityScore(staff)
+    }));
+
+    // Sort by availability (least → most)
+    // Staff with fewer available hours are "more constrained" and should be scheduled first
+    staffWithScores.sort((a, b) => a.availableHours - b.availableHours);
+
+    console.log(`  Availability ranking (least → most):`);
+    staffWithScores.forEach(({ staff, availableHours }) => {
+      console.log(`    ${staff.nickname || staff.name}: ${availableHours}h available`);
+    });
+
+    // Check for Weekly Frequency rule
+    const weeklyFrequencyRule = this.rules.find(r =>
+      r.is_active && (r.parsed_constraint as any).type === 'weekly_frequency' && r.weight >= 90
+    );
+
+    // For each staff member (starting with most constrained)
+    for (const { staff, availableHours } of staffWithScores) {
+      // Skip if this staff already has hours assigned
+      if (staffHours[staff.id] > 0) {
+        continue;
+      }
+
+      // Check if this staff is required by Weekly Frequency rule
+      const mustBeRostered = weeklyFrequencyRule && weeklyFrequencyRule.weight >= 100;
+
+      // If staff has very limited availability (< 20h/week) OR Weekly Frequency requires it
+      // Then we MUST find a shift for them
+      if (availableHours < 20 || mustBeRostered) {
+        console.log(`  🎯 Finding shift for ${staff.nickname || staff.name} (${availableHours}h available, ${mustBeRostered ? 'REQUIRED' : 'constrained'})`);
+
+        // Find ALL shifts that match this staff member's availability
+        const matchingShifts: Array<{ shift: ShiftRequirement; score: number }> = [];
+
+        for (const shift of this.shiftRequirements) {
+          const shiftKey = `${shift.day_of_week}:${shift.scheduled_start}:${shift.scheduled_end}:${shift.role_required}`;
+
+          // Skip if already assigned
+          if (assignedShifts.has(shiftKey)) {
+            continue;
+          }
+
+          // Check if staff is available for this shift
+          const availability = this.getAvailabilityForShift(staff, shift);
+          if (!availability || availability.availability_status === 'unavailable') {
+            continue;
+          }
+
+          // Check other hard constraints (no overlaps, role match, keys, etc.)
+          const hardViolations = this.checkHardConstraints(staff, shift, staffHours, assignments);
+          if (hardViolations.length > 0) {
+            continue;
+          }
+
+          // This shift is valid - calculate score
+          const score = this.scoreStaffForShift(staff, shift, staffHours);
+          matchingShifts.push({ shift, score });
+        }
+
+        // If we found matching shifts, assign the best one
+        if (matchingShifts.length > 0) {
+          matchingShifts.sort((a, b) => b.score - a.score);
+          const bestMatch = matchingShifts[0];
+
+          const assignment: ShiftAssignment = {
+            staff_id: staff.id,
+            shift_requirement: bestMatch.shift,
+            score: bestMatch.score
+          };
+
+          assignments.push(assignment);
+          constrainedAssignments.push(assignment);
+
+          const shiftKey = `${bestMatch.shift.day_of_week}:${bestMatch.shift.scheduled_start}:${bestMatch.shift.scheduled_end}:${bestMatch.shift.role_required}`;
+          assignedShifts.add(shiftKey);
+
+          const shiftHours = this.calculateShiftHours(bestMatch.shift.scheduled_start, bestMatch.shift.scheduled_end);
+          staffHours[staff.id] += shiftHours;
+
+          console.log(`    ✅ Assigned ${staff.nickname || staff.name} to ${bestMatch.shift.day_of_week} ${bestMatch.shift.scheduled_start}-${bestMatch.shift.scheduled_end} (${shiftHours}h)`);
+        } else {
+          console.log(`    ⚠️ No matching shifts found for ${staff.nickname || staff.name}`);
+
+          // If Weekly Frequency is a hard constraint (weight 100) and we can't find a shift, add violation
+          if (mustBeRostered) {
+            violations.push({
+              type: 'hard',
+              constraint: 'WEEKLY_FREQUENCY_IMPOSSIBLE',
+              staff_id: staff.id,
+              message: `Cannot roster ${staff.nickname || staff.name} - no shifts match their availability`,
+              severity: 100
+            });
+          }
+        }
+      }
+    }
+
+    return constrainedAssignments;
   }
 
   /**
@@ -566,14 +736,14 @@ export class RosterSolver {
 
   /**
    * Calculate shift hours
+   * CRITICAL FIX: Handle midnight (00:00) as end-of-day for overnight shifts
    */
   private calculateShiftHours(start: string, end: string): number {
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
+    const startMinutes = this.timeToMinutes(start);
+    const endMinutes = this.timeToMinutes(end);
 
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-
+    // If end is midnight (converted to 1440), this is an overnight shift
+    // e.g., 17:00-00:00 = 1020 to 1440 = 7 hours
     return (endMinutes - startMinutes) / 60;
   }
 

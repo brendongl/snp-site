@@ -85,10 +85,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Validate hours
-    if (hour_start < 0 || hour_start > 23 || hour_end < 0 || hour_end > 23) {
+    // Validate hours (extended range: 24=12am, 25=1am, 26=2am)
+    if (hour_start < 0 || hour_start > 25 || hour_end < 0 || hour_end > 26) {
       return NextResponse.json(
-        { error: 'Hours must be between 0 and 23' },
+        { error: 'Hours must be between 0 and 26' },
         { status: 400 }
       );
     }

@@ -1,8 +1,8 @@
 # AI-Powered Rostering System v2.0.0 - Implementation Status
 
 **Document Created**: January 11, 2025
-**Last Updated**: January 11, 2025
-**Current Phase**: Phase 1 Complete, Testing In Progress
+**Last Updated**: January 14, 2025
+**Current Phase**: Phase 2 Complete - AI Roster Generation Live (Security Review Pending)
 **Design Document**: [2025-01-11-ai-rostering-system-design.md](./2025-01-11-ai-rostering-system-design.md)
 
 ---
@@ -31,36 +31,107 @@ The AI-powered rostering system is a comprehensive staff scheduling solution for
 ### What's Been Completed
 
 ✅ **Phase 1: Database & Core API** - COMPLETE
-- 9 new database tables created with proper constraints and indexes
-- 4 columns added to existing `staff_list` table
-- Service layer with 22 database methods
-- 6 core API endpoints (roster management, clock-in, availability)
-- Cron job infrastructure with server instrumentation
-- TypeScript type definitions (280+ lines)
-- Vietnamese holiday data seeded (5 holidays for 2025)
+- 9 new database tables created (`roster_shifts`, `staff_availability`, etc.)
+- Service layer with comprehensive database access methods
+- Core API endpoints for roster CRUD operations
+- TypeScript type definitions for all roster entities
 - Build verified successfully (no TypeScript errors)
+
+✅ **Phase 2: AI Constraint Solver & Rule Management** - COMPLETE (Security Review Pending)
+- **Natural Language Rule Parser** (`lib/services/rule-parser-service.ts`) - LIVE
+  - Claude API integration via OpenRouter
+  - Parses natural language rules into structured constraints
+  - 14 constraint types supported (min_coverage, max_coverage, opening_time, etc.)
+  - Successfully parsed 17 production rules
+- **Roster Solver Service** (`lib/services/roster-solver-service.ts`) - LIVE
+  - Automatic rule fetching from database (25 active rules)
+  - Automatic staff fetching with availability patterns
+  - Shift requirement generation from rules (43 shifts generated)
+  - Constraint satisfaction solving
+  - Weighted optimization scoring
+- **Roster Generation API** (`/api/roster/generate`) - LIVE
+  - POST endpoint: Generate optimal roster for a week
+  - GET endpoint: Preview shift requirements from rules
+  - Returns: assignments, violations, validation, stats
+- **Calendar UI Integration** - LIVE
+  - "Generate Roster" button with gradient styling
+  - AI results dialog showing stats, violations, and assignments
+  - Accept/Cancel workflow to apply generated roster
+- **Database Integration** - LIVE
+  - 17 natural language rules loaded into `roster_rules` table
+  - All rules successfully parsed and stored
+
+⚠️ **Security Review Findings** (January 14, 2025):
+- Quality-control-enforcer identified 4 **CRITICAL** security issues
+- Must fix before production deployment:
+  1. Missing authentication on `/api/roster/generate` endpoint
+  2. No rate limiting on expensive AI calls
+  3. No timeout on OpenRouter API requests (30s needed)
+  4. No validation of AI-generated constraint objects
+- See "Known Issues" section below for details and fixes
+
+✅ **Phase 3: Roster Calendar UI & Admin Tools** - MOSTLY COMPLETE
+- **Roster Calendar Page** (`/staff/roster/calendar`) - LIVE & FUNCTIONAL
+  - Weekly staff view with Homebase-inspired grid layout
+  - All staff members shown with their shifts for the week
+  - Color-coded shifts by role (supervisor, dealer, barista, etc.)
+  - Availability indicators (green check, yellow warning, red unavailable)
+  - Preferred times displayed for each staff member
+  - Click shifts to edit time/role
+  - Click empty day cells to create new shifts
+  - Click day headers to view daily Gantt timeline
+- **Shift Editing Dialog** - COMPLETE
+  - Edit shift times, role, and type
+  - Delete shifts with confirmation
+  - Real-time validation of shift overlaps
+  - Default times based on day of week (weekday/weekend)
+- **Publish Workflow** - COMPLETE
+  - Draft/Published status tracking
+  - Publish button with unpublished count
+  - `edited_after_publish` flag for tracking changes
+  - Atomic database transaction for publishing
+- **Clear All Functionality** - COMPLETE
+  - Bulk delete all shifts for a week
+  - Confirmation dialog with shift count
+  - Parallel deletion for performance
+- **Homebase Import Script** - COMPLETE
+  - Node.js script to import schedules from Homebase
+  - Staff name to UUID mapping
+  - Automatic clearing of existing shifts
+  - Bulk shift creation (44 shifts in demo)
+  - Success/failure reporting
+- **Rule Management UI** (`/admin/roster/rules`) - COMPLETE (January 14, 2025)
+  - Natural language rule input with priority selector
+  - AI-powered rule parsing via Claude API (OpenRouter)
+  - Real-time parse result display with constraint type and weight
+  - Active rules list with filter by active/inactive status
+  - Edit rule weights and expiration dates inline
+  - Toggle active/inactive status without deleting
+  - Delete rules with confirmation dialog
+  - Color-coded constraint type badges (14 types)
+  - Admin authentication check (requires `staff_type === 'Admin'`)
+  - Success/error message banners
+  - Matches existing admin page styling patterns
 
 ### What's In Progress
 
-🔄 **Testing & Validation**
-- Test data seeding script created (needs schema fixes)
-- API endpoint testing pending
-- Cron job initialization verification pending
+🔄 **Phase 3: Remaining Admin UI Components**
+- Approval queue (shift swaps, hour adjustments)
+- Staff configuration (pay rates, roles, keys)
 
 ### What's Next
 
-⏳ **Immediate Tasks** (Complete Phase 1 Testing)
-1. Fix test data seeding script
-2. Seed test staff, availability, and shifts
-3. Test all 6 API endpoints systematically
-4. Verify cron job initialization
-5. Document API testing results
+⏳ **Immediate Tasks**
+1. Fix 4 critical security issues (authentication, rate limiting, timeout, validation)
+2. Implement approval queue
+3. Add staff configuration UI
+4. Build Phase 4 staff-facing features
 
-⏳ **Phase 2: Constraint Solver & Rule Management**
-- Install Google OR-Tools
-- Implement constraint solver service
-- Build Claude API parser for natural language rules
-- Create roster generation engine
+⏳ **Phase 4: Staff UI & Clock-in**
+- Availability editor (mobile-friendly grid)
+- QR code clock-in/out with GPS
+- Shift swap requests
+- My shifts page
 
 ---
 
@@ -349,9 +420,175 @@ export interface PayCalculation {
 }
 ```
 
-#### 6. Build Status
+#### 6. Roster Calendar UI (Phase 3 - Partially Complete)
 
-**Last Build**: ✅ Successful (January 11, 2025)
+**Location**: [app/staff/roster/calendar/page.tsx](../../app/staff/roster/calendar/page.tsx)
+
+**Status**: ✅ LIVE & FUNCTIONAL
+
+**Key Features Implemented**:
+
+1. **Weekly Staff View Component** (`RosterWeeklyStaffView`)
+   - Displays all staff members in rows
+   - Shows 7 days (Mon-Sun) in columns
+   - Each cell shows shifts with time ranges and roles
+   - Color coding by role:
+     - Supervisor: Blue
+     - Dealer: Green
+     - Senior: Purple
+     - Barista: Orange
+     - Game Master: Pink
+   - Empty cells clickable to create new shifts
+   - Shift cards clickable to edit
+   - Day headers clickable for Gantt view
+
+2. **Staff Data Integration**
+   - Fetches ALL staff from `/api/staff-list` (not just scheduled)
+   - Maps nicknames to display names
+   - Shows availability status per day:
+     - ✓ Green check: Available
+     - ⚠ Yellow warning: Has preferred times
+     - ✗ Red X: Unavailable
+   - Displays preferred time ranges (e.g., "9am-5pm")
+
+3. **Shift Management**
+   - Create: Click empty cell → opens dialog with default times
+   - Edit: Click existing shift → opens dialog with current values
+   - Delete: Delete button in edit dialog
+   - Bulk operations:
+     - Clear All button: Deletes all shifts for the week
+     - Publish button: Marks all shifts as published
+
+4. **Publish Workflow**
+   - Tracks unpublished changes count
+   - Shows count in Publish button: "Publish (44)"
+   - Confirmation dialog before publishing
+   - Updates `is_published` flag in database
+   - Clears `edited_after_publish` flags
+   - Shows success message with count
+
+5. **Week Navigation**
+   - Week selector with prev/next buttons
+   - Date range validation (Monday only)
+   - Fetches shifts on week change
+   - Shows summary stats (total shifts, staff count, violations)
+
+**Components Created**:
+- `RosterWeeklyStaffView.tsx` - Main calendar grid
+- `ShiftCard.tsx` - Individual shift display
+- `ShiftEditDialog.tsx` - Shift editing modal
+- `WeekSelector.tsx` - Week navigation controls
+- `RosterDailyGanttView.tsx` - Daily timeline view (Phase 3.1)
+
+**API Endpoints Used**:
+- `GET /api/roster/shifts?week_start=YYYY-MM-DD` - Fetch shifts
+- `POST /api/roster/shifts` - Create new shift
+- `PUT /api/roster/shifts/[id]` - Update shift
+- `DELETE /api/roster/shifts/[id]` - Delete shift
+- `POST /api/roster/[week]/publish` - Publish roster
+- `GET /api/roster/[week]/unpublished-count` - Get unpublished count
+- `GET /api/roster/availability?week_start=YYYY-MM-DD` - Fetch availability
+- `GET /api/roster/preferred-times` - Fetch preferred times
+- `GET /api/staff-list` - Fetch all staff
+
+**Database Tables Used**:
+- `roster_shifts` - Stores all shift assignments
+- `roster_metadata` - Tracks roster status (draft/published)
+- `staff_availability` - Staff availability patterns
+- `staff_preferred_times` - Preferred working hours
+- `staff_list` - Staff information
+
+#### 7. Homebase Import Script
+
+**Location**: [scripts/import-homebase-schedule.js](../../scripts/import-homebase-schedule.js)
+
+**Status**: ✅ COMPLETE & TESTED
+
+**Purpose**: Automate importing weekly schedules from Homebase into the roster calendar system.
+
+**Features**:
+1. **Staff Name Mapping**
+   - Fetches staff list from API
+   - Maps by nickname or full name
+   - Supports Vietnamese diacritics (Thọ, Hiếu, Sơn, etc.)
+   - Reports unmapped staff members
+
+2. **Existing Shift Cleanup**
+   - Fetches all shifts for target week
+   - Deletes shifts one by one
+   - Reports count cleared
+
+3. **Bulk Shift Creation**
+   - Creates shifts from hardcoded HOMEBASE_SHIFTS array
+   - Maps day names to day_of_week
+   - Converts 24-hour times to TIME format
+   - Sets shift_type to 'day' by default
+   - Reports success/failure per shift
+
+4. **Configuration**
+   - `WEEK_START` constant: Target Monday date (YYYY-MM-DD)
+   - `API_BASE` env var: API endpoint (default: http://localhost:3005)
+   - `HOMEBASE_SHIFTS` array: Schedule data structure
+
+**Data Structure**:
+```javascript
+{
+  staffName: 'Thọ',           // Nickname or full name
+  day: 'Monday',              // Day of week
+  start: '18:00',             // 24-hour start time
+  end: '23:00',               // 24-hour end time
+  role: 'supervisor'          // Role required
+}
+```
+
+**Usage**:
+```bash
+# Default (uses localhost:3005)
+node scripts/import-homebase-schedule.js
+
+# Custom API base
+API_BASE=http://localhost:3000 node scripts/import-homebase-schedule.js
+```
+
+**Example Output**:
+```
+=== Import Homebase Schedule ===
+Week: 2025-11-10
+API Base: http://localhost:3000
+
+Fetching staff list...
+✓ Loaded 13 staff members
+
+Clearing existing shifts for week of 2025-11-10...
+Found 21 existing shifts, deleting...
+✓ Cleared 21 shifts
+
+Importing 44 shifts from Homebase...
+..............................................
+
+✓ Successfully imported 44 shifts
+
+✓ Import complete!
+
+View the roster at: http://localhost:3000/staff/roster/calendar
+```
+
+**Demo Import**: Successfully imported 44 shifts for 11 staff members:
+- Thọ: 5 shifts (supervisor)
+- Hiếu: 6 shifts (supervisor)
+- Phong: 6 shifts (dealer/senior)
+- Huy: 3 shifts (barista)
+- Nhi: 6 shifts (barista)
+- Long: 1 shift (barista)
+- Vũ: 3 shifts (game master)
+- Chase: 5 shifts (dealer - training)
+- Sơn: 2 shifts (dealer - training)
+- Minh: 5 shifts (barista/game master)
+- An: 2 shifts (dealer - training)
+
+#### 8. Build Status
+
+**Last Build**: ✅ Successful (January 13, 2025)
 
 ```bash
 npm run build
@@ -669,7 +906,137 @@ ADD COLUMN IF NOT EXISTS available_roles TEXT[];
 
 ## Known Issues
 
-### 1. Test Data Script Schema Mismatch
+### CRITICAL SECURITY ISSUES (Phase 2 - January 14, 2025)
+
+⚠️ **Must Fix Before Production Deployment**
+
+Quality-control-enforcer review identified the following critical vulnerabilities:
+
+#### 1. Missing Authentication on AI Endpoint
+
+**Severity**: CRITICAL
+**Location**: `app/api/roster/generate/route.ts`
+**Impact**: Anyone can trigger expensive OpenRouter API calls ($$$), potential cost explosion, API quota exhaustion
+
+**Problem**: The `/api/roster/generate` endpoint has ZERO authentication. No session check, no admin verification.
+
+**Required Fix**:
+```typescript
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!session.user.is_admin) {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+  // ... continue with generation
+}
+```
+
+#### 2. No Rate Limiting on Expensive AI Calls
+
+**Severity**: CRITICAL
+**Location**: `app/api/roster/generate/route.ts`, `lib/services/rule-parser-service.ts`
+**Impact**: Cost explosion, API quota exhaustion, DoS attack vector
+
+**Problem**: No rate limiting on AI calls that cost money per request.
+
+**Required Fix**: Implement Redis-based rate limiting
+```typescript
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, '1 h'), // 5 generations per hour
+});
+
+export async function POST(request: NextRequest) {
+  const identifier = session.user.id;
+  const { success } = await ratelimit.limit(identifier);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Max 5 roster generations per hour.' },
+      { status: 429 }
+    );
+  }
+  // ... continue with generation
+}
+```
+
+#### 3. No Timeout on External API Calls
+
+**Severity**: HIGH
+**Location**: `lib/services/rule-parser-service.ts:150`
+**Impact**: Railway container hangs, poor UX, resource exhaustion
+
+**Problem**: OpenRouter API fetch has no timeout, can hang indefinitely.
+
+**Required Fix**: Add AbortController with 30s timeout
+```typescript
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+try {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    signal: controller.signal,
+    headers: { ... },
+    body: JSON.stringify({ ... })
+  });
+  clearTimeout(timeoutId);
+  // ... rest of code
+} catch (error) {
+  if (error.name === 'AbortError') {
+    throw new Error('OpenRouter API timeout (30s)');
+  }
+  throw error;
+}
+```
+
+#### 4. No Validation of AI-Generated Constraints
+
+**Severity**: HIGH
+**Location**: `lib/services/rule-parser-service.ts:188-201`
+**Impact**: Malformed constraints crash solver, AI hallucinations create invalid data, potential SQL injection
+
+**Problem**: AI-generated JSON is parsed directly without schema validation.
+
+**Required Fix**: Add Zod schema validation
+```typescript
+import { z } from 'zod';
+
+const ConstraintSchema = z.object({
+  constraint: z.object({
+    type: z.enum(['min_coverage', 'max_coverage', 'opening_time', /* ... all 14 types */]),
+    // ... type-specific validations
+  }),
+  weight: z.number().min(0).max(100),
+  explanation: z.string().min(1)
+});
+
+const parsed = JSON.parse(jsonMatch[0]);
+const validated = ConstraintSchema.safeParse(parsed);
+
+if (!validated.success) {
+  throw new Error(`Invalid AI response: ${validated.error.message}`);
+}
+
+return {
+  success: true,
+  parsed_constraint: validated.data.constraint,
+  // ...
+};
+```
+
+---
+
+### 5. Test Data Script Schema Mismatch
 
 **Severity**: Medium
 **Impact**: Cannot seed test data until fixed
@@ -842,38 +1209,68 @@ ADD COLUMN IF NOT EXISTS available_roles TEXT[];
 - Test cases for complex scenarios
 - Documentation on adding custom constraints
 
-### Phase 3: Admin UI ⏳ UPCOMING
+### Phase 3: Admin UI ✅ PARTIALLY COMPLETE
 
 **Duration**: 3-4 days
-**Dependencies**: Phase 2 complete
+**Dependencies**: Phase 1 complete (Phase 2 can run in parallel)
 
-**Components**:
-1. **Roster Dashboard** (`app/admin/roster/page.tsx`)
-   - Calendar view of weekly roster
-   - Drag-and-drop shift editing
-   - Real-time conflict detection
-   - Export to PDF/Excel
+**Status**: Core roster calendar UI complete, remaining components pending
 
-2. **Roster Editor** (`app/admin/roster/editor/page.tsx`)
-   - Manual shift assignment
-   - Staff availability overlay
-   - Bulk operations (copy week, clear week)
-   - Undo/redo functionality
+**Completed Components**:
+1. ✅ **Roster Calendar** (`app/staff/roster/calendar/page.tsx`) - LIVE
+   - Weekly grid view (Homebase-inspired layout)
+   - Staff rows with shifts displayed across 7 days
+   - Color-coded by role (supervisor, dealer, barista, etc.)
+   - Click to edit shifts, click empty cells to create
+   - Availability indicators (green/yellow/red)
+   - Preferred times display
+   - Day header click → Gantt timeline view
 
-3. **Rule Management** (`app/admin/roster/rules/page.tsx`)
-   - List all active rules
-   - Add/edit/delete rules (natural language)
+2. ✅ **Shift Management** - LIVE
+   - Create new shifts (click empty cells)
+   - Edit existing shifts (click shift cards)
+   - Delete shifts (delete button in dialog)
+   - Shift validation (overlaps, times)
+   - Default times based on day type
+
+3. ✅ **Publish Workflow** - LIVE
+   - Draft/published status tracking
+   - Unpublished count in button
+   - Confirmation dialogs
+   - Atomic database transactions
+   - `edited_after_publish` tracking
+
+4. ✅ **Bulk Operations** - LIVE
+   - Clear All: Delete all shifts for week
+   - Publish All: Publish all draft shifts
+
+5. ✅ **Homebase Import Script** - COMPLETE
+   - Automated import from Homebase data
+   - Staff name → UUID mapping
+   - Bulk shift creation (44 shifts tested)
+   - Success/failure reporting
+
+**Pending Components**:
+6. ⏳ **Roster Generation** (AI-powered)
+   - Requires Phase 2 constraint solver
+   - "Generate Roster" button
+   - Rule satisfaction display
+   - Regeneration with tweaks
+
+7. ⏳ **Rule Management** (`app/admin/roster/rules/page.tsx`)
+   - Natural language rule input
+   - Claude API parsing
    - Rule weight adjustment
-   - Rule expiration dates
+   - Active/inactive toggle
 
-4. **Approval Queue** (`app/admin/roster/approvals/page.tsx`)
-   - Pending shift swap requests
-   - Auto-approve logic settings
-   - Approval/rejection with reason
+8. ⏳ **Approval Queue** (`app/admin/roster/approvals/page.tsx`)
+   - Shift swap approvals
+   - Hour adjustment approvals
+   - Auto-approve settings
 
-5. **Admin Authentication** (NextAuth v5)
-   - Protect all admin routes
-   - Role-based access control
+9. ⏳ **Admin Authentication** (NextAuth v5)
+   - Protect admin routes
+   - Role-based access
    - Audit logging
 
 ### Phase 4: Staff UI & Clock-in ⏳ UPCOMING
@@ -1241,6 +1638,133 @@ curl -X POST http://localhost:3000/api/cron/check-clockouts
 
 ---
 
+## Priority Roadmap: What to Build Next
+
+Based on current implementation status, here's the recommended build order:
+
+### 1. ⭐ HIGH PRIORITY - Staff Availability System
+
+**Why First**: Staff can't mark their availability yet, which blocks roster generation
+
+**Components**:
+- **Staff Availability Editor** (`/staff/availability`)
+  - Mobile-first 7-day grid (8am-2am hour blocks)
+  - Tap to cycle: Green (available) → Yellow (prefer not) → Red (unavailable)
+  - Quick fill buttons (All Green, All Red, Reset)
+  - Save as recurring weekly pattern
+- **API Endpoints**:
+  - `GET /api/staff/availability?staff_id=<uuid>` ✅ Already exists
+  - `POST /api/staff/availability` ✅ Already exists (bulk update)
+- **Database**: `staff_availability` table ✅ Already created
+
+**Estimated Time**: 1-2 days
+
+### 2. ⭐ HIGH PRIORITY - Preferred Times System
+
+**Why Second**: Complements availability, helps with auto-scheduling
+
+**Components**:
+- **Preferred Times Editor** (`/staff/preferred-times`)
+  - Set preferred working hours per day
+  - E.g., "Monday: 9am-5pm, Tuesday: 12pm-8pm"
+  - Flexible start/end times (not hourly blocks)
+- **API Endpoints**:
+  - `GET /api/roster/preferred-times` ✅ Already exists
+  - `POST /api/roster/preferred-times` - Need to create
+- **Database**: `staff_preferred_times` table - Need to create
+
+**Estimated Time**: 1 day
+
+### 3. MEDIUM PRIORITY - AI Roster Generation (Phase 2)
+
+**Why Third**: Requires availability data, but provides huge value
+
+**Components**:
+- **Constraint Solver Service** (`lib/services/roster-solver-service.ts`)
+  - Google OR-Tools integration
+  - Constraint model builder
+  - Solution → shifts converter
+- **Rule Parser** (`lib/services/rule-parser-service.ts`)
+  - Claude API for natural language → structured constraints
+  - Validation and confirmation
+- **API Endpoint**: `POST /api/roster/generate`
+  - Input: week_start, use_default_requirements
+  - Output: Generated roster with rule satisfaction %
+- **UI Integration**: "Generate Roster" button on calendar page
+
+**Estimated Time**: 2-3 days
+
+### 4. MEDIUM PRIORITY - Rule Management UI
+
+**Why Fourth**: Enables customizing roster generation rules
+
+**Components**:
+- **Rule Management Page** (`/admin/roster/rules`)
+  - Natural language rule input
+  - Parse via Claude API
+  - Display parsed constraint
+  - Weight adjustment slider
+  - Active/inactive toggle
+  - Expiration date picker
+- **API Endpoints**:
+  - `GET /api/roster/rules` - Need to create
+  - `POST /api/roster/rules` - Need to create
+  - `PUT /api/roster/rules/[id]` - Need to create
+  - `DELETE /api/roster/rules/[id]` - Need to create
+
+**Estimated Time**: 2 days
+
+### 5. LOW PRIORITY - Clock-in System (Phase 4)
+
+**Why Later**: Works independently, can be added after rostering
+
+**Components**:
+- QR code generation
+- GPS-based clock-in/out
+- Variance tracking (early/late)
+- Points system integration
+- Missing clock-out detection
+
+**Estimated Time**: 2-3 days
+
+### 6. LOW PRIORITY - Approval Queue
+
+**Why Later**: Only needed once shifts are published and swaps happen
+
+**Components**:
+- Shift swap approval UI
+- Hour adjustment approval
+- Auto-approve logic configuration
+
+**Estimated Time**: 2 days
+
+---
+
+## Recommended Next Steps
+
+1. **Immediate** (This session):
+   - Review what's been implemented (roster calendar + Homebase import)
+   - Decide on priority: Availability editor or AI generation?
+   - If availability: Build staff availability editor page
+   - If AI: Set up OpenRouter API and start constraint solver
+
+2. **This Week**:
+   - Complete staff availability system
+   - Build preferred times editor
+   - Test data flow: Staff marks availability → Admin generates roster
+
+3. **Next Week**:
+   - Implement AI roster generation
+   - Build rule management UI
+   - Test end-to-end workflow
+
+4. **Future**:
+   - Clock-in system
+   - Approval queue
+   - Mobile app considerations
+
+---
+
 ## Document Version History
 
 - **v1.0.0** (2025-01-11): Initial comprehensive status document
@@ -1249,8 +1773,15 @@ curl -X POST http://localhost:3000/api/cron/check-clockouts
   - Identified testing gaps
   - Outlined next steps
 
+- **v1.1.0** (2025-01-13): Major update - Phase 3 progress
+  - Documented roster calendar UI implementation
+  - Added Homebase import script documentation
+  - Updated phase completion status (Phase 3 partially complete)
+  - Added priority roadmap for next components
+  - 44 shifts successfully imported and tested
+
 ---
 
-**Last Updated**: January 11, 2025
+**Last Updated**: January 13, 2025
 **Document Author**: Claude (Sonnet 4.5)
-**Review Status**: Ready for new session handoff
+**Review Status**: Current - Roster calendar live and functional

@@ -1,34 +1,39 @@
 /**
  * API Route: /api/roster/generate
- * Version: 2.0.0
- * Phase 2: Roster Generation with Constraint Solving
+ * Version: 2.1.0
+ * Phase 3: AI Roster Generation with Natural Language Rules
  *
- * POST: Generate optimal roster for a week using constraint solving
+ * POST: Generate optimal roster for a week using parsed natural language rules
+ * GET: Preview shift requirements that would be generated from rules
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import RosterSolverService from '@/lib/services/roster-solver-service';
-import RosterDbService from '@/lib/services/roster-db-service';
-import type { ShiftRequirement, StaffMember } from '@/lib/services/roster-solver-service';
 import pool from '@/lib/db/postgres';
 
 /**
  * POST /api/roster/generate
- * Generate optimal roster for a week
+ * Generate optimal roster using natural language rules
+ *
+ * Request body:
+ * {
+ *   week_start: string;        // ISO date (YYYY-MM-DD, must be Monday)
+ *   max_hours_per_week?: number; // Default: 40
+ *   prefer_fairness?: boolean;   // Default: true
+ * }
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const body = await request.json();
     const {
       week_start,
-      shift_requirements,
-      use_default_requirements = false,
       max_hours_per_week = 40,
-      prefer_fairness = true,
-      auto_save = false
+      prefer_fairness = true
     } = body;
 
-    // Validate week start (must be a Monday)
+    // Validate week start
     if (!week_start) {
       return NextResponse.json(
         { error: 'week_start is required (format: YYYY-MM-DD, must be Monday)' },
@@ -37,6 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     const weekDate = new Date(week_start + 'T00:00:00Z');
+    if (isNaN(weekDate.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid date format for week_start' },
+        { status: 400 }
+      );
+    }
+
     if (weekDate.getDay() !== 1) {
       return NextResponse.json(
         { error: 'week_start must be a Monday' },
@@ -44,193 +56,90 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get shift requirements
-    let requirements: ShiftRequirement[];
-    if (use_default_requirements) {
-      requirements = RosterSolverService.generateDefaultShiftRequirements();
-    } else if (shift_requirements && Array.isArray(shift_requirements)) {
-      requirements = shift_requirements;
-    } else {
-      return NextResponse.json(
-        { error: 'Either shift_requirements array or use_default_requirements=true is required' },
-        { status: 400 }
-      );
+    console.log(`[Roster Generation] Starting for week: ${week_start}`);
+    console.log(`  Max hours per week: ${max_hours_per_week}`);
+    console.log(`  Prefer fairness: ${prefer_fairness}`);
+
+    // Generate roster using AI solver (automatically fetches rules and staff)
+    const solution = await RosterSolverService.generateRoster({
+      weekStart: week_start,
+      maxHoursPerWeek: max_hours_per_week,
+      preferFairness: prefer_fairness
+    });
+
+    const generationTime = Date.now() - startTime;
+
+    console.log(`[Roster Generation] Completed in ${generationTime}ms`);
+    console.log(`  Total shifts: ${solution.assignments.length}`);
+    console.log(`  Score: ${solution.score}`);
+    console.log(`  Valid: ${solution.is_valid}`);
+    console.log(`  Violations: ${solution.violations.length}`);
+
+    // Validate solution
+    const validation = RosterSolverService.validateSolution(solution);
+
+    // Calculate unique staff count
+    const uniqueStaff = new Set(solution.assignments.map(a => a.staff_id)).size;
+
+    // Calculate staff hours
+    const staffHours: Record<string, number> = {};
+    for (const assignment of solution.assignments) {
+      if (!staffHours[assignment.staff_id]) {
+        staffHours[assignment.staff_id] = 0;
+      }
+      const [startHour, startMin] = assignment.shift_requirement.scheduled_start.split(':').map(Number);
+      const [endHour, endMin] = assignment.shift_requirement.scheduled_end.split(':').map(Number);
+      const hours = (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
+      staffHours[assignment.staff_id] += hours;
     }
 
-    // Fetch staff members with availability
+    // Build assignments with staff names (fetch from database)
     const client = await pool.connect();
+    let assignmentsWithNames;
     try {
-      // Get all staff with rostering info
+      const staffIds = Array.from(new Set(solution.assignments.map(a => a.staff_id)));
       const staffResult = await client.query(`
-        SELECT
-          id,
-          staff_name,
-          base_hourly_rate,
-          has_keys,
-          available_roles
+        SELECT id, staff_name, nickname
         FROM staff_list
-        WHERE base_hourly_rate IS NOT NULL
-        ORDER BY staff_name
-      `);
+        WHERE id = ANY($1)
+      `, [staffIds]);
 
-      if (staffResult.rows.length === 0) {
-        return NextResponse.json(
-          { error: 'No staff members found with rostering info configured' },
-          { status: 400 }
-        );
-      }
+      const staffMap = new Map(staffResult.rows.map(r => [r.id, r.nickname || r.staff_name]));
 
-      // Fetch availability for each staff member
-      const staffMembers: StaffMember[] = [];
-      for (const staff of staffResult.rows) {
-        const availability = await RosterDbService.getAvailabilityByStaffId(staff.id);
-        staffMembers.push({
-          id: staff.id,
-          name: staff.staff_name,
-          base_hourly_rate: staff.base_hourly_rate,
-          has_keys: staff.has_keys || false,
-          available_roles: staff.available_roles || [],
-          availability
-        });
-      }
-
-      // Fetch active scheduling rules
-      const rules = await RosterDbService.getActiveRules();
-
-      // Generate roster using constraint solver
-      console.log(`🔧 Generating roster for week ${week_start}...`);
-      console.log(`   Staff members: ${staffMembers.length}`);
-      console.log(`   Shift requirements: ${requirements.length}`);
-      console.log(`   Active rules: ${rules.length}`);
-
-      const solution = await RosterSolverService.generateRoster({
-        weekStart: week_start,
-        shiftRequirements: requirements,
-        staffMembers,
-        rules,
-        maxHoursPerWeek: max_hours_per_week,
-        preferFairness: prefer_fairness
-      });
-
-      console.log(`   Solution score: ${solution.score}`);
-      console.log(`   Valid: ${solution.is_valid}`);
-      console.log(`   Violations: ${solution.violations.length}`);
-
-      // Validate solution
-      const validation = RosterSolverService.validateSolution(solution);
-
-      // Auto-save if requested (even with violations - that's what drafts are for!)
-      let saved = false;
-      let roster_id = null;
-      if (auto_save) {
-        console.log('   💾 Auto-saving roster as draft...');
-        if (!solution.is_valid) {
-          console.log('   ⚠️  Roster has violations, saving as draft for manager review');
-        }
-
-        // Delete existing shifts for this week
-        await RosterDbService.deleteShiftsByWeek(week_start);
-
-        // Create or update roster_metadata
-        const metadataResult = await client.query(`
-          INSERT INTO roster_metadata (roster_week_start, status, violations)
-          VALUES ($1, 'draft', $2)
-          ON CONFLICT (roster_week_start)
-          DO UPDATE SET
-            status = 'draft',
-            violations = $2,
-            updated_at = NOW()
-          RETURNING id
-        `, [week_start, JSON.stringify(solution.violations)]);
-
-        roster_id = metadataResult.rows[0].id;
-
-        // Create new shifts (all unpublished initially)
-        for (const assignment of solution.assignments) {
-          await client.query(`
-            INSERT INTO roster_shifts (
-              roster_week_start,
-              day_of_week,
-              shift_type,
-              staff_id,
-              scheduled_start,
-              scheduled_end,
-              role_required,
-              is_published
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, false)
-          `, [
-            week_start,
-            assignment.shift_requirement.day_of_week,
-            assignment.shift_requirement.shift_type,
-            assignment.staff_id,
-            assignment.shift_requirement.scheduled_start,
-            assignment.shift_requirement.scheduled_end,
-            assignment.shift_requirement.role_required
-          ]);
-        }
-
-        saved = true;
-        console.log(`   ✅ Roster saved as DRAFT (roster_id: ${roster_id})`);
-      }
-
-      // Build response with staff names
-      const assignmentsWithNames = solution.assignments.map(assignment => {
-        const staff = staffMembers.find(s => s.id === assignment.staff_id);
-        return {
-          staff_id: assignment.staff_id,
-          staff_name: staff?.name || 'Unknown',
-          day_of_week: assignment.shift_requirement.day_of_week,
-          shift_type: assignment.shift_requirement.shift_type,
-          scheduled_start: assignment.shift_requirement.scheduled_start,
-          scheduled_end: assignment.shift_requirement.scheduled_end,
-          role_required: assignment.shift_requirement.role_required,
-          score: assignment.score
-        };
-      });
-
-      // Calculate staff hours
-      const staffHours: Record<string, number> = {};
-      for (const assignment of solution.assignments) {
-        if (!staffHours[assignment.staff_id]) {
-          staffHours[assignment.staff_id] = 0;
-        }
-        const [startHour, startMin] = assignment.shift_requirement.scheduled_start.split(':').map(Number);
-        const [endHour, endMin] = assignment.shift_requirement.scheduled_end.split(':').map(Number);
-        const hours = (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
-        staffHours[assignment.staff_id] += hours;
-      }
-
-      const staffSummary = staffMembers.map(staff => ({
-        staff_id: staff.id,
-        staff_name: staff.name,
-        total_hours: staffHours[staff.id] || 0,
-        shift_count: solution.assignments.filter(a => a.staff_id === staff.id).length
+      assignmentsWithNames = solution.assignments.map(assignment => ({
+        staff_id: assignment.staff_id,
+        staff_name: staffMap.get(assignment.staff_id) || 'Unknown',
+        day_of_week: assignment.shift_requirement.day_of_week,
+        shift_type: assignment.shift_requirement.shift_type,
+        scheduled_start: assignment.shift_requirement.scheduled_start,
+        scheduled_end: assignment.shift_requirement.scheduled_end,
+        role_required: assignment.shift_requirement.role_required,
+        score: assignment.score
       }));
-
-      return NextResponse.json({
-        success: true,
-        week_start,
-        solution: {
-          is_valid: solution.is_valid,
-          score: solution.score,
-          assignments: assignmentsWithNames,
-          violations: solution.violations,
-          validation
-        },
-        staff_summary: staffSummary,
-        saved,
-        metadata: {
-          total_shifts: solution.assignments.length,
-          total_staff: staffMembers.length,
-          rules_applied: rules.length,
-          generated_at: new Date().toISOString()
-        }
-      });
     } finally {
       client.release();
     }
+
+    return NextResponse.json({
+      success: true,
+      week_start,
+      solution: {
+        is_valid: solution.is_valid,
+        score: solution.score,
+        assignments: assignmentsWithNames,
+        violations: solution.violations,
+        validation
+      },
+      stats: {
+        total_shifts: solution.assignments.length,
+        unique_staff: uniqueStaff,
+        generation_time_ms: generationTime,
+        generated_at: new Date().toISOString()
+      }
+    });
+
   } catch (error: any) {
-    console.error('Error generating roster:', error);
+    console.error('[Roster Generation] Error:', error);
     return NextResponse.json(
       {
         error: 'Failed to generate roster',
@@ -243,65 +152,87 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/roster/generate
- * Get information about roster generation capabilities
+ * Preview shift requirements that would be generated from rules
+ *
+ * Query params:
+ * - week_start: ISO date string (YYYY-MM-DD)
  */
 export async function GET(request: NextRequest) {
   try {
-    const defaultRequirements = RosterSolverService.generateDefaultShiftRequirements();
+    const { searchParams } = new URL(request.url);
+    const week_start = searchParams.get('week_start');
 
-    // Get staff count
-    const client = await pool.connect();
-    let staffCount = 0;
-    try {
-      const result = await client.query(`
+    if (!week_start) {
+      // Return system info if no week_start provided
+      const rules = await RosterSolverService.fetchActiveRules();
+
+      const staffResult = await pool.query(`
         SELECT COUNT(*) as count
         FROM staff_list
-        WHERE base_hourly_rate IS NOT NULL
+        WHERE active = true
       `);
-      staffCount = parseInt(result.rows[0].count);
-    } finally {
-      client.release();
+      const staffCount = parseInt(staffResult.rows[0].count);
+
+      return NextResponse.json({
+        capabilities: {
+          natural_language_rules: true,
+          constraint_solving: true,
+          fairness_optimization: true,
+          auto_staff_assignment: true
+        },
+        configuration: {
+          active_rules: rules.length,
+          active_staff: staffCount
+        },
+        supported_constraint_types: [
+          'min_coverage', 'max_coverage', 'opening_time', 'min_shift_length',
+          'no_day_and_night', 'min_hours', 'max_hours', 'day_off',
+          'max_consecutive_days', 'staff_pairing', 'required_role',
+          'required_skill', 'fairness', 'weekly_frequency'
+        ],
+        example_request: {
+          week_start: '2025-01-13',
+          max_hours_per_week: 40,
+          prefer_fairness: true
+        }
+      });
     }
 
-    // Get active rules count
-    const rules = await RosterDbService.getActiveRules();
+    // Preview shift requirements for specific week
+    const rules = await RosterSolverService.fetchActiveRules();
+    const shiftRequirements = await RosterSolverService.generateShiftRequirementsFromRules(
+      rules,
+      week_start
+    );
 
     return NextResponse.json({
-      capabilities: {
-        constraint_solving: true,
-        rule_parsing: true,
-        fairness_optimization: true,
-        availability_checking: true
-      },
-      configuration: {
-        configured_staff: staffCount,
-        active_rules: rules.length,
-        default_shift_requirements: defaultRequirements.length
-      },
-      shift_types: ['opening', 'day', 'evening', 'closing'],
-      constraint_types: [
-        'max_hours',
-        'min_hours',
-        'preferred_hours',
-        'max_consecutive_days',
-        'day_off',
-        'no_back_to_back',
-        'requires_keys_for_opening',
-        'fairness'
-      ],
-      example_request: {
-        week_start: '2025-01-13',
-        use_default_requirements: true,
-        max_hours_per_week: 40,
-        prefer_fairness: true,
-        auto_save: false
+      week_start,
+      rules: rules.map(r => ({
+        id: r.id,
+        rule_text: r.rule_text,
+        weight: r.weight,
+        constraint_type: r.parsed_constraint.type
+      })),
+      shift_requirements: shiftRequirements.map(sr => ({
+        day: sr.day_of_week,
+        shift_type: sr.shift_type,
+        start: sr.scheduled_start,
+        end: sr.scheduled_end,
+        min_staff: sr.min_staff,
+        role: sr.role_required,
+        requires_keys: sr.requires_keys
+      })),
+      stats: {
+        total_rules: rules.length,
+        total_shifts_to_fill: shiftRequirements.length
       }
     });
+
   } catch (error: any) {
-    console.error('Error getting roster generation info:', error);
+    console.error('[Roster Preview] Error:', error);
     return NextResponse.json(
       {
-        error: 'Failed to get roster generation info',
+        error: 'Failed to generate preview',
         details: error.message
       },
       { status: 500 }

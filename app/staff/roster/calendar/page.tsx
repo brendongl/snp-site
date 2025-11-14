@@ -2,18 +2,17 @@
 
 import { RosterWeeklyStaffView } from '@/components/features/roster/RosterWeeklyStaffView';
 import { RosterDailyGanttView } from '@/components/features/roster/RosterDailyGanttView';
-import { ShiftEditDialog } from '@/components/features/roster/ShiftEditDialog';
 import { WeekSelector } from '@/components/features/roster/WeekSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, startOfWeek } from 'date-fns';
-import { Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Loader2, RefreshCw, Eye } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ShiftAssignment } from '@/components/features/roster/ShiftCard';
 
 type ViewMode = 'week' | 'day';
 
-export default function RosterCalendarPage() {
+export default function StaffRosterCalendarPage() {
   const [selectedWeek, setSelectedWeek] = useState(() => {
     // Default to current week (Monday)
     const today = new Date();
@@ -28,19 +27,11 @@ export default function RosterCalendarPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // View mode and selected shift for editing
+  // View mode and selected date for day view
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [editingShift, setEditingShift] = useState<ShiftAssignment | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Publish state
-  const [unpublishedCount, setUnpublishedCount] = useState(0);
-  const [rosterStatus, setRosterStatus] = useState<'draft' | 'published'>('draft');
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
-
-  // Fetch shifts for the selected week
+  // Fetch shifts for the selected week (published only)
   const fetchShifts = async () => {
     setLoading(true);
     setError(null);
@@ -48,7 +39,7 @@ export default function RosterCalendarPage() {
     try {
       // Fetch shifts, availability, and preferred times in parallel
       const [shiftsResponse, availabilityResponse, preferredTimesResponse] = await Promise.all([
-        fetch(`/api/roster/shifts?week_start=${selectedWeek}`),
+        fetch(`/api/roster/shifts?week_start=${selectedWeek}&published_only=true`),
         fetch(`/api/roster/availability?week_start=${selectedWeek}`),
         fetch(`/api/roster/preferred-times`)
       ]);
@@ -58,7 +49,10 @@ export default function RosterCalendarPage() {
         throw new Error(`Failed to fetch shifts: ${shiftsResponse.statusText}`);
       }
       const shiftsData = await shiftsResponse.json();
-      setShifts(shiftsData.shifts || []);
+
+      // Filter to only show published shifts (double-check client-side)
+      const publishedShifts = (shiftsData.shifts || []).filter((shift: any) => shift.is_published === true);
+      setShifts(publishedShifts);
 
       // Process availability
       if (!availabilityResponse.ok) {
@@ -96,183 +90,24 @@ export default function RosterCalendarPage() {
     }
   };
 
-  // Fetch unpublished count
-  const fetchUnpublishedCount = async () => {
-    try {
-      const response = await fetch(`/api/roster/${selectedWeek}/unpublished-count`);
-      if (response.ok) {
-        const data = await response.json();
-        setUnpublishedCount(data.unpublished_count);
-        setRosterStatus(data.roster_status);
-      }
-    } catch (err) {
-      console.error('Error fetching unpublished count:', err);
-    }
-  };
-
-  // Handle publish roster
-  const handlePublish = async () => {
-    if (unpublishedCount === 0) return;
-
-    if (!confirm(`Publish roster for ${format(new Date(selectedWeek), 'MMM d, yyyy')}?\n\n${unpublishedCount} shift(s) will be published and visible to staff.`)) {
-      return;
-    }
-
-    setIsPublishing(true);
-    try {
-      const response = await fetch(`/api/roster/${selectedWeek}/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          published_by: null, // TODO: Get staff ID from auth
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to publish roster');
-      }
-
-      const data = await response.json();
-
-      // Show success message
-      alert(`✅ Roster published successfully!\n\n${data.changes_published} shift(s) are now visible to staff.`);
-
-      // Refresh data
-      await fetchShifts();
-      await fetchUnpublishedCount();
-    } catch (err) {
-      console.error('Error publishing roster:', err);
-      alert('❌ Failed to publish roster. Please try again.');
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
-  // Handle clear all shifts for selected week
-  const handleClearAll = async () => {
-    if (shifts.length === 0) {
-      alert('No shifts to clear for this week.');
-      return;
-    }
-
-    if (!confirm(`Clear ALL shifts for ${format(new Date(selectedWeek), 'MMM d, yyyy')}?\n\n${shifts.length} shift(s) will be permanently deleted.\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    setIsClearing(true);
-    try {
-      // Delete all shifts for this week
-      const deletePromises = shifts.map(shift =>
-        fetch(`/api/roster/shifts/${shift.id}`, { method: 'DELETE' })
-      );
-
-      await Promise.all(deletePromises);
-
-      // Show success message
-      alert(`✅ All shifts cleared successfully!\n\n${shifts.length} shift(s) were deleted.`);
-
-      // Refresh data
-      await fetchShifts();
-      await fetchUnpublishedCount();
-    } catch (err) {
-      console.error('Error clearing shifts:', err);
-      alert('❌ Failed to clear all shifts. Please try again.');
-    } finally {
-      setIsClearing(false);
-    }
-  };
-
   // Fetch shifts when week changes
   useEffect(() => {
     fetchShifts();
-    fetchUnpublishedCount();
   }, [selectedWeek]);
 
-  // Handle shift click - open edit dialog
-  const handleShiftClick = (shift: ShiftAssignment) => {
-    setEditingShift(shift);
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle day header click - switch to Gantt view
+  // Handle day header click - switch to Gantt view (read-only)
   const handleDayHeaderClick = (date: string) => {
     setSelectedDate(date);
     setViewMode('day');
   };
 
-  // Handle day cell click - create new shift
+  // No-op handlers for read-only mode (prevent editing)
+  const handleShiftClick = (shift: ShiftAssignment) => {
+    // Do nothing - read-only mode
+  };
+
   const handleDayCellClick = (staffId: string, date: string) => {
-    handleCreateShift(staffId, date);
-  };
-
-  // Handle shift save (both create and update)
-  const handleShiftSave = async (updatedShift: Partial<ShiftAssignment>) => {
-    try {
-      if (editingShift?.id) {
-        // Update existing shift
-        const response = await fetch(`/api/roster/shifts/${editingShift.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedShift),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update shift');
-        }
-      } else {
-        // Create new shift
-        const response = await fetch('/api/roster/shifts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...updatedShift,
-            week_start: selectedWeek,
-            day_of_week: editingShift?.day_of_week,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create shift');
-        }
-      }
-
-      // Close dialog and refresh
-      setIsEditDialogOpen(false);
-      setEditingShift(null);
-      await fetchShifts();
-      await fetchUnpublishedCount(); // Update publish button count
-    } catch (error) {
-      console.error('Error saving shift:', error);
-      throw error; // Re-throw so dialog can handle it
-    }
-  };
-
-  // Handle create new shift
-  const handleCreateShift = (staffId: string, date: string) => {
-    // Create a blank shift for this staff member on this day
-    const dayOfWeek = format(new Date(date), 'EEEE');
-    const staffMember = staffMembers.find((s) => s.id === staffId);
-
-    const newShift: ShiftAssignment = {
-      id: '',
-      staff_id: staffId,
-      staff_name: staffMember?.name || 'Unknown',
-      day_of_week: dayOfWeek,
-      scheduled_start: '', // Let dialog apply default times based on day of week
-      scheduled_end: '', // Let dialog apply default times based on day of week
-      role_required: 'floor',
-      shift_type: 'day',
-      has_violation: false,
-    };
-
-    setEditingShift(newShift);
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle shift delete - refresh data without changing selected week
-  const handleShiftDelete = async () => {
-    await fetchShifts();
-    await fetchUnpublishedCount();
+    // Do nothing - read-only mode (no shift creation)
   };
 
   // Filter shifts for selected date in day view
@@ -289,13 +124,16 @@ export default function RosterCalendarPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Roster Calendar</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Eye className="h-8 w-8 text-muted-foreground" />
+            My Roster
+          </h1>
           <p className="text-muted-foreground">
-            View and manage weekly staff schedules
+            View published weekly schedules (read-only)
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             onClick={fetchShifts}
@@ -308,42 +146,6 @@ export default function RosterCalendarPage() {
             )}
             Refresh
           </Button>
-
-          <Button
-            variant="destructive"
-            onClick={handleClearAll}
-            disabled={shifts.length === 0 || isClearing || loading}
-          >
-            {isClearing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Clearing...
-              </>
-            ) : (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear All
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="default"
-            onClick={handlePublish}
-            disabled={unpublishedCount === 0 || isPublishing}
-            className={unpublishedCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}
-          >
-            {isPublishing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              <>
-                Publish {unpublishedCount > 0 && `(${unpublishedCount})`}
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
@@ -353,7 +155,7 @@ export default function RosterCalendarPage() {
           <CardHeader>
             <CardTitle>Select Week</CardTitle>
             <CardDescription>
-              Choose a week to view the roster. Click on any day to see detailed timeline.
+              Choose a week to view your published roster. Click on any day to see detailed timeline.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -376,6 +178,17 @@ export default function RosterCalendarPage() {
         </Card>
       )}
 
+      {/* No Published Roster Message */}
+      {!loading && shifts.length === 0 && (
+        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <CardContent className="pt-6">
+            <p className="text-yellow-700 dark:text-yellow-300">
+              No published roster for this week yet. Check back later or contact admin.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main View */}
       {!loading && (
         <>
@@ -389,6 +202,7 @@ export default function RosterCalendarPage() {
               onShiftClick={handleShiftClick}
               onDayClick={handleDayCellClick}
               onDayHeaderClick={handleDayHeaderClick}
+              readOnly={true}
             />
           ) : (
             <RosterDailyGanttView
@@ -396,8 +210,9 @@ export default function RosterCalendarPage() {
               shifts={dayShifts}
               staffMembers={staffMembers}
               onShiftClick={handleShiftClick}
-              onCreateShift={handleCreateShift}
+              onCreateShift={(staffId: string, date: string) => {}}
               onBack={() => setViewMode('week')}
+              readOnly={true}
             />
           )}
         </>
@@ -425,7 +240,7 @@ export default function RosterCalendarPage() {
               <div className="text-2xl font-bold">
                 {new Set(shifts.map(s => s.staff_id)).size}
               </div>
-              <div className="text-sm text-muted-foreground">Staff Members</div>
+              <div className="text-sm text-muted-foreground">Staff Scheduled</div>
             </div>
             <div>
               <div className="text-2xl font-bold">
@@ -435,26 +250,13 @@ export default function RosterCalendarPage() {
             </div>
             <div>
               <div className="text-2xl font-bold">
-                {shifts.filter(s => s.has_violation).length}
+                {shifts.filter(s => s.shift_type === 'closing').length}
               </div>
-              <div className="text-sm text-muted-foreground">Violations</div>
+              <div className="text-sm text-muted-foreground">Closing Shifts</div>
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Edit Dialog */}
-      <ShiftEditDialog
-        shift={editingShift}
-        open={isEditDialogOpen}
-        onClose={() => {
-          setIsEditDialogOpen(false);
-          setEditingShift(null);
-        }}
-        onSave={handleShiftSave}
-        onDelete={handleShiftDelete}
-        staffMembers={staffMembers}
-      />
     </div>
   );
 }

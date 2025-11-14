@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const weekStart = searchParams.get('week_start');
+    const publishedOnly = searchParams.get('published_only') === 'true';
 
     if (!weekStart) {
       return NextResponse.json(
@@ -83,6 +84,7 @@ export async function GET(request: NextRequest) {
          FROM roster_shifts rs
          LEFT JOIN staff_list sl ON rs.staff_id = sl.id
          WHERE rs.roster_week_start = $1
+           ${publishedOnly ? 'AND rs.is_published = true' : ''}
          ORDER BY
            CASE rs.day_of_week
              WHEN 'Monday' THEN 1
@@ -135,6 +137,7 @@ export async function GET(request: NextRequest) {
        FROM roster_shifts rs
        LEFT JOIN staff_list sl ON rs.staff_id = sl.id
        WHERE rs.roster_week_start = $1
+         ${publishedOnly ? 'AND rs.is_published = true' : ''}
        ORDER BY
          CASE rs.day_of_week
            WHEN 'Monday' THEN 1
@@ -256,6 +259,61 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to create roster shift',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/roster/shifts - Batch delete all shifts for a specific week
+ * Body: { week_start: 'YYYY-MM-DD' }
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { week_start } = body;
+
+    if (!week_start) {
+      return NextResponse.json(
+        { error: 'week_start parameter required (format: YYYY-MM-DD)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(week_start)) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Use YYYY-MM-DD' },
+        { status: 400 }
+      );
+    }
+
+    const { default: pool } = await import('@/lib/db/postgres');
+
+    // Delete all shifts for this week in a single query
+    const result = await pool.query(
+      'DELETE FROM roster_shifts WHERE roster_week_start = $1 RETURNING id',
+      [week_start]
+    );
+
+    const deletedCount = result.rows.length;
+
+    console.log(`[Roster Shifts] Batch deleted ${deletedCount} shifts for week ${week_start}`);
+
+    return NextResponse.json({
+      success: true,
+      deleted_count: deletedCount,
+      week_start,
+    });
+
+  } catch (error) {
+    console.error('Error batch deleting roster shifts:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Failed to batch delete roster shifts',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

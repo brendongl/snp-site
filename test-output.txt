@@ -1,0 +1,93 @@
+
+============================================================
+  AI-POWERED ROSTERING SYSTEM - COMPREHENSIVE TESTS
+  Testing Phase 4 Features + Extended Hours Fix
+============================================================
+
+============================================================
+
+=== Testing Staff Availability Editor ===
+
+1. Testing availability page loads...
+   [OK] Page loaded successfully
+   [OK] Screenshot: test-screenshots/availability-initial.png
+
+2. Verifying UI elements...
+   [OK] Page title found
+   [OK] All action buttons visible
+   [OK] All 7 day columns present
+   [OK] All 18 hour rows present (8am-2am, including extended hours 12am/1am)
+
+3. Testing availability cell cycling...
+   Initial state: w-full h-12 transition-colors bg-red-500 hover:bg-red-600 text-white
+   [FAIL] Expected yellow, got: w-full h-12 transition-colors bg-green-500 hover:bg-green-600 text-white
+   [FAIL] Expected red, got: w-full h-12 transition-colors bg-yellow-500 hover:bg-yellow-600 text-white
+   [FAIL] Expected green, got: w-full h-12 transition-colors bg-red-500 hover:bg-red-600 text-white
+
+4. Testing extended hours (12am = hour 24, 1am = hour 25)...
+   [OK] Set Saturday 11pm-1am as unavailable (hours 23, 24, 25)
+
+5. Testing bulk fill operations...
+   [OK] Fill All Unavailable: 126/126 cells are red
+   [OK] Fill All Available: 126/126 cells are green
+
+6. Testing save/load persistence...
+   Setting test pattern: Monday 10am-2pm preferred, Saturday 8pm-1am unavailable
+
+============================================================
+
+=== Testing Clock-In/Out Page ===
+
+1. Testing clock-in page loads...
+   [OK] Page loaded successfully
+
+2. Verifying UI elements...
+   [OK] Page title found
+   [OK] Status section visible
+   [OK] Info section visible
+
+3. Checking initial clock status...
+   [OK] Staff is not clocked in (expected initial state)
+   [OK] Clock In button visible
+
+4. Verifying points system info...
+   [OK] Found: Early (5-15 min): +50 points
+   [OK] Found: On-time (±5 min): +20 points
+   [OK] Found: Late (5-15 min):
+   [OK] Found: Late (15+ min): -100 points
+
+[SUCCESS] Clock-In/Out page tests complete!
+   Total screenshots: 3 saved in test-screenshots/
+
+============================================================
+
+=== Testing Roster Calendar ===
+
+1. Testing roster calendar loads...
+   [OK] Page loaded successfully
+
+2. Verifying week navigation...
+   [OK] Week selector visible
+
+3. Checking day headers...
+
+4. Verifying staff members displayed...
+   [WARN]  No staff rows found
+
+5. Verifying action buttons...
+   [OK] Generate Roster button visible
+   [OK] Clear All button visible
+   [OK] Publish button visible
+
+[SUCCESS] Roster Calendar tests complete!
+   Total screenshots: 3 saved in test-screenshots/
+
+============================================================
+  TEST SUMMARY
+============================================================
+Staff Availability Editor......................... [ERROR] FAIL: 'charmap' codec can't encode characters in position 812-813: character maps to <undefined>
+Clock-In/Out Page................................. [SUCCESS] PASS
+Roster Calendar................................... [SUCCESS] PASS
+============================================================
+
+[WARN] Some tests failed - check logs above

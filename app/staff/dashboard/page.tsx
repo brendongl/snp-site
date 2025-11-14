@@ -50,6 +50,14 @@ interface StaffInfo {
   vikunjaUsername: string | null;
 }
 
+interface AvailabilityStats {
+  totalHours: number;
+  availableHours: number;
+  preferredNotHours: number;
+  unavailableHours: number;
+  availablePercentage: number;
+}
+
 // Helper function to get activity icon based on type (v1.5.9)
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -77,6 +85,7 @@ export default function StaffDashboard() {
   const [gamesNeedingAttention, setGamesNeedingAttention] = useState<VikunjaTask[]>([]); // v1.5.0: From Vikunja Board Game Issues
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
+  const [availabilityStats, setAvailabilityStats] = useState<AvailabilityStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [selectedGameIssue, setSelectedGameIssue] = useState<VikunjaTask | null>(null);
@@ -89,6 +98,7 @@ export default function StaffDashboard() {
   useEffect(() => {
     fetchDashboardData();
     fetchStaffInfo();
+    fetchAvailabilityStats();
 
     // Set up polling for real-time points updates (every 30 seconds)
     const pointsInterval = setInterval(() => {
@@ -114,6 +124,50 @@ export default function StaffDashboard() {
       }
     } catch (error) {
       console.error('Error fetching staff info:', error);
+    }
+  };
+
+  const fetchAvailabilityStats = async () => {
+    try {
+      const staffId = localStorage.getItem('staff_id');
+      if (!staffId) {
+        return;
+      }
+
+      const response = await fetch(`/api/staff/availability?staff_id=${staffId}`);
+      if (response.ok) {
+        const data = await response.json();
+
+        // Calculate stats from availability data
+        let availableHours = 0;
+        let preferredNotHours = 0;
+        let unavailableHours = 0;
+
+        data.availability.forEach((slot: any) => {
+          const hours = slot.hour_end - slot.hour_start;
+
+          if (slot.availability_status === 'available') {
+            availableHours += hours;
+          } else if (slot.availability_status === 'preferred_not') {
+            preferredNotHours += hours;
+          } else if (slot.availability_status === 'unavailable') {
+            unavailableHours += hours;
+          }
+        });
+
+        const totalHours = 7 * 18; // 7 days × 18 hours (8am-2am)
+        const availablePercentage = Math.round((availableHours / totalHours) * 100);
+
+        setAvailabilityStats({
+          totalHours,
+          availableHours,
+          preferredNotHours,
+          unavailableHours,
+          availablePercentage
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching availability stats:', error);
     }
   };
 
@@ -274,8 +328,8 @@ export default function StaffDashboard() {
         </div>
         <div className="container mx-auto px-4 py-8">
           <div className="space-y-8 animate-pulse">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
               ))}
             </div>
@@ -318,7 +372,7 @@ export default function StaffDashboard() {
       <div className="container mx-auto px-4 py-8 space-y-8">
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card className="p-3 sm:p-6">
           <div className="flex items-center justify-between mb-1 sm:mb-2">
             <div className="text-[10px] sm:text-sm text-gray-600">Games Need Checking</div>
@@ -352,6 +406,22 @@ export default function StaffDashboard() {
           <div className="text-xl sm:text-3xl font-bold">{stats?.knowledgeGaps || 0}</div>
           <Link href="/games?knowledgeFilter=unknown" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
             View all →
+          </Link>
+        </Card>
+
+        <Card className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="text-[10px] sm:text-sm text-gray-600">My Availability</div>
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+          </div>
+          <div className="text-xl sm:text-3xl font-bold">
+            {availabilityStats ? `${availabilityStats.availablePercentage}%` : '—'}
+          </div>
+          <div className="text-[10px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
+            {availabilityStats ? `${availabilityStats.availableHours} of ${availabilityStats.totalHours} hrs` : 'Not set'}
+          </div>
+          <Link href="/staff/availability" className="text-[10px] sm:text-sm text-blue-600 hover:underline mt-1 sm:mt-2 inline-block">
+            Edit availability →
           </Link>
         </Card>
       </div>

@@ -24,7 +24,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search games...' }: 
             e.currentTarget.blur();
           }
         }}
-        className="pl-10 pr-10"
+        className="pl-10 pr-10 bg-white/95 border-white/50 focus:bg-white placeholder:text-muted-foreground/70"
       />
       {value && (
         <Button

@@ -62,6 +62,7 @@ interface RosterWeeklyStaffViewProps {
   onDayClick?: (staffId: string, date: string) => void; // Click empty cell to create shift
   onDayHeaderClick?: (date: string) => void; // Click day header to open Gantt view
   className?: string;
+  readOnly?: boolean; // If true, disable all editing interactions
 }
 
 const DAYS_OF_WEEK = [
@@ -98,6 +99,7 @@ interface SortableStaffRowProps {
   totalHours: number;
   onShiftClick?: (shift: ShiftAssignment) => void;
   onDayClick?: (staffId: string, date: string) => void;
+  readOnly?: boolean;
 }
 
 function SortableStaffRow({
@@ -110,6 +112,7 @@ function SortableStaffRow({
   totalHours,
   onShiftClick,
   onDayClick,
+  readOnly = false,
 }: SortableStaffRowProps) {
   const {
     attributes,
@@ -240,8 +243,11 @@ function SortableStaffRow({
           return (
             <div
               key={day}
-              className="relative min-h-[48px] border-r last:border-r-0 hover:bg-accent/30 cursor-pointer transition-colors p-1"
-              onClick={() => onDayClick?.(staff.id, dayDate)}
+              className={cn(
+                "relative min-h-[48px] border-r last:border-r-0 transition-colors p-1",
+                !readOnly && "hover:bg-accent/30 cursor-pointer"
+              )}
+              onClick={() => !readOnly && onDayClick?.(staff.id, dayDate)}
               title={preferredTimesTooltip}
             >
               {/* Unavailable/Time-off/Shift Blocks - Homebase exact styling */}
@@ -259,8 +265,10 @@ function SortableStaffRow({
                       )}
                       title={block.isTimeOff ? `Time off: ${block.reason || 'Unavailable'}` : `Unavailable ${timeLabel}`}
                       onClick={(e) => {
-                        // Allow click to create shift over unavailable time
-                        onDayClick?.(staff.id, dayDate);
+                        // Allow click to create shift over unavailable time (only if not read-only)
+                        if (!readOnly) {
+                          onDayClick?.(staff.id, dayDate);
+                        }
                       }}
                     >
                       {/* Label row with icon for time-off */}
@@ -338,6 +346,7 @@ export function RosterWeeklyStaffView({
   onDayClick,
   onDayHeaderClick,
   className,
+  readOnly = false,
 }: RosterWeeklyStaffViewProps) {
   const [staffOrder, setStaffOrder] = useState(staffMembers);
   const startDate = parse(weekStart, 'yyyy-MM-dd', new Date());
@@ -458,6 +467,7 @@ export function RosterWeeklyStaffView({
                   totalHours={calculateStaffHours(staff.id)}
                   onShiftClick={onShiftClick}
                   onDayClick={onDayClick}
+                  readOnly={readOnly}
                 />
               ))}
             </div>

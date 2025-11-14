@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Last Updated**: November 4, 2025
-**Current Version**: 1.4.0
+**Last Updated**: January 14, 2025
+**Current Version**: 1.9.6
 **Hosting**: Railway (Docker containers)
 **Domain**: https://sipnplay.cafe
 
@@ -138,6 +138,97 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Follows project architecture patterns (service layer, type safety, etc.)
 - Proper testing coverage
 
+### Frontend Design & Aesthetics
+
+**Purpose**: Avoid generic "AI slop" aesthetics and create distinctive, intentional user interfaces.
+
+**Core Problem**: Without explicit guidance, AI-generated designs tend toward conservative, predictable outputs that lack character and distinctiveness.
+
+**Key Prompting Strategies:**
+
+1. **Guide Specific Design Dimensions**
+   - Focus attention individually on typography, color, motion, and backgrounds
+   - Prevents defaulting to safe, middle-ground choices
+   - Request targeted improvements rather than general "make it better"
+
+2. **Reference Design Inspirations**
+   - Suggest concrete sources: IDE themes, cultural aesthetics, design systems
+   - Anchors design direction without limiting creativity
+   - Example: "Draw inspiration from Tokyo Neon" or "Use Dracula theme palette"
+
+3. **Call Out Common Defaults to Avoid**
+   - Overused font families: Inter, Roboto, Arial, system fonts
+   - Clichéd color schemes: purple gradients on white backgrounds
+   - Generic layouts: centered cards with subtle shadows
+   - Predictable animations: simple fade-ins
+
+**Design Dimension Guidelines:**
+
+**Typography:**
+- Choose distinctive fonts; avoid generic families
+- Use CSS variables for consistency
+- Pair fonts with high contrast (not subtle differences)
+- Consider: display fonts for headings, readable fonts for body
+
+**Color & Theme:**
+- Commit to cohesive palettes with dominant colors and sharp accents
+- Draw from IDE themes or cultural aesthetics for inspiration
+- Avoid: generic blue/purple gradients, safe gray backgrounds
+- Consider: dark mode first, high contrast ratios, brand identity
+
+**Motion:**
+- Prioritize CSS-only solutions for HTML/React components
+- Orchestrate high-impact moments (page loads, transitions)
+- Use staggered reveals with `animation-delay`
+- Avoid: generic fade-ins, over-animated interfaces
+
+**Backgrounds:**
+- Create atmosphere through layered CSS gradients
+- Use geometric patterns rather than solid colors
+- Consider: mesh gradients, noise textures, subtle animations
+- Avoid: plain white/gray backgrounds
+
+**Practical Application:**
+
+When working on UI components:
+1. **Before coding**: Discuss design direction and inspirations
+2. **During implementation**: Focus on one dimension at a time
+3. **After initial version**: Refine typography, then color, then motion
+4. **Lock in themes**: Reuse established design tokens across features
+
+**Examples:**
+
+```
+❌ DON'T: "Make this component look better"
+✅ DO: "Update the color palette to use high-contrast Tokyo Neon colors with sharp accent pops"
+
+❌ DON'T: Use system fonts without consideration
+✅ DO: "Choose a distinctive display font for headings that contrasts with body text"
+
+❌ DON'T: Add generic purple gradient backgrounds
+✅ DO: "Create a layered mesh gradient background inspired by [specific design system]"
+```
+
+**For This Project (Sip & Play):**
+
+**Brand Color Palette** (defined in [public/mockups/index.html](public/mockups/index.html)):
+- **Primary Cyan**: `#00B4D8` - Main brand color (bright cyan/turquoise)
+- **Primary Orange**: `#F77F00` - Secondary brand color (vibrant orange)
+- **Cream**: `#FFF4E6` - Warm background/accent
+- **Brown**: `#8B4513` - Coffee/earthy tone
+- **White**: `#FFFFFF` - Clean backgrounds
+- **Light Gray**: `#F5F5F5` - Subtle backgrounds
+- **Brand Gradient**: `linear-gradient(135deg, #00B4D8 0%, #F77F00 100%)` (cyan to orange)
+
+**Design Guidelines:**
+- Game cafe aesthetic: playful but professional
+- Color usage: Cyan (`#00B4D8`) for primary actions, Orange (`#F77F00`) for accents and CTAs
+- Avoid: Corporate blue/purple, generic gray backgrounds
+- Inspiration: Board game box art, retro arcade themes, coffee shop warmth
+- Typography: Friendly, readable fonts that work in Vietnamese and English (consider DM Sans for headings, Inter for body)
+- Motion: Subtle, purposeful animations that enhance UX (no excessive effects)
+- Backgrounds: Use cream (`#FFF4E6`) or light gray (`#F5F5F5`) for warmth, not stark white
+
 ---
 
 ## Core Architecture
@@ -182,6 +273,10 @@ All database access goes through service classes in [lib/services/](lib/services
 | [content-checks-db-service.ts](lib/services/content-checks-db-service.ts) | Content check history | `getChecksByGameId()`, `createCheck()` |
 | [play-logs-db-service.ts](lib/services/play-logs-db-service.ts) | Game session tracking | `getLogsByGameId()`, `createLog()` |
 | [staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts) | Staff expertise levels | `getKnowledgeByStaffMember()`, `getTeachersForGame()` |
+| [roster-db-service.ts](lib/services/roster-db-service.ts) | Roster management | 22 methods: shifts, availability, clock records, rules |
+| [roster-solver-service.ts](lib/services/roster-solver-service.ts) | AI constraint solver | `generateRoster()`, `evaluateConstraints()` |
+| [roster-cron-service.ts](lib/services/roster-cron-service.ts) | Automated roster tasks | `exportToAirtable()`, `checkMissingClockOuts()` |
+| [rule-parser-service.ts](lib/services/rule-parser-service.ts) | Natural language parsing | `parseRule()`, `convertToConstraint()` |
 | [changelog-service.ts](lib/services/changelog-service.ts) | Changelog tracking | `getAllChangelogs()`, `createChangelog()` |
 | [vikunja-service.ts](lib/services/vikunja-service.ts) | Vikunja task management | `getPriorityTasks()`, `getTask()`, `completeTask()` |
 | [bgg-api.ts](lib/services/bgg-api.ts) | BoardGameGeek integration | `getGameDetails()`, `searchGames()` |
@@ -216,10 +311,12 @@ See [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) for detai
 ```
 snp-site/
 ├── app/                          # Next.js app directory
-│   ├── api/                      # API routes (44+ endpoints)
+│   ├── api/                      # API routes (60+ endpoints)
 │   │   ├── games/               # Games CRUD endpoints
 │   │   ├── images/              # Image caching & serving
 │   │   ├── content-checks/      # Content check logs
+│   │   ├── roster/              # Roster management (14+ endpoints)
+│   │   ├── clock-in/            # Clock in/out system
 │   │   ├── admin/               # Admin-only operations
 │   │   ├── staff/               # Staff operations
 │   │   ├── play-logs/           # Play session tracking
@@ -227,16 +324,35 @@ snp-site/
 │   │   └── analytics/           # Analytics insights
 │   ├── games/                   # Games catalog page
 │   ├── staff/                   # Staff-only pages
+│   │   ├── roster/              # View roster calendar
+│   │   ├── availability/        # Edit weekly availability
+│   │   ├── clock-in/            # Clock in/out
+│   │   ├── my-hours/            # Hours & pay dashboard
 │   │   ├── knowledge/           # Staff expertise management
 │   │   ├── play-logs/           # Play session logs
 │   │   ├── changelog/           # Changelog viewer
 │   │   ├── check-history/       # Content check history
 │   │   └── add-knowledge/       # Add expertise
+│   ├── admin/                   # Admin-only pages
+│   │   ├── roster/              # Roster management
+│   │   │   ├── calendar/        # Edit roster calendar
+│   │   │   ├── rules/           # Manage rostering rules
+│   │   │   ├── staff-config/    # Payroll configuration
+│   │   │   ├── clock-records/   # View clock records
+│   │   │   └── hours-approval/  # Approve hours
+│   │   └── approvals/           # General approval queue
 │   └── page.tsx                 # Home page
 ├── components/                   # React components
 │   └── features/                # Feature-specific components
+│       ├── roster/              # Roster UI components (6 files)
+│       ├── games/               # Games UI components
+│       └── staff/               # Staff UI components
 ├── lib/                         # Utility libraries
-│   ├── services/                # Database service layer (7 files)
+│   ├── services/                # Database service layer (11 files)
+│   │   ├── roster-db-service.ts        # Roster data access
+│   │   ├── roster-solver-service.ts    # AI constraint solver
+│   │   ├── roster-cron-service.ts      # Automated tasks
+│   │   └── rule-parser-service.ts      # Natural language parsing
 │   ├── db/                      # PostgreSQL connection pool
 │   ├── cache/                   # Cache management
 │   ├── airtable/                # Airtable API (secondary)
@@ -245,7 +361,7 @@ snp-site/
 │   ├── analytics/               # Mixpanel integration
 │   ├── discord/                 # Discord webhooks
 │   └── version.ts               # Version constant (UPDATE THIS!)
-├── scripts/                     # Migration & utility scripts (33 files)
+├── scripts/                     # Migration & utility scripts (50+ files)
 ├── docs/                        # Detailed documentation (17 files)
 ├── .claude/                     # Claude Code settings
 ├── package.json                 # Dependencies (UPDATE VERSION!)
@@ -492,6 +608,32 @@ http://switch-webhook.brendonganle.workers.dev/
 
 **Documentation**: [docs/SWITCH_WEBHOOK_NOTIFICATIONS.md](docs/SWITCH_WEBHOOK_NOTIFICATIONS.md)
 
+### AI-Powered Roster Management System (v1.9.x)
+
+**Status**: ✅ ~85% Complete - Core features fully operational, integrations pending
+
+Comprehensive staff rostering system with AI-powered schedule generation, clock-in/out tracking, payroll calculation, and approval workflows.
+
+**Key Features**:
+- Interactive 7-day availability editor with tap-to-cycle color coding
+- GPS-tracked clock-in/out with points-based punctuality rewards
+- Hours & pay dashboard with VND payroll calculation (base/weekend/holiday/overtime multipliers)
+- Homebase-style roster calendar with drag-and-drop shift management
+- Natural language rule parser (Claude API) for rostering constraints
+- 14+ API endpoints, 4 backend services, 9 database tables
+- Admin approval workflows for hour adjustments and shift swaps
+
+**Live Pages**:
+- Staff: `/staff/availability`, `/staff/clock-in`, `/staff/my-hours`, `/staff/roster/calendar`
+- Admin: `/admin/roster/calendar`, `/admin/roster/rules`, `/admin/roster/staff-config`, `/admin/roster/clock-records`, `/admin/roster/hours-approval`, `/admin/approvals`
+
+**Documentation**:
+- Design: [docs/plans/2025-01-11-ai-rostering-system-design.md](docs/plans/2025-01-11-ai-rostering-system-design.md)
+- Implementation Status: [docs/plans/2025-01-14-rostering-implementation-status.md](docs/plans/2025-01-14-rostering-implementation-status.md)
+
+**Security Issues** ⚠️ (Must fix before production):
+- `/api/roster/generate` lacks authentication, rate limiting, timeout, and validation
+
 ---
 
 ## Environment Variables
@@ -549,7 +691,7 @@ See `.env.example` for full list and format.
 
 ## API Endpoints Reference
 
-**Total Endpoints: 44+**
+**Total Endpoints: 60+**
 
 ### Core Endpoints
 - `GET /api/games` - Fetch all games from PostgreSQL
@@ -567,13 +709,37 @@ See `.env.example` for full list and format.
 - `GET /api/content-checks` - Content check history
 - `POST /api/content-checks/refresh` - Refresh check cache
 
-### Admin Endpoints (6)
+### Roster Endpoints (14+)
+**Roster Management:**
+- `GET/PUT/DELETE /api/roster/[week]` - Roster CRUD operations
+- `POST /api/roster/[week]/publish` - Publish roster
+- `GET /api/roster/[week]/unpublished-count` - Count drafts
+- `GET/POST/PUT/DELETE /api/roster/shifts` - Shift operations
+- `POST /api/roster/generate` - AI roster generation
+
+**Rules & Config:**
+- `GET/POST/PUT/DELETE /api/roster/rules` - Rule management
+- `POST /api/roster/rules/parse` - Natural language parsing
+- `GET/PUT /api/roster/staff-config` - Payroll configuration
+- `GET/POST /api/roster/availability` - Staff availability
+- `GET/POST /api/roster/preferred-times` - Preferred hours
+
+**Clock System:**
+- `GET/POST /api/clock-in` - Clock in/out with GPS
+- `GET /api/clock-in/qr-generate` - Generate QR codes
+- `GET /api/roster/clock-records` - Fetch records
+- `POST /api/roster/clock-records/[id]/approve` - Approve hours
+- `GET /api/roster/my-hours` - Hours summary
+
+### Admin Endpoints (8)
 - `POST /api/admin/migrate-images` - Migrate images to volume
 - `GET /api/admin/storage` - Storage usage stats
 - `POST /api/admin/sync-to-airtable` - Push data to Airtable
 - `GET /api/admin/staging-files` - List staging files
 - `POST /api/admin/copy-volume` - Copy persistent volume
 - `POST /api/admin/download-images` - Download images
+- `GET/POST /api/admin/approvals` - General approval queue
+- `GET/PUT /api/admin/staff-config` - Staff configuration
 
 ### Analytics & Changelog
 - `GET /api/changelog` - Changelog entries

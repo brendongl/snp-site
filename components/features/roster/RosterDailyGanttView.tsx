@@ -15,6 +15,7 @@ interface RosterDailyGanttViewProps {
   onCreateShift?: (staffId: string, date: string) => void;
   onBack?: () => void;
   className?: string;
+  readOnly?: boolean; // If true, disable all editing interactions
 }
 
 // Role color mapping
@@ -37,6 +38,7 @@ export function RosterDailyGanttView({
   onCreateShift,
   onBack,
   className,
+  readOnly = false,
 }: RosterDailyGanttViewProps) {
   const dateObj = new Date(date + 'T00:00:00');
 
@@ -127,8 +129,11 @@ export function RosterDailyGanttView({
                   return (
                     <div
                       key={staff.id}
-                      className="relative h-12 border rounded hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => onCreateShift?.(staff.id, date)}
+                      className={cn(
+                        "relative h-12 border rounded transition-colors",
+                        !readOnly && "hover:bg-accent/50 cursor-pointer"
+                      )}
+                      onClick={() => !readOnly && onCreateShift?.(staff.id, date)}
                     >
                       {/* Staff Name */}
                       <div className="absolute left-0 top-0 bottom-0 w-28 flex items-center px-2 bg-muted/50 border-r z-10">
@@ -170,7 +175,9 @@ export function RosterDailyGanttView({
                               style={style}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onShiftClick?.(shift);
+                                if (!readOnly) {
+                                  onShiftClick?.(shift);
+                                }
                               }}
                             >
                               <span className="font-semibold">

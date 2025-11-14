@@ -746,18 +746,20 @@ function GamesPageContent() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Unified Sticky Header */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container mx-auto px-3 py-2 max-w-full">
+    <div className="min-h-screen bg-background">
+      {/* Unified Sticky Header - Sip & Play Brand Colors */}
+      <div className="sticky top-0 z-40 bg-primary shadow-md">
+        <div className="container mx-auto px-3 sm:px-4 py-3 max-w-full">
           {/* Top Row - Title, Version, Buttons */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
             {/* Left side - Title and version (hidden when collapsed) */}
             {!isHeaderCollapsed && (
-              <div className="flex items-center gap-2 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">Board Game Collection</h1>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white truncate">
+                  🎲 Board Games
+                </h1>
                 <div
-                  className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
+                  className="hidden sm:flex px-2 py-0.5 bg-white/20 border border-white/30 rounded-full text-xs font-medium text-white cursor-help whitespace-nowrap"
                   title={`Build date: ${BUILD_DATE}`}
                 >
                   v{VERSION}
@@ -765,44 +767,45 @@ function GamesPageContent() {
               </div>
             )}
 
-            {/* Collapsed view - Version + Priority legend (v1.3.0) */}
+            {/* Collapsed view - Compact title */}
             {isHeaderCollapsed && (
               <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base font-bold text-white">🎲 Games</h1>
                 <div
-                  className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary cursor-help whitespace-nowrap"
+                  className="px-2 py-0.5 bg-white/20 border border-white/30 rounded-full text-[10px] font-medium text-white cursor-help whitespace-nowrap"
                   title={`Build date: ${BUILD_DATE}`}
                 >
                   v{VERSION}
                 </div>
                 {/* v1.3.0: Needs Checking Priority Legend (staff-only) */}
                 {isStaff && (
-                  <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                    Priority: Highest🔴🟠🟡🟢🔵Lowest
+                  <div className="text-[9px] sm:text-[10px] text-white/70 whitespace-nowrap">
+                    Priority: 🔴🟠🟡🟢🔵
                   </div>
                 )}
               </div>
             )}
 
             {/* Right side - Action buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => window.location.href = '/'}
-                className="whitespace-nowrap h-8 text-xs"
+                className="whitespace-nowrap h-8 text-xs text-white hover:bg-white/20 hover:text-white"
                 title="Go to Home Page"
               >
                 <Home className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1.5">Home</span>
+                <span className="hidden md:inline ml-1.5">Home</span>
               </Button>
               {!isStaff && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowStaffLogin(true)}
-                  className="whitespace-nowrap h-8 text-xs"
+                  className="whitespace-nowrap h-8 text-xs bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white hover:border-white/50"
                 >
-                  <span className="hidden sm:inline">🔐 Staff Login</span>
+                  <span className="hidden sm:inline">🔐 Staff</span>
                   <span className="sm:hidden">🔐</span>
                 </Button>
               )}
@@ -811,10 +814,10 @@ function GamesPageContent() {
                   variant="default"
                   size="sm"
                   onClick={() => setShowAddGameDialog(true)}
-                  className="whitespace-nowrap h-8 text-xs"
+                  className="whitespace-nowrap h-8 text-xs bg-secondary hover:bg-secondary/90 text-white"
                 >
                   <Plus className="h-3 w-3" />
-                  <span className="hidden sm:inline ml-1.5">Add Game</span>
+                  <span className="hidden md:inline ml-1.5">Add</span>
                 </Button>
               )}
               {isStaff && <StaffMenu />}
@@ -822,7 +825,7 @@ function GamesPageContent() {
           </div>
 
           {/* Search and Filters Row - Part of unified header */}
-          <div className="mt-2">
+          <div className="mt-3">
         {isHeaderCollapsed ? (
           // Collapsed view - search bar + slim bar with active filters
           <div className="space-y-2">
@@ -832,7 +835,7 @@ function GamesPageContent() {
                 <SearchBar
                   value={filters.search || ''}
                   onChange={handleSearch}
-                  placeholder="Search by game title"
+                  placeholder="Search games..."
                 />
               </div>
               <Button
@@ -840,7 +843,7 @@ function GamesPageContent() {
                 size="sm"
                 onClick={toggleHeaderCollapse}
                 title="Expand filters"
-                className="h-9 w-9 p-0 flex-shrink-0"
+                className="h-9 w-9 p-0 flex-shrink-0 text-white hover:bg-white/20 hover:text-white"
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -849,19 +852,19 @@ function GamesPageContent() {
             {/* Filter badges and results count */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-                <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                <p className="text-xs sm:text-sm text-white/90 font-medium whitespace-nowrap">
                   {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
                 </p>
               {hasAnyFilters && (
                 <div className="flex items-center gap-1 flex-wrap">
                   {filters.search && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       🔍 {filters.search.length > 8 ? filters.search.substring(0, 8) + '...' : filters.search}
                     </span>
                   )}
                   {filters.quickFilter && (
                     <>
-                      <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                      <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                         {filters.quickFilter === 'sixPlus' && '👥 6+ Players'}
                         {filters.quickFilter === 'couples' && '💑 Couples'}
                         {filters.quickFilter === 'social' && '🎉 Social'}
@@ -870,54 +873,54 @@ function GamesPageContent() {
                       </span>
                       {/* Show what the special filter is actually doing */}
                       {filters.quickFilter === 'sixPlus' && (
-                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                        <span className="text-[10px] sm:text-xs bg-white/70 text-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
                           Max≥6
                         </span>
                       )}
                       {filters.quickFilter === 'couples' && (
-                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                        <span className="text-[10px] sm:text-xs bg-white/70 text-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
                           2p or Best@2
                         </span>
                       )}
                       {filters.quickFilter === 'social' && (
-                        <span className="text-[10px] sm:text-xs bg-secondary/30 text-secondary-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
+                        <span className="text-[10px] sm:text-xs bg-white/70 text-foreground px-1.5 py-0.5 rounded whitespace-nowrap">
                           Party/Deduction/Social
                         </span>
                       )}
                     </>
                   )}
                   {filters.categories && filters.categories.length > 0 && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       📁 {filters.categories.length}
                     </span>
                   )}
                   {(filters.playerCount?.min || filters.playerCount?.max) && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       🎲 {filters.playerCount?.min || '?'}-{filters.playerCount?.max || '?'}
                     </span>
                   )}
                   {(filters.yearRange?.min || filters.yearRange?.max) && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       📅 {filters.yearRange?.min || '?'}-{filters.yearRange?.max || '?'}
                     </span>
                   )}
                   {(filters.complexity?.min || filters.complexity?.max) && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       🧠 {filters.complexity?.min || '?'}-{filters.complexity?.max || '?'}
                     </span>
                   )}
                   {filters.playtime && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       ⏱️ {filters.playtime}m
                     </span>
                   )}
                   {filters.bestPlayerCount && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       ⭐ {filters.bestPlayerCount}
                     </span>
                   )}
                   {filters.exactPlayerCount && (
-                    <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-[10px] sm:text-xs bg-white/90 text-primary px-1.5 py-0.5 rounded whitespace-nowrap font-medium">
                       👥 {filters.exactPlayerCount}p
                     </span>
                   )}
@@ -928,13 +931,13 @@ function GamesPageContent() {
           </div>
         ) : (
           // Expanded view - full header
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1">
                 <SearchBar
                   value={filters.search || ''}
                   onChange={handleSearch}
-                  placeholder="Search by game title"
+                  placeholder="Search games..."
                 />
               </div>
               <Button
@@ -942,13 +945,14 @@ function GamesPageContent() {
                 size="sm"
                 onClick={toggleHeaderCollapse}
                 title="Collapse filters"
+                className="text-white hover:bg-white/20 hover:text-white"
               >
                 <ChevronUp className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Mobile-optimized layout: Row 1 (Filters, Gallery, Random) → Divider → Row 2 (Sort + Staff Knowledge) */}
-            <div className="space-y-3">
+            {/* Mobile-optimized layout: Row 1 (Filters, Gallery, Random) → Row 2 (Sort + Staff Knowledge) */}
+            <div className="space-y-2.5">
               {/* Row 1: Filter buttons - Filters, Gallery Mode, Random Pick */}
               <div className="flex flex-wrap gap-2 items-center">
                 <GameFilters
@@ -988,13 +992,14 @@ function GamesPageContent() {
                 </Select>
 
                 <Button
-                  variant={picturesOnlyMode ? 'default' : 'outline'}
+                  variant={picturesOnlyMode ? 'secondary' : 'outline'}
                   size="sm"
                   onClick={() => setPicturesOnlyMode(!picturesOnlyMode)}
+                  className={picturesOnlyMode ? 'bg-secondary hover:bg-secondary/90 text-white' : 'bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white hover:border-white/50'}
                 >
                   <Images className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Gallery Mode</span>
-                  <span className="sm:hidden">Gallery</span>
+                  <span className="hidden sm:inline">Gallery</span>
+                  <span className="sm:hidden">📷</span>
                 </Button>
 
                 <Button
@@ -1002,15 +1007,13 @@ function GamesPageContent() {
                   size="sm"
                   onClick={handleRandomGame}
                   disabled={filteredAndSortedGames.length === 0}
+                  className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Shuffle className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Random Pick</span>
-                  <span className="sm:hidden">Random</span>
+                  <span className="hidden sm:inline">Random</span>
+                  <span className="sm:hidden">🎲</span>
                 </Button>
               </div>
-
-              {/* Divider */}
-              <div className="h-px bg-border" />
 
               {/* Row 2: Sorting options - Sort dropdown + Staff Knowledge dropdowns */}
               <div className="flex flex-wrap gap-2 items-center">
@@ -1123,9 +1126,9 @@ function GamesPageContent() {
               </div>
             </div>
 
-            {/* Results count - reduced margin */}
-            <p className="text-xs text-muted-foreground mt-2">
-              Showing {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
+            {/* Results count */}
+            <p className="text-xs sm:text-sm text-white/90 font-medium">
+              {filteredAndSortedGames.length} {filteredAndSortedGames.length === 1 ? 'game' : 'games'}
             </p>
           </div>
         )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { usePageView } from "@/lib/hooks/usePageView";
 import { useAdminMode } from "@/lib/hooks/useAdminMode";
@@ -20,6 +20,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${inter.variable} antialiased`}
       >
         <ToastProvider>
           {/* Admin: Combined POS + Staff Header */}
