@@ -42,12 +42,12 @@ export async function DELETE(request: NextRequest) {
       const staff = staffResult.rows[0];
       const staffId = staff.id;
 
-      // Delete related data
+      // Delete related data (column names vary by table)
       const deleteOperations = [
         { table: 'staff_availability', field: 'staff_id' },
         { table: 'roster_shifts', field: 'staff_id' },
-        { table: 'staff_knowledge', field: 'staff_id' },
-        { table: 'play_logs', field: 'staff_id' },
+        { table: 'staff_knowledge', field: 'staff_member_id' },
+        { table: 'play_logs', field: 'staff_list_id' },
         { table: 'content_checks', field: 'inspector_id' },
       ];
 
