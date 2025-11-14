@@ -46,6 +46,14 @@ interface ParseResult {
   suggestion?: string;
 }
 
+interface RosterHours {
+  id: number;
+  day_of_week: string;
+  open_time: string;
+  close_time: string;
+  is_active: boolean;
+}
+
 export default function RosterRulesPage() {
   const router = useRouter();
   const isAdmin = useAdminMode();
@@ -67,6 +75,11 @@ export default function RosterRulesPage() {
   const [editedWeight, setEditedWeight] = useState<Record<number, number>>({});
   const [editedExpiration, setEditedExpiration] = useState<Record<number, string>>({});
 
+  // Roster hours state
+  const [rosterHours, setRosterHours] = useState<RosterHours[]>([]);
+  const [editedHours, setEditedHours] = useState<Record<string, { open_time: string; close_time: string }>>({});
+  const [isSavingHours, setIsSavingHours] = useState(false);
+
   // Check authentication and admin access
   useEffect(() => {
     const id = localStorage.getItem('staff_id');
@@ -86,11 +99,12 @@ export default function RosterRulesPage() {
     setStaffId(id);
   }, [router]);
 
-  // Fetch roster rules
+  // Fetch roster rules and hours
   useEffect(() => {
     if (!staffId || !isAdmin) return;
 
     fetchRules();
+    fetchRosterHours();
   }, [staffId, isAdmin]);
 
   const fetchRules = async () => {
@@ -120,6 +134,66 @@ export default function RosterRulesPage() {
       setError(err instanceof Error ? err.message : 'Failed to load rules');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchRosterHours = async () => {
+    try {
+      const response = await fetch('/api/roster/hours');
+      if (!response.ok) {
+        throw new Error('Failed to fetch roster hours');
+      }
+
+      const data = await response.json();
+      setRosterHours(data.hours);
+
+      // Initialize edited hours
+      const initialHours: Record<string, { open_time: string; close_time: string }> = {};
+      data.hours.forEach((hour: RosterHours) => {
+        initialHours[hour.day_of_week] = {
+          open_time: hour.open_time,
+          close_time: hour.close_time
+        };
+      });
+      setEditedHours(initialHours);
+    } catch (err) {
+      console.error('Error fetching roster hours:', err);
+      // Don't set error state - this is non-critical
+    }
+  };
+
+  const handleSaveRosterHours = async () => {
+    try {
+      setIsSavingHours(true);
+      setError(null);
+
+      // Build updates array
+      const updates = rosterHours.map(hour => ({
+        day_of_week: hour.day_of_week,
+        open_time: editedHours[hour.day_of_week]?.open_time || hour.open_time,
+        close_time: editedHours[hour.day_of_week]?.close_time || hour.close_time,
+        is_active: hour.is_active
+      }));
+
+      const response = await fetch('/api/roster/hours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ updates })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save roster hours');
+      }
+
+      const data = await response.json();
+      setRosterHours(data.hours);
+      setSuccessMessage('Roster hours saved successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save roster hours');
+    } finally {
+      setIsSavingHours(false);
     }
   };
 
@@ -577,6 +651,110 @@ export default function RosterRulesPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Roster Hours Section */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mt-8">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+              Daily Open/Close Hours
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Set the required opening and closing times for each day. Shifts MUST begin at or after open time and MUST end at or before close time (hard constraint).
+            </p>
+          </div>
+
+          <div className="p-6">
+            {rosterHours.length === 0 ? (
+              <div className="text-center text-gray-500 py-4">
+                Loading roster hours...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rosterHours.map((hour) => (
+                  <div key={hour.day_of_week} className="grid grid-cols-12 gap-4 items-center">
+                    {/* Day Name */}
+                    <div className="col-span-2">
+                      <span className="font-medium text-gray-900">{hour.day_of_week}</span>
+                    </div>
+
+                    {/* Open Time */}
+                    <div className="col-span-4">
+                      <label className="block text-xs text-gray-600 mb-1">Open Time</label>
+                      <input
+                        type="time"
+                        value={editedHours[hour.day_of_week]?.open_time || hour.open_time}
+                        onChange={(e) =>
+                          setEditedHours({
+                            ...editedHours,
+                            [hour.day_of_week]: {
+                              ...editedHours[hour.day_of_week],
+                              open_time: e.target.value,
+                              close_time: editedHours[hour.day_of_week]?.close_time || hour.close_time
+                            }
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Close Time */}
+                    <div className="col-span-4">
+                      <label className="block text-xs text-gray-600 mb-1">Close Time</label>
+                      <input
+                        type="time"
+                        value={editedHours[hour.day_of_week]?.close_time || hour.close_time}
+                        onChange={(e) =>
+                          setEditedHours({
+                            ...editedHours,
+                            [hour.day_of_week]: {
+                              open_time: editedHours[hour.day_of_week]?.open_time || hour.open_time,
+                              close_time: e.target.value
+                            }
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Time Range Display */}
+                    <div className="col-span-2 text-sm text-gray-600">
+                      {editedHours[hour.day_of_week]?.open_time || hour.open_time} - {editedHours[hour.day_of_week]?.close_time || hour.close_time}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Save Button */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={handleSaveRosterHours}
+                    disabled={isSavingHours}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+                  >
+                    {isSavingHours ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        Save Roster Hours
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 border-t border-blue-200 px-4 py-3">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> These hours are enforced as hard constraints during roster generation. Use "00:00" for midnight. The natural language rules above are soft constraints (preferences).
+            </p>
+          </div>
         </div>
       </div>
     </div>

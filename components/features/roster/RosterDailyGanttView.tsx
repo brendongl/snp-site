@@ -49,8 +49,17 @@ export function RosterDailyGanttView({
   }, {} as Record<string, ShiftAssignment[]>);
 
   // Convert time string (HH:MM) to hour decimal for positioning
+  // Extended hours: 00:00 = 24 (midnight), 01:00 = 25, 02:00 = 26
   const timeToHours = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    let [hours, minutes] = timeStr.split(':').map(Number);
+
+    // Convert midnight (0) to extended hour 24
+    if (hours === 0) hours = 24;
+    // Convert 1am (1) to extended hour 25
+    else if (hours === 1) hours = 25;
+    // Convert 2am (2) to extended hour 26
+    else if (hours === 2) hours = 26;
+
     return hours + minutes / 60;
   };
 

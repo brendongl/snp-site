@@ -194,6 +194,10 @@ function SortableStaffRow({
     if (isFullDay) return 'all day';
 
     const formatHour = (hour: number): string => {
+      // Handle extended hours for overnight (24=12am, 25=1am, 26=2am)
+      if (hour === 24) return '12am';
+      if (hour === 25) return '1am';
+      if (hour === 26) return '2am';
       if (hour === 0) return '12am';
       if (hour === 12) return '12pm';
       if (hour < 12) return `${hour}am`;
