@@ -110,6 +110,16 @@ export default function AvailabilityEditorPage() {
     setHasChanges(true);
   };
 
+  // Fill specific day with a status
+  const fillDay = (day: string, status: AvailabilityStatus) => {
+    const newGrid = new Map(grid);
+    HOURS.forEach(hour => {
+      newGrid.set(getCellKey(day, hour), status);
+    });
+    setGrid(newGrid);
+    setHasChanges(true);
+  };
+
   // Reset to default (all available)
   const reset = () => {
     if (!staffId) return;
@@ -348,6 +358,54 @@ export default function AvailabilityEditorPage() {
               <div className="w-4 h-4 rounded bg-red-500" />
               <span>Unavailable</span>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Per-Day Fill Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fill By Day</CardTitle>
+          <CardDescription>
+            Quickly set availability status for an entire day
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {DAYS.map(day => (
+              <div key={day} className="flex items-center gap-2">
+                <span className="w-24 text-sm font-medium">{day}</span>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fillDay(day, 'available')}
+                    className="flex items-center gap-1"
+                  >
+                    <div className="w-3 h-3 rounded bg-green-500" />
+                    Available
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fillDay(day, 'preferred_not')}
+                    className="flex items-center gap-1"
+                  >
+                    <div className="w-3 h-3 rounded bg-yellow-500" />
+                    Prefer Not
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fillDay(day, 'unavailable')}
+                    className="flex items-center gap-1"
+                  >
+                    <div className="w-3 h-3 rounded bg-red-500" />
+                    Unavailable
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

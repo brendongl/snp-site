@@ -241,13 +241,33 @@ export class RosterDbService {
 
   /**
    * Bulk upsert availability (for weekly pattern updates)
+   *
+   * ✅ FIXED v1.10.8: Delete existing availability before inserting new pattern
+   * This prevents conflicts when time slot boundaries change (e.g., "Fill All" operations)
    */
   static async bulkUpsertAvailability(availabilityList: Omit<StaffAvailability, 'id' | 'created_at' | 'updated_at'>[]): Promise<void> {
+    if (availabilityList.length === 0) {
+      return;
+    }
+
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
 
+      // Get unique staff IDs from the list
+      const staffIds = [...new Set(availabilityList.map(a => a.staff_id))];
+
+      // Delete all existing availability for these staff members
+      // This ensures clean slate when time slot boundaries change
+      for (const staffId of staffIds) {
+        await client.query(
+          'DELETE FROM staff_availability WHERE staff_id = $1',
+          [staffId]
+        );
+      }
+
+      // Insert new availability slots
       for (const availability of availabilityList) {
         await client.query(`
           INSERT INTO staff_availability (
@@ -257,10 +277,6 @@ export class RosterDbService {
             hour_end,
             availability_status
           ) VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (staff_id, day_of_week, hour_start, hour_end)
-          DO UPDATE SET
-            availability_status = EXCLUDED.availability_status,
-            updated_at = NOW()
         `, [
           availability.staff_id,
           availability.day_of_week,
