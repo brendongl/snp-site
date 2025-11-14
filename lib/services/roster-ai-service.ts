@@ -1,7 +1,15 @@
 /**
  * Service: AI-Powered Roster Generator
  * Version: 1.10.13
- * Uses Claude Haiku 4.5 via OpenRouter to generate optimal staff rosters
+ * Uses configurable AI models via OpenRouter to generate optimal staff rosters
+ *
+ * Supported models:
+ * - anthropic/claude-haiku-4.5 (default)
+ * - anthropic/claude-sonnet-4.5
+ * - anthropic/claude-opus-4.1
+ * - openai/gpt-5.1-chat
+ * - openai/gpt-5.1-codex
+ * - kwaipilot/kat-coder-pro:free
  *
  * Replaces the constraint satisfaction solver with AI reasoning
  */
@@ -64,6 +72,7 @@ export interface GenerateRosterParams {
   rosterHours: RosterHours[];
   maxHoursPerWeek?: number;
   preferFairness?: boolean;
+  model?: string; // OpenRouter model ID
 }
 
 export interface RosterSolution {
@@ -106,11 +115,12 @@ export default class AIRosterService {
   }
 
   /**
-   * Generate roster using Claude Haiku 4.5
+   * Generate roster using AI model (configurable)
    */
   static async generateRoster(params: GenerateRosterParams): Promise<RosterSolution> {
     try {
-      console.log('[AI Roster] Starting roster generation with Haiku 4.5...');
+      const model = params.model || 'anthropic/claude-haiku-4.5';
+      console.log(`[AI Roster] Starting roster generation with ${model}...`);
 
       const apiKey = this.getApiKey();
 
@@ -128,7 +138,7 @@ export default class AIRosterService {
           'X-Title': 'Sip N Play Roster System',
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-haiku-4.5', // Claude Haiku 4.5
+          model: model,
           messages: [
             {
               role: 'user',

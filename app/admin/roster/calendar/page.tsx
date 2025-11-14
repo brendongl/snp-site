@@ -7,6 +7,7 @@ import { WeekSelector } from '@/components/features/roster/WeekSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, startOfWeek } from 'date-fns';
 import { Loader2, RefreshCw, Trash2, Sparkles, CheckCircle2, AlertCircle, Settings, Calendar, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -46,6 +47,7 @@ export default function RosterCalendarPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState<any>(null);
   const [isGenerationDialogOpen, setIsGenerationDialogOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('anthropic/claude-haiku-4.5');
 
   // Fetch shifts for the selected week
   const fetchShifts = async () => {
@@ -211,7 +213,8 @@ export default function RosterCalendarPage() {
         body: JSON.stringify({
           week_start: selectedWeek,
           max_hours_per_week: 40,
-          prefer_fairness: true
+          prefer_fairness: true,
+          model: selectedModel
         }),
       });
 
@@ -419,7 +422,7 @@ export default function RosterCalendarPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button
             variant="outline"
             onClick={fetchShifts}
@@ -432,6 +435,21 @@ export default function RosterCalendarPage() {
             )}
             Refresh
           </Button>
+
+          {/* AI Model Selector */}
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Select AI Model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</SelectItem>
+              <SelectItem value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</SelectItem>
+              <SelectItem value="anthropic/claude-opus-4.1">Claude Opus 4.1</SelectItem>
+              <SelectItem value="openai/gpt-5.1-chat">GPT-5.1 Chat</SelectItem>
+              <SelectItem value="openai/gpt-5.1-codex">GPT-5.1 Codex</SelectItem>
+              <SelectItem value="kwaipilot/kat-coder-pro:free">Kat Coder Pro (Free)</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Button
             variant="secondary"

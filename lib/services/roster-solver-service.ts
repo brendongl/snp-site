@@ -85,6 +85,7 @@ export interface GenerateRosterParams {
   rules?: RosterRule[]; // Optional, fetched from database
   maxHoursPerWeek?: number;
   preferFairness?: boolean;
+  model?: string; // OpenRouter model ID (default: anthropic/claude-haiku-4.5)
 }
 
 export interface WeeklyRoster {
@@ -1074,8 +1075,8 @@ export default class RosterSolverService {
     }));
     console.log(`  Loaded ${rosterHours.length} roster hour constraints`);
 
-    // ✅ NEW v1.10.13: Use AI (Claude Haiku 4.5) to generate roster
-    console.log('  Using Claude Haiku 4.5 for roster generation...');
+    // ✅ NEW v1.10.13: Use AI to generate roster (model configurable)
+    console.log(`  Using AI model: ${params.model || 'anthropic/claude-haiku-4.5'}`);
 
     // Dynamic import to avoid circular dependencies
     const AIRosterService = (await import('@/lib/services/roster-ai-service')).default;
@@ -1087,7 +1088,8 @@ export default class RosterSolverService {
       rules,
       rosterHours,
       maxHoursPerWeek: params.maxHoursPerWeek,
-      preferFairness: params.preferFairness
+      preferFairness: params.preferFairness,
+      model: params.model || 'anthropic/claude-haiku-4.5'
     };
 
     // Retry up to 3 times if overlapping shifts are detected

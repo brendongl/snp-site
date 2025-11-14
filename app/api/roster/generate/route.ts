@@ -20,6 +20,7 @@ import pool from '@/lib/db/postgres';
  *   week_start: string;        // ISO date (YYYY-MM-DD, must be Monday)
  *   max_hours_per_week?: number; // Default: 40
  *   prefer_fairness?: boolean;   // Default: true
+ *   model?: string;              // OpenRouter model ID (default: anthropic/claude-haiku-4.5)
  * }
  */
 export async function POST(request: NextRequest) {
@@ -30,7 +31,8 @@ export async function POST(request: NextRequest) {
     const {
       week_start,
       max_hours_per_week = 40,
-      prefer_fairness = true
+      prefer_fairness = true,
+      model = 'anthropic/claude-haiku-4.5'
     } = body;
 
     // Validate week start
@@ -59,12 +61,14 @@ export async function POST(request: NextRequest) {
     console.log(`[Roster Generation] Starting for week: ${week_start}`);
     console.log(`  Max hours per week: ${max_hours_per_week}`);
     console.log(`  Prefer fairness: ${prefer_fairness}`);
+    console.log(`  AI Model: ${model}`);
 
     // Generate roster using AI solver (automatically fetches rules and staff)
     const solution = await RosterSolverService.generateRoster({
       weekStart: week_start,
       maxHoursPerWeek: max_hours_per_week,
-      preferFairness: prefer_fairness
+      preferFairness: prefer_fairness,
+      model
     });
 
     const generationTime = Date.now() - startTime;
