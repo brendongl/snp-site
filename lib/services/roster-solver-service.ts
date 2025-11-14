@@ -296,12 +296,20 @@ export class RosterSolver {
           // Check if staff is available for this shift
           const availability = this.getAvailabilityForShift(staff, shift);
           if (!availability || availability.availability_status === 'unavailable') {
+            // Debug logging for first constrained staff
+            if (availableHours < 40 && matchingShifts.length === 0) {
+              console.log(`      ❌ ${shift.day_of_week} ${shift.scheduled_start}-${shift.scheduled_end}: ${!availability ? 'No availability slot found' : 'Marked as unavailable'}`);
+            }
             continue;
           }
 
           // Check other hard constraints (no overlaps, role match, keys, etc.)
           const hardViolations = this.checkHardConstraints(staff, shift, staffHours, assignments);
           if (hardViolations.length > 0) {
+            // Debug logging for first constrained staff
+            if (availableHours < 40 && matchingShifts.length === 0) {
+              console.log(`      ❌ ${shift.day_of_week} ${shift.scheduled_start}-${shift.scheduled_end}: Constraint violation - ${hardViolations[0].message}`);
+            }
             continue;
           }
 
