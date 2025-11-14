@@ -1074,8 +1074,8 @@ export default class RosterSolverService {
     }));
     console.log(`  Loaded ${rosterHours.length} roster hour constraints`);
 
-    // ✅ NEW v1.10.12: Use AI (Claude Sonnet 4.5) to generate roster
-    console.log('  Using Claude Sonnet 4.5 for roster generation...');
+    // ✅ NEW v1.10.13: Use AI (Claude Haiku 4.5) to generate roster
+    console.log('  Using Claude Haiku 4.5 for roster generation...');
 
     // Dynamic import to avoid circular dependencies
     const AIRosterService = (await import('@/lib/services/roster-ai-service')).default;

@@ -1,7 +1,7 @@
 /**
  * Service: AI-Powered Roster Generator
- * Version: 1.10.12
- * Uses Claude Sonnet 4.5 via OpenRouter to generate optimal staff rosters
+ * Version: 1.10.13
+ * Uses Claude Haiku 4.5 via OpenRouter to generate optimal staff rosters
  *
  * Replaces the constraint satisfaction solver with AI reasoning
  */
@@ -106,11 +106,11 @@ export default class AIRosterService {
   }
 
   /**
-   * Generate roster using Claude Sonnet 4.5
+   * Generate roster using Claude Haiku 4.5
    */
   static async generateRoster(params: GenerateRosterParams): Promise<RosterSolution> {
     try {
-      console.log('[AI Roster] Starting roster generation with Sonnet 4.5...');
+      console.log('[AI Roster] Starting roster generation with Haiku 4.5...');
 
       const apiKey = this.getApiKey();
 
@@ -128,7 +128,7 @@ export default class AIRosterService {
           'X-Title': 'Sip N Play Roster System',
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-sonnet-4-5-20250929', // Claude Sonnet 4.5
+          model: 'anthropic/claude-haiku-4.5', // Claude Haiku 4.5
           messages: [
             {
               role: 'user',

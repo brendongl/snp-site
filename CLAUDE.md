@@ -23,23 +23,20 @@ npm run notify:discord          # Send Discord notification
 ```
 
 ### Before Any Git Push
-✅ **CRITICAL WORKFLOW - ALL CHANGES GO TO STAGING FIRST:**
+✅ **CRITICAL WORKFLOW - LOCAL DEVELOPMENT FIRST:**
 
-**ALL revisions (minor or major) MUST go to the `staging` branch first for testing.** The `main` branch is production-only and is only updated when explicitly instructed with "push to main".
-
-**Standard Deployment Workflow:**
+**Standard Development Workflow:**
 1. Update version in [lib/version.ts](lib/version.ts) AND [package.json](package.json)
 2. Run `npm run build` to verify no errors
-3. Use the commit template below
-4. Push to `staging` branch: `git push origin staging`
-5. Test on staging environment (user will confirm via "push to main")
-6. After user confirms, merge to `main`: `git push origin main`
+3. Commit changes with the template below
+4. **WAIT for user instruction before pushing**
+   - User will run `npm run dev` locally to test
+   - Only push when user explicitly says "push to staging" or "push to main"
 
 **Important:**
-- Always commit to `staging` by default
-- **NEVER push to `main` unless user explicitly says "push to main"**
-- Staging environment URL will be different from sipnplay.cafe (production)
-- Only merge to main when ready for production deployment
+- **NEVER push to `staging` or `main` unless user explicitly asks**
+- Assume user will test locally with `npm run dev`
+- User will decide when changes are ready for deployment
 
 ### Version Numbering
 - **MAJOR.MINOR.PATCH** (semantic versioning)
@@ -60,14 +57,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ### Branch Strategy
 **Two-Branch Deployment Model:**
-- **`staging` branch** - Testing environment for all new features/fixes
+- **`staging` branch** - Testing environment for QA
   - Railway auto-deploys from this branch
-  - Used for QA before production
-  - All development work commits here first
+  - Only push when user says "push to staging"
 - **`main` branch** - Production environment (sipnplay.cafe)
-  - Only updated after user confirms changes are ready
-  - Trigger phrase: "push to main"
   - Railway auto-deploys from this branch to production
+  - Only push when user says "push to main"
+
+**Default workflow**: Commit locally, let user test with `npm run dev`, wait for push instructions
 
 ---
 
@@ -536,10 +533,11 @@ See `.env.example` for full list and format.
 
 ### Adding Database Tables/Schemas
 1. Create migration script in [scripts/](scripts/)
-2. Test on staging database first
+2. Test locally first (`npm run dev`)
 3. Create service class in [lib/services/](lib/services/)
 4. Add API endpoints in [app/api/](app/api/)
 5. Update types in [types/index.ts](types/index.ts)
+6. **Document in [docs/](docs/)** - Update DATABASE_SERVICES_USAGE.md and/or POSTGRESQL_MIGRATION_SUMMARY.md
 
 ### Debugging Endpoints
 - `/api/health` - System health (database, Airtable, environment)
@@ -567,27 +565,26 @@ See `.env.example` for full list and format.
 ## Deployment Workflow
 
 1. **Local Development**
-   - `npm run dev` (runs on localhost:3000+)
-   - Make changes and test locally
-   - `npm run build` to verify no errors
-
-2. **Version & Commit**
+   - Make changes and test with `npm run dev` (localhost:3000+)
+   - Run `npm run build` to verify no errors
    - Update [lib/version.ts](lib/version.ts) and [package.json](package.json)
-   - Commit with version in message (use template above)
+   - Commit changes (use template above)
 
-3. **Push to Staging**
+2. **Wait for User Instructions**
+   - **DO NOT push** to any branch automatically
+   - User will test locally first
+   - User will explicitly say "push to staging" or "push to main"
+
+3. **When User Says "Push to Staging"**
    - `git push origin staging`
-   - GitHub Actions automatically builds Docker image
-   - Railway deploys to staging environment
-   - Test thoroughly on staging
+   - Railway auto-deploys to staging environment
+   - User tests on staging
 
-4. **Deploy to Production**
-   - Wait for user to say "push to main"
+4. **When User Says "Push to Main"**
    - `git push origin main`
-   - Railway auto-deploys to production
-   - Visit https://sipnplay.cafe to verify
+   - Railway auto-deploys to production (sipnplay.cafe)
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) for detailed setup.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/STAGING_DEPLOYMENT_GUIDE.md](docs/STAGING_DEPLOYMENT_GUIDE.md) for infrastructure details.
 
 ---
 
@@ -658,6 +655,39 @@ Request for /api/games:
 - **Status update** → Git commit messages (not STATUS.md)
 - **Bug fix notes** → Code comments (not FIX_SUMMARY.md)
 - **Test artifacts** → .gitignore (never commit)
+
+### New Feature Documentation Requirements
+
+**CRITICAL: Every new feature MUST include documentation in `/docs/`**
+
+When implementing a new feature:
+1. **Create feature documentation** in [docs/](docs/) directory
+   - File naming: `FEATURE_NAME_GUIDE.md` or `FEATURE_NAME_IMPLEMENTATION.md`
+   - Include: Purpose, architecture, API endpoints, usage examples, configuration
+   - Example: [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md), [docs/CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md)
+
+2. **Update CLAUDE.md** with feature summary
+   - Add brief overview in "Major Features" section
+   - Link to detailed docs in `/docs/`
+   - Keep CLAUDE.md concise - detailed info goes in `/docs/`
+
+3. **Update existing docs** if feature affects them
+   - [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) - If adding new service
+   - [docs/POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) - If adding database tables
+   - [.env.example](.env.example) - If adding environment variables
+
+4. **Keep documentation current**
+   - Update docs when feature behavior changes
+   - Mark deprecated features in docs (don't delete immediately)
+   - Archive old implementation details to `docs/archive/` if needed
+
+**Documentation checklist for new features:**
+- [ ] Created `/docs/FEATURE_NAME.md` with comprehensive guide
+- [ ] Updated CLAUDE.md "Major Features" section with summary + link
+- [ ] Updated relevant existing docs (DATABASE_SERVICES_USAGE.md, etc.)
+- [ ] Added environment variables to `.env.example` if needed
+- [ ] Documented API endpoints with examples
+- [ ] Included troubleshooting section if applicable
 
 ---
 
