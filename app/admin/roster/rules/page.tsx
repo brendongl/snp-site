@@ -137,6 +137,11 @@ export default function RosterRulesPage() {
     }
   };
 
+  // Helper to strip seconds from time string (HH:MM:SS -> HH:MM)
+  const stripSeconds = (timeStr: string): string => {
+    return timeStr.split(':').slice(0, 2).join(':');
+  };
+
   const fetchRosterHours = async () => {
     try {
       const response = await fetch('/api/roster/hours');
@@ -147,12 +152,12 @@ export default function RosterRulesPage() {
       const data = await response.json();
       setRosterHours(data.hours);
 
-      // Initialize edited hours
+      // Initialize edited hours (strip seconds for clean HH:MM format)
       const initialHours: Record<string, { open_time: string; close_time: string }> = {};
       data.hours.forEach((hour: RosterHours) => {
         initialHours[hour.day_of_week] = {
-          open_time: hour.open_time,
-          close_time: hour.close_time
+          open_time: stripSeconds(hour.open_time),
+          close_time: stripSeconds(hour.close_time)
         };
       });
       setEditedHours(initialHours);
@@ -684,14 +689,14 @@ export default function RosterRulesPage() {
                       <label className="block text-xs text-gray-600 mb-1">Open Time</label>
                       <input
                         type="time"
-                        value={editedHours[hour.day_of_week]?.open_time || hour.open_time}
+                        value={editedHours[hour.day_of_week]?.open_time || stripSeconds(hour.open_time)}
                         onChange={(e) =>
                           setEditedHours({
                             ...editedHours,
                             [hour.day_of_week]: {
                               ...editedHours[hour.day_of_week],
                               open_time: e.target.value,
-                              close_time: editedHours[hour.day_of_week]?.close_time || hour.close_time
+                              close_time: editedHours[hour.day_of_week]?.close_time || stripSeconds(hour.close_time)
                             }
                           })
                         }
@@ -704,12 +709,12 @@ export default function RosterRulesPage() {
                       <label className="block text-xs text-gray-600 mb-1">Close Time</label>
                       <input
                         type="time"
-                        value={editedHours[hour.day_of_week]?.close_time || hour.close_time}
+                        value={editedHours[hour.day_of_week]?.close_time || stripSeconds(hour.close_time)}
                         onChange={(e) =>
                           setEditedHours({
                             ...editedHours,
                             [hour.day_of_week]: {
-                              open_time: editedHours[hour.day_of_week]?.open_time || hour.open_time,
+                              open_time: editedHours[hour.day_of_week]?.open_time || stripSeconds(hour.open_time),
                               close_time: e.target.value
                             }
                           })

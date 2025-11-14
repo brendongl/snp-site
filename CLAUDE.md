@@ -265,23 +265,14 @@ Filter/Sort/Render (Client-side)
 
 ### Service Layer Architecture
 
-All database access goes through service classes in [lib/services/](lib/services/):
+All database access goes through service classes in [lib/services/](lib/services/). Key services include:
+- **games-db-service.ts** - Games CRUD operations
+- **roster-db-service.ts** - Roster management (22 methods)
+- **roster-solver-service.ts** - AI constraint solving
+- **vikunja-service.ts** - Task management integration
+- **staff-knowledge-db-service.ts** - Expertise tracking
 
-| Service | Purpose | Key Methods |
-|---------|---------|-------------|
-| [games-db-service.ts](lib/services/games-db-service.ts) | Games data access | `getAllGames()`, `getGameById()`, `updateGame()` |
-| [content-checks-db-service.ts](lib/services/content-checks-db-service.ts) | Content check history | `getChecksByGameId()`, `createCheck()` |
-| [play-logs-db-service.ts](lib/services/play-logs-db-service.ts) | Game session tracking | `getLogsByGameId()`, `createLog()` |
-| [staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts) | Staff expertise levels | `getKnowledgeByStaffMember()`, `getTeachersForGame()` |
-| [roster-db-service.ts](lib/services/roster-db-service.ts) | Roster management | 22 methods: shifts, availability, clock records, rules |
-| [roster-solver-service.ts](lib/services/roster-solver-service.ts) | AI constraint solver | `generateRoster()`, `evaluateConstraints()` |
-| [roster-cron-service.ts](lib/services/roster-cron-service.ts) | Automated roster tasks | `exportToAirtable()`, `checkMissingClockOuts()` |
-| [rule-parser-service.ts](lib/services/rule-parser-service.ts) | Natural language parsing | `parseRule()`, `convertToConstraint()` |
-| [changelog-service.ts](lib/services/changelog-service.ts) | Changelog tracking | `getAllChangelogs()`, `createChangelog()` |
-| [vikunja-service.ts](lib/services/vikunja-service.ts) | Vikunja task management | `getPriorityTasks()`, `getTask()`, `completeTask()` |
-| [bgg-api.ts](lib/services/bgg-api.ts) | BoardGameGeek integration | `getGameDetails()`, `searchGames()` |
-
-See [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) for detailed usage examples.
+**See [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) for complete service reference and usage examples.**
 
 ### Caching Strategy
 
@@ -391,222 +382,60 @@ snp-site/
   - Airtable sync ([/api/admin/sync-to-airtable](app/api/admin/sync-to-airtable/route.ts))
   - Staging file operations ([/api/admin/staging-files](app/api/admin/staging-files/route.ts))
 
-### Changelog System (v1.4.0+)
-- **Service**: [lib/services/changelog-service.ts](lib/services/changelog-service.ts)
-- **API**: [/api/changelog](app/api/changelog/route.ts), [/api/changelog/stats](app/api/changelog/stats/route.ts)
-- **Page**: [app/staff/changelog/page.tsx](app/staff/changelog/page.tsx)
-- **Features**: Version tracking, analytics, staff activity logs
-- **Details**: [docs/CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md)
+### Other Core Features
 
-### Play Logs System
-- **Service**: [lib/services/play-logs-db-service.ts](lib/services/play-logs-db-service.ts)
-- **API**: [/api/play-logs](app/api/play-logs/route.ts)
-- **Page**: [app/staff/play-logs/page.tsx](app/staff/play-logs/page.tsx)
-- **Features**: Session tracking, player counts, duration, staff logging
+**Changelog System** - Version tracking, analytics, staff activity logs
+- Service: [lib/services/changelog-service.ts](lib/services/changelog-service.ts) | Docs: [CHANGELOG_IMPLEMENTATION.md](docs/CHANGELOG_IMPLEMENTATION.md)
 
-### Staff Knowledge Management
-- **Service**: [lib/services/staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts)
-- **API**: [/api/staff-knowledge](app/api/staff-knowledge/route.ts)
-- **Pages**: [app/staff/knowledge/page.tsx](app/staff/knowledge/page.tsx), [app/staff/add-knowledge/page.tsx](app/staff/add-knowledge/page.tsx)
-- **Features**: Expertise tracking, confidence levels, can_teach flags
+**Play Logs** - Game session tracking (player counts, duration, staff logging)
+- Service: [lib/services/play-logs-db-service.ts](lib/services/play-logs-db-service.ts)
 
-### BoardGameGeek Integration
-- **Service**: [lib/services/bgg-api.ts](lib/services/bgg-api.ts)
-- **API**: [/api/games/bgg/[id]](app/api/games/bgg/[id]/route.ts)
-- **Features**: Game details fetch, ratings, metadata enrichment
+**Staff Knowledge Management** - Expertise tracking with confidence levels
+- Service: [lib/services/staff-knowledge-db-service.ts](lib/services/staff-knowledge-db-service.ts)
 
-### Analytics
-- **Integration**: Mixpanel ([lib/analytics/mixpanel.ts](lib/analytics/mixpanel.ts))
-- **API**: [/api/analytics/insights](app/api/analytics/insights/route.ts)
-- **Features**: Page views, user tracking, event logging
+**BoardGameGeek Integration** - Game metadata enrichment
+- Service: [lib/services/bgg-api.ts](lib/services/bgg-api.ts)
+
+**Analytics** - Mixpanel integration for page views and event tracking
+- [lib/analytics/mixpanel.ts](lib/analytics/mixpanel.ts)
 
 ### Vikunja Task Management (v1.4.0+)
 
-**Status**: ✅ Fully implemented and tested in v1.4.1
+**Status**: ✅ Production ready - Fully implemented and tested
 
-- **Instance**: https://tasks.sipnplay.cafe (self-hosted on Railway)
-- **Service**: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
-- **API Endpoints**:
-  - [/api/vikunja/tasks/priority](app/api/vikunja/tasks/priority/route.ts) - Fetch priority tasks (due within 3 days)
-  - [/api/vikunja/tasks/complete](app/api/vikunja/tasks/complete/route.ts) - Complete task and award points (v1.4.1)
-  - [/api/staff/points](app/api/staff/points/route.ts) - Fetch staff member's points and info (v1.4.1)
-- **Dashboard**: [app/staff/dashboard/page.tsx](app/staff/dashboard/page.tsx) - "Upcoming Tasks" section
+Staff task management with gamified points system integrated into dashboard. Tasks show 3-day visibility with color-coded priorities (red/orange/blue), one-click completion awards points.
 
-#### Database Schema (v1.4.1)
-Three new columns added to `staff_list` table via [scripts/add-points-and-vikunja-columns.js](scripts/add-points-and-vikunja-columns.js):
-- `points` (INTEGER, default 0) - Staff member's accumulated points
-- `vikunja_user_id` (INTEGER) - Links to Vikunja user account
-- `vikunja_username` (TEXT) - Vikunja username for display
-- Index on `vikunja_user_id` for performance
+**Key Components**:
+- Instance: https://tasks.sipnplay.cafe (self-hosted on Railway)
+- Service: [lib/services/vikunja-service.ts](lib/services/vikunja-service.ts)
+- Dashboard: [app/staff/dashboard/page.tsx](app/staff/dashboard/page.tsx)
+- All 13 staff have linked accounts with point tracking
 
-#### Account Management
-**All 13 staff members have Vikunja accounts** (created v1.4.1):
-- **Creation Script**: [scripts/create-vikunja-accounts.js](scripts/create-vikunja-accounts.js)
-  - Generates usernames from staff names (handles Vietnamese diacritics)
-  - Creates secure random passwords (displayed once during creation)
-  - Links accounts to `staff_list` via `vikunja_user_id`
-  - Rate limiting: 2-second delay between registrations
-- **Team Assignment**: [scripts/add-staff-to-team.js](scripts/add-staff-to-team.js)
-  - All staff added to "Sip n Play" team (ID: 1)
-  - Enables access to project tasks
-- **Verification**: [scripts/check-staff-for-vikunja.js](scripts/check-staff-for-vikunja.js)
-
-#### Points System Features (v1.4.1)
-**Gamification workflow**:
-1. **Label-based Points**: Tasks have point labels (e.g., "points:500", "points:1000")
-2. **3-Day Task Visibility**: Dashboard shows tasks due within next 3 days (not just today/overdue)
-3. **Three-tier Color Coding**:
-   - 🔴 **Red**: Overdue tasks
-   - 🟠 **Orange**: Due today
-   - 🔵 **Blue**: Due soon (1-3 days)
-4. **Complete Button**: Each task card has "Complete" button with loading state
-5. **Points Award**: Completing task:
-   - Marks task done in Vikunja via API
-   - Awards points to staff member in database
-   - Updates points display in real-time
-   - Removes task from dashboard
-6. **Header Display**: Shows logged-in staff name and points with gold star badge
-
-**Implementation Details**:
-- `extractPoints()` - Parse point value from task labels
-- `isDueSoon()` - Check if task due within 3 days
-- `enhanceTask()` - Add computed fields (points, isOverdue, isDueToday, isDueSoon)
-- `handleCompleteTask()` - Client-side handler with optimistic updates
-
-#### Point Label Scale
-Created via [scripts/create-vikunja-point-labels.js](scripts/create-vikunja-point-labels.js):
-- 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000 points
-- Color-coded for quick identification
-- Admin-only assignment
-
-#### Documentation
-- [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md) - Complete workflow guide
-- [docs/TASK_PROPOSAL_TEMPLATE.md](docs/TASK_PROPOSAL_TEMPLATE.md) - Staff task proposal format
-- [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) - UI bug workarounds
-
-#### Environment Variables Required
-```bash
-VIKUNJA_API_URL=https://tasks.sipnplay.cafe/api/v1
-VIKUNJA_API_TOKEN=tk_e396533971cba5f0873c21900a49ecd136602c77  # Must be set in Railway
-```
-
-#### Known Issues & Workarounds
-- **⚠️ UI Bug**: Vikunja v1.0.0-rc2 has greyed-out "+ Add Task" button
-  - **Workaround 1**: Press `Ctrl+K` → type "new task" (fastest)
-  - **Workaround 2**: Use [scripts/add-vikunja-task.js](scripts/add-vikunja-task.js) (most features)
-  - See [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) for details
-
-#### Testing Status (v1.4.1)
-**All Testing Completed** ✅:
-- ✅ Database schema updated
-- ✅ All staff accounts created and linked
-- ✅ 3-day task visibility implemented
-- ✅ Dashboard UI with color coding (red/orange/blue)
-- ✅ Complete button on task cards with loading states
-- ✅ API endpoints for completion and points
-- ✅ Real-time points display in header
-- ✅ End-to-end testing on local development environment
-- ✅ Task completion workflow verified (button click → API → points award → UI update)
-- ✅ Points award correctly to database (tested: 0 → 200 points)
-- ✅ Task removal from dashboard after completion (tested: 3 → 2 tasks)
-- ✅ Vikunja API integration confirmed (task marked done successfully)
-
-#### Future Enhancements
-- Leaderboard display on dashboard
-- Points history/transaction log
-- Badge/achievement system
-- Task completion notifications
-- Weekly/monthly reports
+**Documentation**: See [docs/VIKUNJA_TASK_WORKFLOW.md](docs/VIKUNJA_TASK_WORKFLOW.md) for complete workflow and [docs/VIKUNJA_WORKAROUNDS.md](docs/VIKUNJA_WORKAROUNDS.md) for known issues.
 
 ### iPOS Integration with Playwright (v1.7.7)
-**IMPORTANT UPDATE**: Successfully integrated Playwright directly into Railway for iPOS data scraping
 
-**Key Discovery**: iPOS authentication tokens are session-bound and cannot be extracted:
-- Direct API calls fail with 401 Unauthorized (even with full cookies + headers)
-- Tokens only work within the browser session that created them
-- **Solution**: Use Playwright browser automation to maintain session
+**Status**: ✅ Production ready
 
-**Architecture**:
-- Railway now uses Microsoft's official Playwright Docker image
-- Headless Chromium browser automation for iPOS login and scraping
-- 5-minute caching to minimize browser launches
-- No separate microservice needed - everything runs on Railway
+POS data scraping using headless Chromium (tokens are session-bound, cannot use direct API calls).
 
-**Setup**:
-- **Dockerfile**: Uses `mcr.microsoft.com/playwright:v1.48.0-noble` as runner base
-- **Launch flags**: `--no-sandbox`, `--disable-dev-shm-usage` for Docker compatibility
-- **Service**: [lib/services/ipos-playwright-service.ts](lib/services/ipos-playwright-service.ts)
-- **API Route**: [app/api/pos/dashboard/route.ts](app/api/pos/dashboard/route.ts)
-
-**Environment Variables Required**:
-```bash
-IPOS_EMAIL=sipnplay@ipos.vn
-IPOS_PASSWORD=<your_password>
-```
-
-**Performance**:
-- First request: ~10-15 seconds (browser launch + login)
-- Cached requests: <100ms (5-minute cache)
-- Automatic fallback to stale cache on errors
+**Setup**: Service at [lib/services/ipos-playwright-service.ts](lib/services/ipos-playwright-service.ts), 5-minute caching, auto-fallback.
+**Docs**: [docs/IPOS_API_ENDPOINTS.md](docs/IPOS_API_ENDPOINTS.md)
 
 ### Staff UUID Migration (v1.19.0)
-**IMPORTANT ARCHITECTURAL CHANGE**: Migrated from dual-ID system to single UUID primary key.
 
-**Before (v1.18.x and earlier)**:
-- Two separate ID fields: `staff_id` (Airtable Sip N Play) and `stafflist_id` (Airtable SNP Games List)
-- Stored both in localStorage: `staff_id` and `staff_record_id`
-- Complex ID mapping required for foreign keys
+**Status**: ✅ Complete - Migrated from dual-ID to single UUID primary key
 
-**After (v1.19.0+)**:
-- Single UUID primary key: `staff_list.id` (generated via `gen_random_uuid()`)
-- Only `staff_id` in localStorage (contains UUID)
-- All foreign keys reference this single UUID
-- Simplified architecture, no ID mapping needed
-
-**Migration Script**: [scripts/migrate-staff-to-uuid.js](scripts/migrate-staff-to-uuid.js)
-- Migrated 13 staff members
-- Updated 107 content checks
-- Updated 149 play logs
-- Updated 1179 staff knowledge records
-
-**Archived Scripts**: Old diagnostic scripts moved to [scripts/archive/](scripts/archive/) directory.
-
-**Documentation Updates**:
-- [docs/DATABASE_SERVICES_USAGE.md](docs/DATABASE_SERVICES_USAGE.md) - Updated with UUID usage examples
-- [docs/AIRTABLE_SCHEMA.md](docs/AIRTABLE_SCHEMA.md) - Marked dual-ID flow as deprecated
-- [docs/POSTGRESQL_MIGRATION_SUMMARY.md](docs/POSTGRESQL_MIGRATION_SUMMARY.md) - Updated table references
+Now uses single `staff_list.id` (UUID) instead of dual Airtable IDs. Migration script: [scripts/migrate-staff-to-uuid.js](scripts/migrate-staff-to-uuid.js)
 
 ### Nintendo Switch Webhook Notifications (v1.7.12)
-**Status**: ✅ Production Ready with HTTP Bridge
 
-Real-time toast notifications when someone launches or exits a game on their Nintendo Switch. Uses Server-Sent Events (SSE) to broadcast to all connected website visitors.
+**Status**: ✅ Production ready
 
-**HTTP Bridge Solution (Recommended)**:
-- **Cloudflare Worker**: `http://switch-webhook.brendonganle.workers.dev/`
-- Solves SSL certificate issues common with Switch homebrew
-- Free, permanent URL with global edge network
-- Automatically forwards HTTP webhooks to HTTPS production endpoint
+Real-time toast notifications (SSE) when Switch games launch/exit. Uses Cloudflare Worker HTTP bridge for Switch compatibility.
 
-**Architecture**:
-- **Webhook Endpoint**: [/api/switch-webhook](app/api/switch-webhook/route.ts) - Receives POST from Switch
-- **SSE Endpoint**: [/api/switch-notifications](app/api/switch-notifications/route.ts) - Broadcasts to clients
-- **Service**: [lib/services/switch-notifier.ts](lib/services/switch-notifier.ts) - Notification broadcaster
-- **Component**: [components/features/switch/SwitchGameToast.tsx](components/features/switch/SwitchGameToast.tsx) - Toast UI
-- **Config Page**: [/switch-webhook-config](app/switch-webhook-config/page.tsx) - Admin configuration & testing
-
-**Features**:
-- 🎮 Launch/Exit notifications with game thumbnails
-- 📡 Real-time broadcast to all connected users
-- 🔗 Permanent webhook URLs (HTTP & HTTPS)
-- 🎨 5-second toast in bottom-left corner
-- 🌐 Cloudflare Worker HTTP bridge for Switch compatibility
-
-**Switch Configuration**:
-```
-http://switch-webhook.brendonganle.workers.dev/
-```
-
-**Documentation**: [docs/SWITCH_WEBHOOK_NOTIFICATIONS.md](docs/SWITCH_WEBHOOK_NOTIFICATIONS.md)
+**Config**: `http://switch-webhook.brendonganle.workers.dev/` → [/api/switch-webhook](app/api/switch-webhook/route.ts)
+**Docs**: [docs/SWITCH_WEBHOOK_NOTIFICATIONS.md](docs/SWITCH_WEBHOOK_NOTIFICATIONS.md)
 
 ### AI-Powered Roster Management System (v1.9.x)
 
@@ -691,64 +520,13 @@ See `.env.example` for full list and format.
 
 ## API Endpoints Reference
 
-**Total Endpoints: 60+**
-
-### Core Endpoints
-- `GET /api/games` - Fetch all games from PostgreSQL
-- `GET /api/games/[id]` - Single game details
-- `GET /api/games/random` - Random game picker
-- `POST /api/games/create` - Create new game
-- `POST /api/games/[id]/edit` - Update game metadata
-- `GET /api/images/[hash]` - Serve cached images
-
-### Staff Endpoints
-- `GET /api/staff-knowledge` - All expertise records
-- `POST /api/staff-knowledge` - Create/update knowledge
-- `GET /api/play-logs` - Game session logs
-- `POST /api/play-logs` - Log new play session
-- `GET /api/content-checks` - Content check history
-- `POST /api/content-checks/refresh` - Refresh check cache
-
-### Roster Endpoints (14+)
-**Roster Management:**
-- `GET/PUT/DELETE /api/roster/[week]` - Roster CRUD operations
-- `POST /api/roster/[week]/publish` - Publish roster
-- `GET /api/roster/[week]/unpublished-count` - Count drafts
-- `GET/POST/PUT/DELETE /api/roster/shifts` - Shift operations
-- `POST /api/roster/generate` - AI roster generation
-
-**Rules & Config:**
-- `GET/POST/PUT/DELETE /api/roster/rules` - Rule management
-- `POST /api/roster/rules/parse` - Natural language parsing
-- `GET/PUT /api/roster/staff-config` - Payroll configuration
-- `GET/POST /api/roster/availability` - Staff availability
-- `GET/POST /api/roster/preferred-times` - Preferred hours
-
-**Clock System:**
-- `GET/POST /api/clock-in` - Clock in/out with GPS
-- `GET /api/clock-in/qr-generate` - Generate QR codes
-- `GET /api/roster/clock-records` - Fetch records
-- `POST /api/roster/clock-records/[id]/approve` - Approve hours
-- `GET /api/roster/my-hours` - Hours summary
-
-### Admin Endpoints (8)
-- `POST /api/admin/migrate-images` - Migrate images to volume
-- `GET /api/admin/storage` - Storage usage stats
-- `POST /api/admin/sync-to-airtable` - Push data to Airtable
-- `GET /api/admin/staging-files` - List staging files
-- `POST /api/admin/copy-volume` - Copy persistent volume
-- `POST /api/admin/download-images` - Download images
-- `GET/POST /api/admin/approvals` - General approval queue
-- `GET/PUT /api/admin/staff-config` - Staff configuration
-
-### Analytics & Changelog
-- `GET /api/changelog` - Changelog entries
-- `GET /api/changelog/stats` - Changelog statistics
-- `GET /api/analytics/insights` - Analytics data
-
-### Diagnostics
-- `GET /api/health` - System health check
-- `GET /api/debug/logs` - Recent application logs
+**60+ endpoints** organized in [app/api/](app/api/) directory:
+- **Games**: CRUD, random picker, BGG integration
+- **Staff**: Knowledge management, play logs, content checks
+- **Roster**: 14+ endpoints (shifts, availability, clock system, rules, payroll)
+- **Admin**: Storage, migrations, approvals, sync operations
+- **Analytics**: Changelog, insights, staff activity
+- **Diagnostics**: Health checks, logs
 
 **See individual route files in [app/api/](app/api/) for detailed parameters and responses.**
 
@@ -756,46 +534,17 @@ See `.env.example` for full list and format.
 
 ## Common Development Tasks
 
-### Adding a New Filter
-1. Define in [types/index.ts](types/index.ts) - `GameFilters` interface
-2. Add filter logic in [app/games/page.tsx](app/games/page.tsx) - `useCallback` for filtering
-3. Add UI component in [components/features/games/GameFilters.tsx](components/features/games/)
-4. Test with various game combinations
-
-### Adding a New Sort Option
-1. Add to sort options in [app/games/page.tsx](app/games/page.tsx)
-2. Implement sort logic in [lib/airtable/games-service.ts](lib/airtable/games-service.ts) - `sortGames()` method
-3. Add UI option to sort dropdown
-
-### Adding a New Database Table
-1. Create migration script in [scripts/](scripts/) (e.g., `create-new-table.js`)
-2. Run migration on staging database first
-3. Create service class in [lib/services/](lib/services/) (e.g., `new-table-service.ts`)
+### Adding Database Tables/Schemas
+1. Create migration script in [scripts/](scripts/)
+2. Test on staging database first
+3. Create service class in [lib/services/](lib/services/)
 4. Add API endpoints in [app/api/](app/api/)
-5. Update TypeScript types in [types/index.ts](types/index.ts)
-6. Test thoroughly on staging before production
+5. Update types in [types/index.ts](types/index.ts)
 
-### Updating Database Schema
-1. Write migration script to add/modify columns
-2. Test on staging database
-3. Update service layer to use new fields
-4. Update TypeScript types
-5. Verify with test queries
-
-### Debugging Issues
-```bash
-# View overall health (database, Airtable, environment)
-curl http://localhost:3000/api/health
-
-# View recent logs (last 50 entries)
-curl http://localhost:3000/api/debug/logs
-
-# Check database connection
-curl http://localhost:3000/api/test-connectivity
-
-# View storage usage (admin only)
-curl http://localhost:3000/api/admin/storage
-```
+### Debugging Endpoints
+- `/api/health` - System health (database, Airtable, environment)
+- `/api/debug/logs` - Recent logs (last 50 entries)
+- `/api/admin/storage` - Storage usage (admin only)
 
 ---
 
@@ -914,25 +663,11 @@ Request for /api/games:
 
 ## Custom Hooks & Utilities
 
-### useStaffMode
-- **Location**: [lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)
-- **Purpose**: Detect `?staff=true` URL parameter
-- **Returns**: Boolean indicating staff mode is active
-- **Used in**: GameDetailModal, GameCard, GameFilters components
+**useStaffMode** ([lib/hooks/useStaffMode.ts](lib/hooks/useStaffMode.ts)) - Detects `?staff=true` URL parameter
 
-### useAdminMode
-- **Location**: [lib/hooks/useAdminMode.ts](lib/hooks/useAdminMode.ts)
-- **Purpose**: Detect admin user role via NextAuth
-- **Returns**: Boolean indicating admin mode is active
-- **Used in**: Admin pages, admin endpoints
+**useAdminMode** ([lib/hooks/useAdminMode.ts](lib/hooks/useAdminMode.ts)) - Detects admin role via NextAuth
 
-### Logger Singleton
-- **Location**: [lib/logger.ts](lib/logger.ts)
-- **Features**:
-  - Console output with emoji prefixes
-  - File persistence to `data/logs/`
-  - In-memory buffer (last 1000 entries)
-  - Methods: `info()`, `warn()`, `error()`, `debug()`, `api()`
+**Logger** ([lib/logger.ts](lib/logger.ts)) - Console output, file persistence, in-memory buffer (1000 entries)
 
 ---
 
@@ -957,37 +692,13 @@ Request for /api/games:
 
 ## Troubleshooting
 
-### Build Fails
-```bash
-# Clean and rebuild
-rm -rf .next
-npm run build
-```
+**Build Issues**: `rm -rf .next && npm run build`
 
-### Dev Server Won't Start
-```bash
-# Kill old processes and restart
-npm run dev
-# Server will use next available port (3000, 3001, 3002, etc.)
-```
+**Database Connection**: Check `DATABASE_URL` env var, test with `/api/health` or `/api/debug/logs`
 
-### Database Connection Issues
-- Verify `DATABASE_URL` in environment
-- Check Railway PostgreSQL service status
-- Test connection: `curl http://localhost:3000/api/test-connectivity`
-- Review logs: `curl http://localhost:3000/api/debug/logs`
+**Image Caching**: Verify persistent volume at `/app/data/images/` or check `/api/admin/storage`
 
-### Image Caching Issues
-- Check persistent volume is mounted at `/app/data`
-- Verify image files exist: `ls /app/data/images/`
-- Check metadata file: `cat /app/data/image-cache-metadata.json`
-- Use admin endpoint: `GET /api/admin/storage`
-
-### Migration Script Errors
-- Always test on staging database first
-- Verify `DATABASE_URL` points to correct environment
-- Check migration script logs for detailed errors
-- Use transaction rollback on failures
+**For detailed troubleshooting, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**
 
 ---
 

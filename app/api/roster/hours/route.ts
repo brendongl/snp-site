@@ -9,6 +9,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db/postgres';
 
+// Force Node.js runtime (required for PostgreSQL)
+export const runtime = 'nodejs';
+
+
 export interface RosterHours {
   id: number;
   day_of_week: string;
@@ -24,7 +28,10 @@ export interface RosterHours {
  * Fetch all roster hours (7 days)
  */
 export async function GET(request: NextRequest) {
+  console.log('[Roster Hours API] GET request received');
+
   try {
+    console.log('[Roster Hours API] Querying database...');
     const result = await pool.query(`
       SELECT
         id,
@@ -47,14 +54,16 @@ export async function GET(request: NextRequest) {
         END
     `);
 
+    console.log('[Roster Hours API] Query successful, returning', result.rows.length, 'rows');
     return NextResponse.json({
       success: true,
       hours: result.rows
     });
   } catch (error: any) {
-    console.error('Error fetching roster hours:', error);
+    console.error('[Roster Hours API] Error fetching roster hours:', error);
+    console.error('[Roster Hours API] Error stack:', error.stack);
     return NextResponse.json(
-      { error: 'Failed to fetch roster hours', details: error.message },
+      { error: 'Failed to fetch roster hours', details: error.message, stack: error.stack },
       { status: 500 }
     );
   }
@@ -97,11 +106,15 @@ export async function PUT(request: NextRequest) {
           throw new Error(`Invalid day_of_week: ${day_of_week}`);
         }
 
-        // Validate times (HH:MM format)
-        const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+        // Validate times (HH:MM or HH:MM:SS format)
+        const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/;
         if (!timeRegex.test(open_time) || !timeRegex.test(close_time)) {
           throw new Error(`Invalid time format for ${day_of_week}. Use HH:MM (00:00-23:59)`);
         }
+
+        // Strip seconds if present (convert HH:MM:SS to HH:MM)
+        const cleanOpenTime = open_time.split(':').slice(0, 2).join(':');
+        const cleanCloseTime = close_time.split(':').slice(0, 2).join(':');
 
         await client.query(`
           UPDATE roster_hours
@@ -111,7 +124,7 @@ export async function PUT(request: NextRequest) {
             is_active = $3,
             updated_at = NOW()
           WHERE day_of_week = $4
-        `, [open_time, close_time, is_active, day_of_week]);
+        `, [cleanOpenTime, cleanCloseTime, is_active, day_of_week]);
       }
 
       await client.query('COMMIT');

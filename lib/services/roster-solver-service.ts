@@ -96,6 +96,14 @@ export interface WeeklyRoster {
   optimization_score: number;
 }
 
+export interface RosterHours {
+  id: number;
+  day_of_week: string;
+  open_time: string;
+  close_time: string;
+  is_active: boolean;
+}
+
 // ========================================
 // Constraint Solver
 // ========================================
@@ -107,6 +115,7 @@ export class RosterSolver {
   private weekStart: string;
   private maxHoursPerWeek: number;
   private preferFairness: boolean;
+  private rosterHours: Map<string, RosterHours>; // Store by day_of_week
 
   constructor(params: GenerateRosterParams) {
     this.weekStart = params.weekStart;
@@ -115,6 +124,40 @@ export class RosterSolver {
     this.rules = params.rules || [];
     this.maxHoursPerWeek = params.maxHoursPerWeek || 40;
     this.preferFairness = params.preferFairness ?? true;
+    this.rosterHours = new Map(); // Will be loaded in solve()
+  }
+
+  /**
+   * Load roster hours (open/close times) from database
+   * ✅ NEW v1.10.12: Hard constraint enforcement for daily open/close hours
+   */
+  private async loadRosterHours(): Promise<void> {
+    try {
+      const result = await pool.query(`
+        SELECT day_of_week, open_time::text as open_time, close_time::text as close_time, is_active
+        FROM roster_hours
+        WHERE is_active = true
+      `);
+
+      this.rosterHours.clear();
+      for (const row of result.rows) {
+        // Strip seconds from times (HH:MM:SS -> HH:MM)
+        const stripSeconds = (time: string) => time.split(':').slice(0, 2).join(':');
+
+        this.rosterHours.set(row.day_of_week, {
+          id: 0, // Not needed for validation
+          day_of_week: row.day_of_week,
+          open_time: stripSeconds(row.open_time),
+          close_time: stripSeconds(row.close_time),
+          is_active: row.is_active
+        });
+      }
+
+      console.log(`[Roster Solver] Loaded ${this.rosterHours.size} roster hour constraints`);
+    } catch (error) {
+      console.error('[Roster Solver] Error loading roster hours:', error);
+      // Continue without roster hours if loading fails (non-critical)
+    }
   }
 
   /**
@@ -123,6 +166,9 @@ export class RosterSolver {
    * Prioritizes constrained staff (least availability) by assigning them FIRST
    */
   async solve(): Promise<RosterSolution> {
+    // Load roster hours (open/close times) from database
+    await this.loadRosterHours();
+
     const violations: ConstraintViolation[] = [];
     const assignments: ShiftAssignment[] = [];
 
@@ -560,6 +606,40 @@ export class RosterSolver {
       });
     }
 
+    // 6. Open/Close Hours (NEW v1.10.12)
+    // Shifts MUST begin at or after open_time and MUST end at or before close_time
+    const dayHours = this.rosterHours.get(shift.day_of_week);
+    if (dayHours) {
+      const shiftStart = this.timeToMinutes(shift.scheduled_start);
+      const shiftEnd = this.timeToMinutes(shift.scheduled_end);
+      const openMinutes = this.timeToMinutes(dayHours.open_time);
+      const closeMinutes = this.timeToMinutes(dayHours.close_time);
+
+      // Check if shift starts before opening time
+      if (shiftStart < openMinutes) {
+        violations.push({
+          type: 'hard',
+          constraint: 'SHIFT_BEFORE_OPEN',
+          staff_id: staff.id,
+          shift,
+          message: `Shift starts at ${shift.scheduled_start} but ${shift.day_of_week} opens at ${dayHours.open_time}`,
+          severity: 100
+        });
+      }
+
+      // Check if shift ends after closing time
+      if (shiftEnd > closeMinutes) {
+        violations.push({
+          type: 'hard',
+          constraint: 'SHIFT_AFTER_CLOSE',
+          staff_id: staff.id,
+          shift,
+          message: `Shift ends at ${shift.scheduled_end} but ${shift.day_of_week} closes at ${dayHours.close_time}`,
+          severity: 100
+        });
+      }
+    }
+
     return violations;
   }
 
@@ -952,7 +1032,7 @@ export default class RosterSolverService {
    * With retry logic to prevent overlapping shifts
    */
   static async generateRoster(params: GenerateRosterParams): Promise<RosterSolution> {
-    console.log('[Roster Solver] Starting roster generation with natural language rules...');
+    console.log('[Roster Solver] Starting AI-powered roster generation...');
 
     // Fetch rules from database if not provided
     const rules = params.rules || await this.fetchActiveRules();
@@ -980,12 +1060,34 @@ export default class RosterSolverService {
     }
     console.log(`  Total shift requirements: ${shiftRequirements.length}`);
 
-    // Create solver with all data
-    const solverParams = {
-      ...params,
-      shiftRequirements,
+    // Load roster hours
+    const rosterHoursResult = await pool.query(`
+      SELECT day_of_week, open_time::text as open_time, close_time::text as close_time, is_active
+      FROM roster_hours
+      WHERE is_active = true
+    `);
+    const rosterHours = rosterHoursResult.rows.map(row => ({
+      day_of_week: row.day_of_week,
+      open_time: row.open_time.split(':').slice(0, 2).join(':'), // Strip seconds
+      close_time: row.close_time.split(':').slice(0, 2).join(':'),
+      is_active: row.is_active
+    }));
+    console.log(`  Loaded ${rosterHours.length} roster hour constraints`);
+
+    // ✅ NEW v1.10.12: Use AI (Claude Sonnet 4.5) to generate roster
+    console.log('  Using Claude Sonnet 4.5 for roster generation...');
+
+    // Dynamic import to avoid circular dependencies
+    const AIRosterService = (await import('@/lib/services/roster-ai-service')).default;
+
+    const aiParams = {
+      weekStart: params.weekStart,
       staffMembers,
-      rules
+      shiftRequirements,
+      rules,
+      rosterHours,
+      maxHoursPerWeek: params.maxHoursPerWeek,
+      preferFairness: params.preferFairness
     };
 
     // Retry up to 3 times if overlapping shifts are detected
@@ -994,10 +1096,9 @@ export default class RosterSolverService {
     let solution: RosterSolution;
 
     while (attempt <= maxRetries) {
-      console.log(`  Attempt ${attempt}/${maxRetries}: Generating roster...`);
+      console.log(`  Attempt ${attempt}/${maxRetries}: Generating roster with AI...`);
 
-      const solver = new RosterSolver(solverParams);
-      solution = await solver.solve();
+      solution = await AIRosterService.generateRoster(aiParams);
 
       // Validate for overlapping shifts
       const overlapCheck = this.validateNoOverlaps(solution);

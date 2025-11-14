@@ -6,7 +6,7 @@
  * and MUST end at or before close_time.
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 const { Pool } = require('pg');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
